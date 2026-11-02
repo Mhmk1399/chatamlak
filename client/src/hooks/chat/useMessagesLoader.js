@@ -1,0 +1,1079 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  isMessageAuthoredByUser,
+  isMessageFromOtherUser,
+} from "../../utils/messageOwnership.js";
+import { parseServerDate as defaultParseServerDate } from "../../utils/chatFormat.js";
+
+const SILENT_FETCH_TRACK_MAX_CHATS = 40;
+const SILENT_FETCH_MIN_INTERVAL_MS = 320;
+
+const isDocumentActive = () => {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState === "visible" && document.hasFocus();
+};
+
+export const compareMessages = (
+  left,
+  right,
+  parseServerDateFn = defaultParseServerDate,
+) => {
+  const leftIsPending =
+    left?._delivery === "sending" || Boolean(left?._processingPending);
+  const rightIsPending =
+    right?._delivery === "sending" || Boolean(right?._processingPending);
+  if (leftIsPending !== rightIsPending) {
+    return leftIsPending ? 1 : -1;
+  }
+  if (leftIsPending && rightIsPending) {
+    const leftQueuedAt = Number(left?._queuedAt || 0);
+    const rightQueuedAt = Number(right?._queuedAt || 0);
+    if (leftQueuedAt !== rightQueuedAt) {
+      return leftQueuedAt - rightQueuedAt;
+    }
+  }
+  const leftDate = left?.created_at || left?._createdAt || left?.createdAt;
+  const rightDate = right?.created_at || right?._createdAt || right?.createdAt;
+  const parseFn =
+    typeof parseServerDateFn === "function"
+      ? parseServerDateFn
+      : defaultParseServerDate;
+  const leftTimeRaw = Number(leftDate ? parseFn(leftDate).getTime() : 0);
+  const rightTimeRaw = Number(rightDate ? parseFn(rightDate).getTime() : 0);
+  const leftTime = Number.isFinite(leftTimeRaw) ? leftTimeRaw : 0;
+  const rightTime = Number.isFinite(rightTimeRaw) ? rightTimeRaw : 0;
+  if (leftTime !== rightTime) {
+    return leftTime - rightTime;
+  }
+  const leftId = String(left?._serverId || left?.id || "");
+  const rightId = String(right?._serverId || right?.id || "");
+  if (leftId && rightId) {
+    return leftId.localeCompare(rightId);
+  }
+  return String(left?._clientId || "").localeCompare(
+    String(right?._clientId || ""),
+  );
+};
+
+export function useMessagesLoader({
+  user,
+  topicId = null,
+  chats,
+  activeChat,
+  activeChatIdRef,
+  activeChatTypeRef,
+  isActiveChannelChat,
+  isMobileViewport,
+  mobileTab,
+  setMessages,
+  setUnreadInChat,
+  setUnreadMarkerId,
+  setUserScrolledUp,
+  setIsAtBottom,
+  setChannelSeenCounts,
+  lastMessageIdRef,
+  openingChatRef,
+  openingUnreadCountRef,
+  openingHadUnreadRef,
+  pendingScrollToUnreadRef,
+  unreadMarkerIdRef,
+  pendingScrollToBottomRef,
+  userScrolledUpRef,
+  isAtBottomRef,
+  unreadAnchorLockUntilRef,
+  shouldAutoMarkReadRef,
+  allowStartReachedRef,
+  formatDayLabel,
+  formatTime,
+  parseServerDate,
+  resolveReplyPreview,
+  normalizeMessageBody,
+  CHAT_PAGE_CONFIG,
+  listMessagesByQuery,
+  markMessagesRead,
+  fetchFirstUnreadMessage,
+}) {
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const messageFetchInFlightRef = useRef(false);
+  const queuedSilentMessageRefreshRef = useRef(null);
+  const queuedSilentMessageRefreshTimerRef = useRef(null);
+  const messageFetchAbortRef = useRef(null);
+  const messageFetchRequestIdRef = useRef(0);
+  const lastSilentFetchByChatRef = useRef(new Map());
+
+  const markSilentFetchAt = (chatId, timestamp) => {
+    const key = String(chatId || "").trim();
+    if (!key) return;
+    const map = lastSilentFetchByChatRef.current;
+    map.set(key, Number(timestamp || Date.now()));
+    if (map.size > 1) {
+      const value = map.get(key);
+      map.delete(key);
+      map.set(key, value);
+    }
+    while (map.size > SILENT_FETCH_TRACK_MAX_CHATS) {
+      const oldestKey = map.keys().next().value;
+      if (oldestKey === undefined) break;
+      map.delete(oldestKey);
+    }
+  };
+
+  useEffect(
+    () => () => {
+      if (messageFetchAbortRef.current) {
+        messageFetchAbortRef.current.abort();
+        messageFetchAbortRef.current = null;
+      }
+      if (queuedSilentMessageRefreshTimerRef.current) {
+        window.clearTimeout(queuedSilentMessageRefreshTimerRef.current);
+        queuedSilentMessageRefreshTimerRef.current = null;
+      }
+      queuedSilentMessageRefreshRef.current = null;
+      messageFetchInFlightRef.current = false;
+    },
+    [],
+  );
+
+  const clearQueuedSilentMessageRefreshTimer = () => {
+    if (!queuedSilentMessageRefreshTimerRef.current) return;
+    window.clearTimeout(queuedSilentMessageRefreshTimerRef.current);
+    queuedSilentMessageRefreshTimerRef.current = null;
+  };
+
+  const runQueuedSilentMessageRefresh = () => {
+    if (messageFetchInFlightRef.current) return;
+    const queued = queuedSilentMessageRefreshRef.current;
+    if (!queued) return;
+    queuedSilentMessageRefreshRef.current = null;
+    clearQueuedSilentMessageRefreshTimer();
+    void loadMessages(queued.chatId, queued.options);
+  };
+
+  const scheduleQueuedSilentMessageRefresh = (delayMs = 0) => {
+    clearQueuedSilentMessageRefreshTimer();
+    queuedSilentMessageRefreshTimerRef.current = window.setTimeout(() => {
+      queuedSilentMessageRefreshTimerRef.current = null;
+      runQueuedSilentMessageRefresh();
+    }, Math.max(0, Number(delayMs || 0)));
+  };
+
+  const queueSilentMessageRefresh = (chatId, options = {}, delayMs = 0) => {
+    queuedSilentMessageRefreshRef.current = {
+      chatId: String(chatId || ""),
+      options: { ...options, silent: true },
+    };
+    if (!messageFetchInFlightRef.current) {
+      scheduleQueuedSilentMessageRefresh(delayMs);
+    }
+  };
+
+  async function loadMessages(chatId, options = {}) {
+    const requestChatId = String(chatId || "");
+    const isSilentRefresh = Boolean(options.silent);
+    if (isSilentRefresh) {
+      const now = Date.now();
+      const lastAt = Number(lastSilentFetchByChatRef.current.get(requestChatId) || 0);
+      const elapsedMs = lastAt ? now - lastAt : SILENT_FETCH_MIN_INTERVAL_MS;
+      if (lastAt && elapsedMs < SILENT_FETCH_MIN_INTERVAL_MS) {
+        queueSilentMessageRefresh(
+          requestChatId,
+          options,
+          SILENT_FETCH_MIN_INTERVAL_MS - elapsedMs,
+        );
+        return;
+      }
+      clearQueuedSilentMessageRefreshTimer();
+      markSilentFetchAt(requestChatId, now);
+    }
+    if (
+      messageFetchInFlightRef.current &&
+      options.silent &&
+      options.preserveHistory &&
+      !options.prepend
+    ) {
+      queueSilentMessageRefresh(chatId, {
+        ...options,
+        silent: true,
+        preserveHistory: true,
+      });
+      return;
+    }
+    const requestId = messageFetchRequestIdRef.current + 1;
+    messageFetchRequestIdRef.current = requestId;
+    if (messageFetchAbortRef.current) {
+      messageFetchAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    messageFetchAbortRef.current = controller;
+    if (!options.silent) {
+      setLoadingMessages(true);
+    }
+    messageFetchInFlightRef.current = true;
+    try {
+      const fetchLimit = Number(
+        options.limit || CHAT_PAGE_CONFIG.messageFetchLimit,
+      );
+      const query = new URLSearchParams({
+        chatId: String(chatId),
+        username: user.username,
+        limit: String(fetchLimit),
+      });
+      if (topicId) query.set("topicId", topicId);
+      if (options.beforeId) {
+        query.set("beforeId", String(options.beforeId));
+      }
+      if (options.beforeCreatedAt) {
+        query.set("beforeCreatedAt", String(options.beforeCreatedAt));
+      }
+      if (options.afterId) {
+        query.set("afterId", String(options.afterId));
+      }
+      if (options.afterCreatedAt) {
+        query.set("afterCreatedAt", String(options.afterCreatedAt));
+      }
+      const res = await listMessagesByQuery(
+        Object.fromEntries(query.entries()),
+        { cache: "no-store", signal: controller.signal },
+      );
+      if (requestId !== messageFetchRequestIdRef.current) {
+        return;
+      }
+      const data = await res.json();
+      if (requestId !== messageFetchRequestIdRef.current) {
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load messages.");
+      }
+      if (String(activeChatIdRef.current || "") !== requestChatId) {
+        return;
+      }
+      // When loading with afterId (unread anchor), hasMore means there are newer
+      // messages beyond the window — not older ones. Since we anchored mid-history,
+      // there are always older messages to load via pagination.
+      //
+      // Tail-delta refreshes (options.tailDelta) also use afterId, but they
+      // anchor on the newest loaded message to pull only brand-new messages.
+      // They must not touch the older-history flag, which reflects state at the
+      // top of the already-loaded window.
+      setHasOlderMessages((prev) =>
+        options.tailDelta
+          ? prev
+          : options.afterId
+            ? true
+            : options.prepend
+              ? Boolean(data?.hasMore)
+              : options.preserveHistory
+                ? prev || Boolean(data?.hasMore)
+                : Boolean(data?.hasMore),
+      );
+      const chatType =
+        chats.find((chat) => String(chat.id) === String(requestChatId))?.type ||
+        activeChatTypeRef.current ||
+        null;
+      const allowSystemEvents =
+        String(chatType || "").toLowerCase() !== "channel";
+      const nextMessages = (data.messages || []).map((msg) => {
+        const date = parseServerDate(msg.created_at);
+        const dayKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        const readByMe =
+          isMessageAuthoredByUser(msg, user) || Boolean(msg.read_by_me);
+        const hasProcessingVideo = Array.isArray(msg?.files)
+          ? msg.files.some(
+              (file) =>
+                String(file?.mimeType || "")
+                  .toLowerCase()
+                  .startsWith("video/") &&
+                file?.processing === true &&
+                !String(file?.url || "").includes("-h264-"),
+            )
+          : false;
+        const isOwnProcessingVideo =
+          hasProcessingVideo && isMessageAuthoredByUser(msg, user);
+        const normalizedBody = normalizeMessageBody(msg?.body);
+        const normalizedReply =
+          msg?.replyTo && typeof msg.replyTo === "object"
+            ? {
+                ...msg.replyTo,
+                body: normalizeMessageBody(msg.replyTo?.body),
+              }
+            : msg?.replyTo || null;
+        const bodyText = normalizedBody;
+        const systemMatch = bodyText.match(
+          /^\[\[system:(join|joined|left|removed):(.+)\]\]$/i,
+        );
+        const rawTargetName = systemMatch?.[2]
+          ? String(systemMatch[2]).trim()
+          : "";
+        const maxNameLength = 13;
+        const shortTargetName =
+          rawTargetName.length > maxNameLength
+            ? `${rawTargetName.slice(0, maxNameLength)}...`
+            : rawTargetName;
+        const isolatedTargetName = `\u2068${shortTargetName || "A member"}\u2069`;
+        const normalizedSystemType = String(
+          systemMatch?.[1] || "",
+        ).toLowerCase();
+        const systemSuffix =
+          normalizedSystemType === "left"
+            ? "left the group"
+            : normalizedSystemType === "removed"
+              ? "was removed from the group"
+              : normalizedSystemType
+                ? "joined the group"
+                : "";
+        const systemText =
+          systemSuffix && isolatedTargetName
+            ? `${isolatedTargetName} ${systemSuffix}`
+            : "";
+        return {
+          ...msg,
+          body: normalizedBody,
+          replyTo: normalizedReply,
+          _readByMe: readByMe,
+          _dayKey: dayKey,
+          _dayLabel: formatDayLabel(msg.created_at),
+          _timeLabel: formatTime(msg.created_at),
+          _processingPending: isOwnProcessingVideo,
+          _systemEvent:
+            allowSystemEvents && normalizedSystemType
+              ? {
+                  type: normalizedSystemType,
+                  text: systemText,
+                  name: shortTargetName || "A member",
+                  suffix: systemSuffix,
+                }
+              : null,
+        };
+      });
+      const replyIconByMessageId = new Map(
+        nextMessages
+          .map((message) => [
+            String(message?.id || ""),
+            resolveReplyPreview(message).icon || null,
+          ])
+          .filter(
+            ([id, icon]) => Boolean(id) && Boolean(icon),
+          ),
+      );
+      const replyColorByMessageId = new Map(
+        nextMessages
+          .map((message) => [String(message?.id || ""), message?.color || null])
+          .filter(
+            ([id, color]) => Boolean(id) && Boolean(color),
+          ),
+      );
+      const nextMessagesWithReplyIcons = nextMessages.map((message) => {
+        if (!message?.replyTo) return message;
+        const replyId = String(message.replyTo.id || "");
+        if (!replyId) return message;
+        const resolvedIcon = replyIconByMessageId.get(replyId) || null;
+        const resolvedColor = replyColorByMessageId.get(replyId) || null;
+        if (!resolvedIcon && !resolvedColor) return message;
+        return {
+          ...message,
+          replyTo: {
+            ...message.replyTo,
+            icon: resolvedIcon || message.replyTo.icon || null,
+            color: resolvedColor || message.replyTo.color || null,
+          },
+        };
+      });
+      if (options.prepend) {
+        setMessages((prev) => {
+          if (String(activeChatIdRef.current || "") !== requestChatId) return prev;
+          const seen = new Set(prev.map((msg) => String(msg.id || "")));
+          const older = nextMessagesWithReplyIcons.filter(
+            (msg) => !seen.has(String(msg.id || "")),
+          );
+          return older.length ? [...older, ...prev] : prev;
+        });
+        return;
+      }
+      setMessages((prev) => {
+        if (String(activeChatIdRef.current || "") !== requestChatId) return prev;
+        if (isActiveChannelChat) {
+          const nextCounts = nextMessagesWithReplyIcons.reduce((acc, msg) => {
+            const id = String(msg?.id || "");
+            if (!id) return acc;
+            if (Number.isFinite(Number(msg?.seenCount))) {
+              acc[id] = Math.max(1, Number(msg.seenCount));
+            }
+            return acc;
+          }, {});
+          if (Object.keys(nextCounts).length) {
+            setChannelSeenCounts((prevCounts) => ({
+              ...prevCounts,
+              ...nextCounts,
+            }));
+          }
+        }
+        let basePrev = prev;
+        if (options.pruneMissing) {
+          const serverIds = new Set(
+            nextMessagesWithReplyIcons
+              .map((msg) => String(msg?.id || ""))
+              .filter((id) => Boolean(id)),
+          );
+          basePrev = prev.filter((msg) => {
+            if (msg?._delivery === "sending" || msg?._delivery === "failed")
+              return true;
+            if (msg?._clientId) return true;
+            const serverId = String(msg?._serverId || msg?.id || "");
+            return serverIds.has(serverId);
+          });
+        }
+        const prevByServerId = new Map(
+          basePrev
+            .filter((msg) => Boolean(String(msg._serverId || msg.id || "").trim()))
+            .map((msg) => [String(msg._serverId || msg.id), msg]),
+        );
+        const normalizeBody = (value) => normalizeMessageBody(value).trim();
+        const isGenericFileSummaryBody = (value) => {
+          const normalized = normalizeBody(value);
+          if (!normalized) return false;
+          return /^sent (a (media file|document|photo|video|voice message)|\d+ (files|photos|videos|voice messages|documents))$/i.test(
+            normalized,
+          );
+        };
+        const bodiesLookEquivalent = (
+          localBody,
+          serverBody,
+          localFiles = [],
+          serverFiles = [],
+        ) => {
+          const normalizedLocal = normalizeBody(localBody);
+          const normalizedServer = normalizeBody(serverBody);
+          if (normalizedLocal === normalizedServer) return true;
+          const localHasFiles = Array.isArray(localFiles) && localFiles.length > 0;
+          const serverHasFiles = Array.isArray(serverFiles) && serverFiles.length > 0;
+          if (!localHasFiles || !serverHasFiles) return false;
+          if (!normalizedLocal && isGenericFileSummaryBody(normalizedServer)) {
+            return true;
+          }
+          return false;
+        };
+        const prevLocalCandidates = basePrev.filter((msg) =>
+          Boolean(msg?._clientId),
+        );
+        const prevLocalByClientId = new Map(
+          prevLocalCandidates.map((msg) => [String(msg?._clientId || "").trim(), msg]),
+        );
+        const nextMessagesByClientRequestId = new Map(
+          nextMessagesWithReplyIcons
+            .map((msg) => [String(msg?.client_request_id || "").trim(), msg])
+            .filter(([clientRequestId]) => Boolean(clientRequestId)),
+        );
+        const isSavedChat =
+          activeChatTypeRef?.current === "saved" || activeChat?.type === "saved";
+        const nextMessagesWithLocalIdentity = nextMessagesWithReplyIcons.map(
+          (serverMsg) => {
+            let existingLocal = prevByServerId.get(String(serverMsg.id || ""));
+            const serverClientRequestId = String(
+              serverMsg?.client_request_id || "",
+            ).trim();
+            if (!existingLocal && serverClientRequestId) {
+              existingLocal =
+                prevLocalCandidates.find(
+                  (localMsg) =>
+                    String(localMsg?._clientId || "").trim() ===
+                    serverClientRequestId,
+                ) || null;
+            }
+            if (!existingLocal) {
+              const serverClientId = String(
+                serverMsg?.clientRequestId || serverMsg?.client_request_id || "",
+              ).trim();
+              if (serverClientId) {
+                existingLocal = prevLocalByClientId.get(serverClientId);
+              }
+            }
+            if (!existingLocal) {
+              existingLocal = prevLocalCandidates.find((localMsg) => {
+                if (!localMsg?._clientId) return false;
+                if ((localMsg.username || "") !== (serverMsg.username || ""))
+                  return false;
+                const localFiles = Array.isArray(localMsg.files)
+                  ? localMsg.files
+                  : [];
+                const serverFiles = Array.isArray(serverMsg.files)
+                  ? serverMsg.files
+                  : [];
+                if (
+                  !bodiesLookEquivalent(
+                    localMsg.body || "",
+                    serverMsg.body || "",
+                    localFiles,
+                    serverFiles,
+                  )
+                ) {
+                  return false;
+                }
+                if (localFiles.length !== serverFiles.length) return false;
+                const localTime = parseServerDate(
+                  localMsg.created_at,
+                ).getTime();
+                const serverTime = parseServerDate(
+                  serverMsg.created_at,
+                ).getTime();
+                return Math.abs(localTime - serverTime) < 2 * 60 * 1000;
+              });
+            }
+            if (!existingLocal?._clientId) {
+              if (isSavedChat && !serverMsg.read_at) {
+                return {
+                  ...serverMsg,
+                  read_at: serverMsg.created_at || new Date().toISOString(),
+                  read_by_user_id: serverMsg.read_by_user_id || user?.id || null,
+                };
+              }
+              return serverMsg;
+            }
+            const serverFiles = Array.isArray(serverMsg.files)
+              ? serverMsg.files
+              : [];
+            const localFiles = Array.isArray(existingLocal.files)
+              ? existingLocal.files
+              : [];
+            const mergedFiles =
+              serverFiles.length && localFiles.length === serverFiles.length
+                ? serverFiles.map((file, idx) => {
+                    const serverUrl = String(file?.url || "");
+                    const localUrl =
+                      localFiles[idx]?.url || localFiles[idx]?._localUrl || null;
+                    const keepLocalUrl =
+                      !serverUrl || serverUrl.startsWith("blob:");
+                    return {
+                      ...file,
+                      _localId:
+                        localFiles[idx]?._localId || localFiles[idx]?.id || null,
+                      _localUrl: keepLocalUrl ? localUrl : null,
+                    };
+                  })
+                : serverFiles;
+            return {
+              ...serverMsg,
+              files: mergedFiles,
+              _clientId: existingLocal._clientId,
+              client_request_id:
+                serverMsg?.client_request_id || existingLocal?._clientId || null,
+              _serverId: String(serverMsg.id || ""),
+              _chatId: existingLocal._chatId,
+              _delivery: undefined,
+              _awaitingServerEcho: false,
+              _readByMe:
+                Boolean(serverMsg?.read_by_me) ||
+                Boolean(existingLocal?._readByMe) ||
+                isMessageAuthoredByUser(serverMsg, user),
+              read_at:
+                serverMsg.read_at ||
+                existingLocal?.read_at ||
+                (isSavedChat
+                  ? serverMsg.created_at || new Date().toISOString()
+                  : null),
+              read_by_user_id:
+                serverMsg.read_by_user_id ||
+                existingLocal?.read_by_user_id ||
+                (isSavedChat ? user?.id || null : null),
+              seenCount: Math.max(
+                Number(serverMsg?.seenCount || 0),
+                Number(existingLocal?.seenCount || 0),
+              ) || undefined,
+            };
+          },
+        );
+
+        if (
+          nextMessages.length === 0 &&
+          basePrev.some((msg) => {
+            if (String(msg._chatId || chatId) !== String(chatId)) return false;
+            return Boolean(
+              msg._clientId || msg._awaitingServerEcho || msg._delivery,
+            );
+          })
+        ) {
+          // Prevent one-frame disappearance when first local message exists
+          // and a transient fetch returns empty before server echo settles.
+          return basePrev;
+        }
+        const isPendingMessageAcknowledged = (pending, serverMessages) => {
+          if (!pending || !serverMessages.length) return false;
+          const pendingClientRequestId = String(
+            pending?._clientId || pending?.client_request_id || "",
+          ).trim();
+          if (
+            pendingClientRequestId &&
+            serverMessages.some(
+              (serverMsg) =>
+                String(
+                  serverMsg?.clientRequestId || serverMsg?.client_request_id || "",
+                ).trim() ===
+                pendingClientRequestId,
+            )
+          ) {
+            return true;
+          }
+          const pendingServerId = String(pending?._serverId || "");
+          if (
+            pendingServerId &&
+            serverMessages.some((serverMsg) => String(serverMsg.id) === pendingServerId)
+          ) {
+            return true;
+          }
+          const pendingHasFiles =
+            Array.isArray(pending.files) && pending.files.length > 0;
+          const pendingProgress = Number(pending._uploadProgress ?? 100);
+          if (
+            pending._delivery === "sending" &&
+            pendingHasFiles &&
+            pendingProgress < 100
+          ) {
+            return false;
+          }
+          const pendingCreatedAt = parseServerDate(
+            pending.created_at || new Date().toISOString(),
+          ).getTime();
+          const pendingFiles = Array.isArray(pending.files)
+            ? pending.files
+            : [];
+          const pendingBody = normalizeBody(pending.body || "");
+          return serverMessages.some((serverMsg) => {
+            if (serverMsg.username !== pending.username) return false;
+            const serverBody = normalizeBody(serverMsg.body || "");
+            const serverFiles = Array.isArray(serverMsg.files)
+              ? serverMsg.files
+              : [];
+            if (
+              !bodiesLookEquivalent(
+                pendingBody,
+                serverBody,
+                pendingFiles,
+                serverFiles,
+              )
+            ) {
+              return false;
+            }
+            if (serverFiles.length !== pendingFiles.length) return false;
+            const serverCreatedAt = parseServerDate(
+              serverMsg.created_at,
+            ).getTime();
+            const minMatchTime = pendingCreatedAt - 3000;
+            const maxMatchTime = pendingCreatedAt + 2 * 60 * 1000;
+            return (
+              serverCreatedAt >= minMatchTime && serverCreatedAt <= maxMatchTime
+            );
+          });
+        };
+
+        const isServerMessageShadowedByPendingUpload = (
+          serverMsg,
+          pendingMessages,
+        ) => {
+          return pendingMessages.some((pending) => {
+            if (!pending || pending._delivery !== "sending") return false;
+            const pendingFiles = Array.isArray(pending.files)
+              ? pending.files
+              : [];
+            if (!pendingFiles.length) return false;
+            const pendingProgress = Number(pending._uploadProgress || 0);
+            if (pendingProgress >= 100) return false;
+            if (serverMsg.username !== pending.username) return false;
+            const serverBody = normalizeBody(serverMsg.body || "");
+            const pendingBody = normalizeBody(pending.body || "");
+            const serverFiles = Array.isArray(serverMsg.files)
+              ? serverMsg.files
+              : [];
+            if (
+              !bodiesLookEquivalent(
+                pendingBody,
+                serverBody,
+                pendingFiles,
+                serverFiles,
+              )
+            ) {
+              return false;
+            }
+            if (serverFiles.length !== pendingFiles.length) return false;
+            const pendingCreatedAt = parseServerDate(
+              pending.created_at || new Date().toISOString(),
+            ).getTime();
+            const serverCreatedAt = parseServerDate(
+              serverMsg.created_at,
+            ).getTime();
+            const minMatchTime = pendingCreatedAt - 3000;
+            const maxMatchTime = pendingCreatedAt + 2 * 60 * 1000;
+            return (
+              serverCreatedAt >= minMatchTime && serverCreatedAt <= maxMatchTime
+            );
+          });
+        };
+
+        const pendingLocal = basePrev.filter(
+          (msg) =>
+            (msg._delivery === "sending" || msg._delivery === "failed") &&
+            String(msg._chatId || chatId) === String(chatId) &&
+            !isPendingMessageAcknowledged(msg, nextMessages),
+        );
+        const optimisticSentLocal = basePrev.filter((msg) => {
+          if (!msg?._awaitingServerEcho) return false;
+          if (String(msg._chatId || chatId) !== String(chatId)) return false;
+          const localClientRequestId = String(
+            msg?._clientId || msg?.client_request_id || "",
+          ).trim();
+          if (
+            localClientRequestId &&
+            nextMessagesByClientRequestId.has(localClientRequestId)
+          ) {
+            return false;
+          }
+          return !nextMessagesWithLocalIdentity.some(
+            (serverMsg) =>
+              String(serverMsg.id) === String(msg._serverId || msg.id),
+          );
+        });
+        const nextMessagesVisible = nextMessagesWithLocalIdentity.filter(
+          (msg) => !isServerMessageShadowedByPendingUpload(msg, pendingLocal),
+        );
+        const sortComparator = (left, right) =>
+          compareMessages(left, right, parseServerDate);
+
+        let mergedNext = [
+          ...nextMessagesVisible,
+          ...optimisticSentLocal,
+          ...pendingLocal,
+        ].sort(sortComparator);
+
+        const nowMs = Date.now();
+        const rescuedOptimistic = basePrev.filter((msg) => {
+          if (!msg?._clientId) return false;
+          if (String(msg._chatId || chatId) !== String(chatId)) return false;
+          const queuedAt = Number(msg?._queuedAt || 0);
+          if (!queuedAt || nowMs - queuedAt > 2 * 60 * 1000) return false;
+          const hasClientMatch = mergedNext.some(
+            (item) => String(item?._clientId || "") === String(msg._clientId),
+          );
+          if (hasClientMatch) return false;
+          const optimisticServerId = String(msg?._serverId || "");
+          if (optimisticServerId) {
+            const hasServerMatch = mergedNext.some(
+              (item) =>
+                String(item?._serverId || item?.id || "") === optimisticServerId,
+            );
+            if (hasServerMatch) return false;
+          }
+          return true;
+        });
+        if (rescuedOptimistic.length) {
+          mergedNext = [...mergedNext, ...rescuedOptimistic].sort(
+            sortComparator,
+          );
+        }
+
+        // Final reconciliation pass: prevent duplicate rows that represent
+        // the same logical message. Bridge both identity systems together so a
+        // pending row keyed by _clientId is collapsed into the echoed server row
+        // once that same logical message gains a server id.
+        const mergedNextDeduped = [];
+        const serverIdentityMap = new Map();
+        const clientIdentityMap = new Map();
+        const requestIdentityMap = new Map();
+        const getMessageIdentity = (msg) => {
+          const serverId = String(msg?._serverId || msg?.id || "");
+          const hasServerId = Boolean(serverId);
+          const clientId = String(msg?._clientId || "").trim();
+          const requestId = String(
+            msg?.client_request_id || msg?._clientId || "",
+          ).trim();
+          return {
+            hasServerId,
+            serverKey: hasServerId ? `s:${serverId}` : "",
+            clientKey: clientId ? `c:${clientId}` : "",
+            requestKey: requestId ? `r:${requestId}` : "",
+          };
+        };
+        const choosePreferredMessage = (existing, next) => {
+          if (!existing) return next;
+          if (!next) return existing;
+          const existingServerId = String(existing?._serverId || existing?.id || "");
+          const nextServerId = String(next?._serverId || next?.id || "");
+          const existingHasServerId = Boolean(existingServerId);
+          const nextHasServerId = Boolean(nextServerId);
+          if (existingHasServerId !== nextHasServerId) {
+            return nextHasServerId ? next : existing;
+          }
+          const existingSending = existing?._delivery === "sending";
+          const nextSending = next?._delivery === "sending";
+          if (existingSending !== nextSending) {
+            return nextSending ? existing : next;
+          }
+          const existingAwaiting = Boolean(existing?._awaitingServerEcho);
+          const nextAwaiting = Boolean(next?._awaitingServerEcho);
+          if (existingAwaiting !== nextAwaiting) {
+            return nextAwaiting ? existing : next;
+          }
+          const existingProgress = Number(existing?._uploadProgress ?? -1);
+          const nextProgress = Number(next?._uploadProgress ?? -1);
+          if (existingProgress !== nextProgress) {
+            return nextProgress > existingProgress ? next : existing;
+          }
+          return existing;
+        };
+        mergedNext.forEach((msg) => {
+          const { serverKey, clientKey, requestKey } = getMessageIdentity(msg);
+          if (!serverKey && !clientKey && !requestKey) {
+            mergedNextDeduped.push(msg);
+            return;
+          }
+          const existingIndexes = Array.from(
+            new Set(
+              [
+                serverKey ? serverIdentityMap.get(serverKey) : undefined,
+                clientKey ? clientIdentityMap.get(clientKey) : undefined,
+                requestKey ? requestIdentityMap.get(requestKey) : undefined,
+              ]
+                .filter((value) => value !== undefined),
+            ),
+          );
+          if (!existingIndexes.length) {
+            const nextIndex = mergedNextDeduped.length;
+            mergedNextDeduped.push(msg);
+            if (serverKey) serverIdentityMap.set(serverKey, nextIndex);
+            if (clientKey) clientIdentityMap.set(clientKey, nextIndex);
+            if (requestKey) requestIdentityMap.set(requestKey, nextIndex);
+            return;
+          }
+
+          const primaryIndex = existingIndexes[0];
+          let mergedMessage = choosePreferredMessage(
+            mergedNextDeduped[primaryIndex],
+            msg,
+          );
+          for (let i = 1; i < existingIndexes.length; i += 1) {
+            const duplicateIndex = existingIndexes[i];
+            mergedMessage = choosePreferredMessage(
+              mergedMessage,
+              mergedNextDeduped[duplicateIndex],
+            );
+            mergedNextDeduped[duplicateIndex] = null;
+          }
+          mergedNextDeduped[primaryIndex] = mergedMessage;
+
+          const mergedIdentity = getMessageIdentity(mergedMessage);
+          if (serverKey) serverIdentityMap.set(serverKey, primaryIndex);
+          if (clientKey) clientIdentityMap.set(clientKey, primaryIndex);
+          if (requestKey) requestIdentityMap.set(requestKey, primaryIndex);
+          if (mergedIdentity.serverKey) {
+            serverIdentityMap.set(mergedIdentity.serverKey, primaryIndex);
+          }
+          if (mergedIdentity.clientKey) {
+            clientIdentityMap.set(mergedIdentity.clientKey, primaryIndex);
+          }
+          if (mergedIdentity.requestKey) {
+            requestIdentityMap.set(mergedIdentity.requestKey, primaryIndex);
+          }
+        });
+        mergedNext = mergedNextDeduped.filter(Boolean);
+
+        if (options.preserveHistory) {
+          const mergedById = new Map();
+          mergedNext.forEach((msg) => {
+            const key = String(msg?._serverId || msg?.id || "");
+            if (key) {
+              mergedById.set(key, msg);
+            }
+          });
+          const carriedOlder = prev.filter((msg) => {
+            const key = String(msg?._serverId || msg?.id || "");
+            if (!key) return false;
+            return !mergedById.has(key);
+          });
+          if (carriedOlder.length) {
+            mergedNext = [...carriedOlder, ...mergedNext].sort(sortComparator);
+          }
+        }
+        return mergedNext;
+      });
+      const lastMsg = nextMessages[nextMessages.length - 1];
+      const lastId = lastMsg?.id || null;
+      const hasUnreadFromOthers = nextMessages.some(
+        (msg) => isMessageFromOtherUser(msg, user) && !msg._readByMe,
+      );
+      const hasNew =
+        lastId &&
+        lastMessageIdRef.current &&
+        lastId !== lastMessageIdRef.current;
+      const newFromSelf = hasNew && isMessageAuthoredByUser(lastMsg, user);
+      lastMessageIdRef.current = lastId;
+
+      if (openingChatRef.current) {
+        const firstUnreadIndex = nextMessages.findIndex(
+          (msg) => isMessageFromOtherUser(msg, user) && !msg._readByMe,
+        );
+        const firstUnreadMessage =
+          firstUnreadIndex >= 0 ? nextMessages[firstUnreadIndex] : null;
+
+        shouldAutoMarkReadRef.current = true;
+        pendingScrollToUnreadRef.current = null;
+
+        if (
+          !topicId && !firstUnreadMessage?.id &&
+          openingUnreadCountRef.current > 0 &&
+          !options.forceUnreadFetch
+        ) {
+          // The first unread message is older than the current window.
+          // Ask the server for its exact position, then reload anchored from there.
+          void (async () => {
+            try {
+              const anchorRes = await fetchFirstUnreadMessage(
+                { chatId, username: user.username },
+                { cache: "no-store" },
+              );
+              if (String(activeChatIdRef.current || "") !== requestChatId) return;
+              const anchorData = await anchorRes.json();
+              if (String(activeChatIdRef.current || "") !== requestChatId) return;
+              const anchor = anchorData?.firstUnread;
+              if (anchor?.id && anchor?.created_at) {
+                // Load messageFetchLimit messages starting from the first unread
+                void loadMessages(chatId, {
+                  silent: true,
+                  preserveHistory: true,
+                  afterId: anchor.id,
+                  afterCreatedAt: anchor.created_at,
+                  limit: CHAT_PAGE_CONFIG.messageFetchLimit,
+                  forceUnreadFetch: true,
+                });
+              } else {
+                // No unread messages found server-side — scroll to bottom
+                openingHadUnreadRef.current = false;
+                openingUnreadCountRef.current = 0;
+                openingChatRef.current = false;
+                allowStartReachedRef.current = true;
+                pendingScrollToBottomRef.current = true;
+                isAtBottomRef.current = true;
+                setIsAtBottom(true);
+                userScrolledUpRef.current = false;
+                setUserScrolledUp(false);
+                shouldAutoMarkReadRef.current = true;
+              }
+            } catch {
+              // Fallback: just scroll to bottom if the anchor fetch fails
+              openingHadUnreadRef.current = false;
+              openingUnreadCountRef.current = 0;
+              openingChatRef.current = false;
+              allowStartReachedRef.current = true;
+              pendingScrollToBottomRef.current = true;
+            }
+          })();
+          return;
+        }
+
+        if (firstUnreadMessage?.id) {
+          shouldAutoMarkReadRef.current = false;
+          const unreadId = String(firstUnreadMessage.id);
+          setUnreadMarkerId(unreadId);
+          unreadMarkerIdRef.current = unreadId;
+          pendingScrollToUnreadRef.current = unreadId;
+          pendingScrollToBottomRef.current = false;
+          userScrolledUpRef.current = false;
+          setUserScrolledUp(false);
+          isAtBottomRef.current = false;
+          setIsAtBottom(false);
+        } else {
+          setUnreadMarkerId(null);
+          unreadMarkerIdRef.current = null;
+          pendingScrollToBottomRef.current = true;
+          userScrolledUpRef.current = false;
+          setUserScrolledUp(false);
+          isAtBottomRef.current = true;
+          setIsAtBottom(true);
+          shouldAutoMarkReadRef.current = true;
+        }
+
+        openingHadUnreadRef.current = false;
+        openingUnreadCountRef.current = 0;
+        openingChatRef.current = false;
+        // Enable pagination after initial load completes (works on both desktop and mobile)
+        allowStartReachedRef.current = true;
+      }
+
+      if (options.forceBottom) {
+        pendingScrollToBottomRef.current = true;
+        isAtBottomRef.current = true;
+        setIsAtBottom(true);
+        userScrolledUpRef.current = false;
+        setUserScrolledUp(false);
+      }
+
+      if (!options.silent) {
+        setUnreadInChat(0);
+      }
+
+      const hasPendingUnreadAnchor =
+        pendingScrollToUnreadRef.current !== null ||
+        unreadMarkerIdRef.current !== null;
+      const keepUnreadAnchor =
+        hasPendingUnreadAnchor ||
+        (Boolean(options.initialLoad) &&
+          Number(openingUnreadCountRef.current || 0) > 0);
+      const unreadAnchorLocked =
+        unreadMarkerIdRef.current !== null &&
+        Date.now() < Number(unreadAnchorLockUntilRef.current || 0);
+      if (!keepUnreadAnchor && !unreadAnchorLocked) {
+        if (newFromSelf) {
+          pendingScrollToBottomRef.current = true;
+          isAtBottomRef.current = true;
+          setIsAtBottom(true);
+          userScrolledUpRef.current = false;
+          setUserScrolledUp(false);
+        } else if (hasNew && !userScrolledUpRef.current) {
+          pendingScrollToBottomRef.current = true;
+          isAtBottomRef.current = true;
+          setIsAtBottom(true);
+        }
+      }
+      if (
+        activeChat?.type === "dm" &&
+        hasUnreadFromOthers &&
+        isDocumentActive() &&
+        (!isMobileViewport || mobileTab === "chat") &&
+        isAtBottomRef.current &&
+        !userScrolledUpRef.current &&
+        shouldAutoMarkReadRef.current
+      ) {
+        await markMessagesRead({ chatId, username: user.username }).catch(
+          () => null,
+        );
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+      // Keep chat window free of transient fetch errors.
+    } finally {
+      if (messageFetchAbortRef.current === controller) {
+        messageFetchAbortRef.current = null;
+      }
+      messageFetchInFlightRef.current = false;
+      if (queuedSilentMessageRefreshRef.current) {
+        const queuedChatId = String(queuedSilentMessageRefreshRef.current.chatId || "");
+        const lastAt = Number(lastSilentFetchByChatRef.current.get(queuedChatId) || 0);
+        const remainingMs = lastAt
+          ? Math.max(0, SILENT_FETCH_MIN_INTERVAL_MS - (Date.now() - lastAt))
+          : 0;
+        scheduleQueuedSilentMessageRefresh(remainingMs);
+      }
+      if (!options.silent) {
+        setLoadingMessages(false);
+      }
+    }
+  }
+
+  return {
+    loadMessages,
+    loadingMessages,
+    setLoadingMessages,
+    hasOlderMessages,
+    setHasOlderMessages,
+  };
+}

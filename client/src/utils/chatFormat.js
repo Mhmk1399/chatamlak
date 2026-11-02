@@ -1,0 +1,104 @@
+import { t, getLocale } from "../i18n/locale.js";
+export const formatBytesAsMb = (bytes) =>
+  `${Math.round(Number(bytes || 0) / (1024 * 1024))} MB`;
+
+export const parseServerDate = (value) => {
+  if (!value) return new Date();
+  if (typeof value === "string") {
+    let normalized = value.trim();
+    if (!normalized) return new Date();
+    normalized = normalized.includes("T") ? normalized : normalized.replace(" ", "T");
+    normalized = normalized.replace(/(\.\d{3})\d+/, "$1");
+    const hasExplicitTimezone = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(normalized);
+    if (!hasExplicitTimezone) {
+      const d = new Date(`${normalized}Z`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    normalized = normalized.replace(/([+-]\d{4})$/i, (offset) => `${offset.slice(0, 3)}:${offset.slice(3)}`);
+    normalized = normalized.replace(/([+-]\d{2})$/i, "$1:00");
+    const d = new Date(normalized);
+    if (!isNaN(d.getTime())) return d;
+    return new Date(NaN);
+  }
+  return new Date(value);
+};
+
+export const formatDayLabel = (dateValue) => {
+  const date = parseServerDate(dateValue);
+  if (!Number.isFinite(date.getTime())) return "";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round(
+    (startOfToday - startOfDate) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays === 0) return t("Today");
+  if (diffDays === 1) return t("Yesterday");
+  if (diffDays > 1 && diffDays < 7) {
+    return date.toLocaleDateString(getLocale() === "fa" ? "fa-IR" : undefined, { weekday: "long" });
+  }
+  return date.toLocaleDateString(getLocale() === "fa" ? "fa-IR" : undefined, {
+    month: "long",
+    day: "numeric",
+  });
+};
+
+export const formatTime = (dateValue) => {
+  const date = parseServerDate(dateValue);
+  if (!Number.isFinite(date.getTime())) return "";
+  return date.toLocaleTimeString(getLocale() === "fa" ? "fa-IR" : undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
+
+export const formatChatCardTimestamp = (dateValue) => {
+  const date = parseServerDate(dateValue);
+  if (!Number.isFinite(date.getTime())) return "";
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.floor((startOfToday - startOfDate) / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return formatTime(date);
+  }
+
+  if (diffDays < 7) {
+    const shortDay = date.toLocaleDateString(getLocale() === "fa" ? "fa-IR" : "en-US", { weekday: "short" }).slice(0, 3);
+    return shortDay;
+  }
+
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(getLocale() === "fa" ? "fa-IR" : "en-US", {
+      month: "2-digit",
+      day: "2-digit",
+    });
+  }
+
+  return date.toLocaleDateString(getLocale() === "fa" ? "fa-IR" : "en-US", {
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
+
+// Formats a count using compact notation
+export const formatCompactCount = (value) => {
+  const count = Math.max(0, Number(value || 0));
+  if (!Number.isFinite(count)) return "0";
+  if (count < 1000) return getLocale() === "fa" ? count.toLocaleString("fa-IR") : String(count);
+  if (count < 1_000_000) {
+    const next = (count / 1000).toFixed(1);
+    return `${next.replace(/\.0$/, "")}K`;
+  }
+  if (count < 1_000_000_000) {
+    const next = (count / 1_000_000).toFixed(1);
+    return `${next.replace(/\.0$/, "")}M`;
+  }
+  const next = (count / 1_000_000_000).toFixed(1);
+  return `${next.replace(/\.0$/, "")}B`;
+};

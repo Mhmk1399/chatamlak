@@ -1,0 +1,142 @@
+import { confirmAction, getCliArgs, getPositionalArgs, hasForceYes, hasFlag } from './_cli.js'
+import {
+  openDatabase,
+  removeStoredFiles,
+  chunkArray,
+  runAdminActionViaServer,
+  detectRunningServer,
+} from './_db-admin.js'
+import { resolveChatRow } from '../lib/dbToolHelpers.js'
+
+async function resolveChatIds(dbApi, selectors) {
+  const ids = new Set()
+  const missing = []
+
+  for (const selector of selectors) {
+    const raw = String(selector || '').trim()
+    if (!raw) continue
+
+    const chat = await resolveChatRow(dbApi, raw, { groupOnly: false })
+    if (chat?.id) {
+      ids.add(String(chat.id))
+      continue
+    }
+
+    missing.push(raw)
+  }
+
+  return {
+    chatIds: Array.from(ids),
+    missing,
+  }
+}
+
+async function deleteChatsByIds(dbApi, chatIds) {
+  const placeholders = chatIds.map(() => '?').join(', ')
+  const fileRows = await dbApi.getAll(
+    `
+      SELECT cmf.stored_name
+      FROM chat_message_files cmf
+      JOIN chat_messages cm ON cm.id = cmf.message_id
+      WHERE cm.chat_id IN (${placeholders})
+    `,
+    chatIds,
+  )
+  const storedNames = fileRows.map((row) => row.stored_name)
+
+  await dbApi.run('BEGIN')
+  try {
+    for (const chunk of chunkArray(chatIds, 500)) {
+      const chunkPlaceholders = chunk.map(() => '?').join(', ')
+      await dbApi.run(
+        `DELETE FROM chat_message_files WHERE message_id IN (
+          SELECT id FROM chat_messages WHERE chat_id IN (${chunkPlaceholders})
+        )`,
+        chunk,
+      )
+      await dbApi.run(`DELETE FROM chat_messages WHERE chat_id IN (${chunkPlaceholders})`, chunk)
+      await dbApi.run(`DELETE FROM chat_members WHERE chat_id IN (${chunkPlaceholders})`, chunk)
+      await dbApi.run(`DELETE FROM chat_left_members WHERE chat_id IN (${chunkPlaceholders})`, chunk)
+      await dbApi.run(`DELETE FROM hidden_chats WHERE chat_id IN (${chunkPlaceholders})`, chunk)
+      await dbApi.run(`DELETE FROM chats WHERE id IN (${chunkPlaceholders})`, chunk)
+    }
+    await dbApi.run('COMMIT')
+  } catch (error) {
+    await dbApi.run('ROLLBACK')
+    throw error
+  }
+
+  const fileCleanup = removeStoredFiles(storedNames)
+  return {
+    removedChats: chatIds.length,
+    removedFiles: fileCleanup.removed,
+    missingFiles: fileCleanup.missing,
+  }
+}
+
+async function main() {
+  const args = getCliArgs()
+  const force = hasForceYes(args)
+  const hasAll = hasFlag(args, '--all')
+  const selectors = getPositionalArgs(args)
+
+  const dbApi = await openDatabase()
+  try {
+    const resolved = await resolveChatIds(dbApi, selectors)
+    let chatIds = resolved.chatIds
+
+    if (resolved.missing.length) {
+      console.error(`No chats matched: ${resolved.missing.join(', ')}`)
+      process.exitCode = 1
+      return
+    }
+
+    if (!chatIds.length) {
+      if (!hasAll) {
+        console.error('Refusing to delete all chats without --all.')
+        process.exitCode = 1
+        return
+      }
+      const allChats = await dbApi.getAll('SELECT id FROM chats ORDER BY id ASC')
+      chatIds = allChats
+        .map((row) => String(row.id))
+        .filter(Boolean)
+    }
+
+    if (!chatIds.length) {
+      console.log('No chats found. Nothing to delete.')
+      return
+    }
+
+    const confirmed = await confirmAction({
+      prompt: selectors.length
+        ? `Delete ${chatIds.length} selected chat(s) and related data?`
+        : `Delete ALL chats (${chatIds.length}) and related data?`,
+      force,
+      forceHint: 'Refusing to delete chats in non-interactive mode without -y/--yes. Run: npm run db:chat:delete -- -y <chat-id-or-username>',
+    })
+
+    if (!confirmed) {
+      console.log('Aborted.')
+      return
+    }
+
+    const { running } = await detectRunningServer()
+    if (running) {
+      const remoteResult = await runAdminActionViaServer('delete_chats', { chatIds, all: hasAll })
+      console.log(`Server mode: chats deleted: ${remoteResult.removedChats ?? 0}`)
+      console.log(`Server mode: stored files removed: ${remoteResult.removedFiles ?? 0}`)
+      return
+    }
+
+    const result = await deleteChatsByIds(dbApi, chatIds)
+    await dbApi.save()
+    console.log(`Chats deleted: ${result.removedChats}`)
+    console.log(`Stored files removed: ${result.removedFiles}`)
+    console.log(`Stored files missing on disk: ${result.missingFiles}`)
+  } finally {
+    await dbApi.close()
+  }
+}
+
+await main()

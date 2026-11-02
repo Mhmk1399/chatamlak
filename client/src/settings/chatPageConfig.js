@@ -1,0 +1,201 @@
+const readEnvNumber = (key, fallback, options = {}) => {
+  const keys = Array.isArray(key) ? key : [key];
+  const raw = keys
+    .map((name) => import.meta.env[name])
+    .find((value) => value !== undefined && value !== null && value !== "");
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  const integer = options.integer ? Math.trunc(parsed) : parsed;
+  if (options.min !== undefined && integer < options.min) return fallback;
+  if (options.max !== undefined && integer > options.max) return fallback;
+  return integer;
+};
+
+const readEnvBool = (key, fallback) => {
+  const keys = Array.isArray(key) ? key : [key];
+  const raw = keys
+    .map((name) => import.meta.env[name])
+    .find((value) => value !== undefined && value !== null && value !== "");
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const normalized = String(raw).trim().toLowerCase();
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
+  return fallback;
+};
+
+const MB = 1024 * 1024;
+const readEnvSizeMbAsBytes = (mbKeys, legacyByteKeys, fallbackMb, options = {}) => {
+  const mbValue = readEnvNumber(mbKeys, null, {
+    integer: true,
+    ...options,
+  });
+  if (mbValue !== null) return mbValue * MB;
+  return readEnvNumber(legacyByteKeys, fallbackMb * MB, {
+    integer: true,
+    min: 1024,
+  });
+};
+
+export const CHAT_PAGE_CONFIG = {
+  pendingTextTimeoutMs: readEnvNumber("CHAT_PENDING_TEXT_TIMEOUT", 5 * 60 * 1000, {
+    integer: true,
+    min: 1000,
+  }),
+  pendingFileTimeoutMs: readEnvNumber("CHAT_PENDING_FILE_TIMEOUT", 20 * 60 * 1000, {
+    integer: true,
+    min: 1000,
+  }),
+  pendingRetryIntervalMs: readEnvNumber("CHAT_PENDING_RETRY_INTERVAL", 4000, {
+    integer: true,
+    min: 250,
+  }),
+  pendingStatusCheckIntervalMs: readEnvNumber("CHAT_PENDING_STATUS_CHECK_INTERVAL", 1000, {
+    integer: true,
+    min: 250,
+  }),
+  messageFetchLimit: readEnvNumber("CHAT_MESSAGE_FETCH_LIMIT", 60, {
+    integer: true,
+    min: 1,
+  }),
+  messagePageSize: readEnvNumber("CHAT_MESSAGE_PAGE_SIZE", 60, {
+    integer: true,
+    min: 10,
+    max: 500,
+  }),
+  maxFilesPerMessage: readEnvNumber("FILE_UPLOAD_MAX_FILES", 10, {
+    integer: true,
+    min: 1,
+  }),
+  maxFileSizeBytes: readEnvSizeMbAsBytes(
+    "FILE_UPLOAD_MAX_SIZE_MB",
+    "FILE_UPLOAD_MAX_SIZE",
+    25,
+    { min: 1 },
+  ),
+  maxTotalUploadBytes: readEnvSizeMbAsBytes(
+    "FILE_UPLOAD_MAX_TOTAL_SIZE_MB",
+    "FILE_UPLOAD_MAX_TOTAL_SIZE",
+    75,
+    { min: 1 },
+  ),
+  chatsRefreshIntervalMs: readEnvNumber("CHAT_LIST_REFRESH_INTERVAL", 20000, {
+    integer: true,
+    min: 1000,
+  }),
+  newChatSearchMaxResults: readEnvNumber("CHAT_SEARCH_MAX_RESULTS", 5, {
+    integer: true,
+    min: 1,
+  }),
+  healthCheckIntervalMs: readEnvNumber("CHAT_HEALTH_CHECK_INTERVAL", 10000, {
+    integer: true,
+    min: 1000,
+  }),
+  sseReconnectDelayMs: readEnvNumber("CHAT_SSE_RECONNECT_DELAY", 2000, {
+    integer: true,
+    min: 250,
+  }),
+  voiceWaveformMaxDecodeBytes: readEnvSizeMbAsBytes(
+    "CHAT_VOICE_WAVEFORM_MAX_DECODE_MB",
+    "CHAT_VOICE_WAVEFORM_MAX_DECODE_BYTES",
+    5,
+    {
+      min: 1,
+    },
+  ),
+  voiceWaveformMaxDecodeSeconds: readEnvNumber(
+    "CHAT_VOICE_WAVEFORM_MAX_DECODE_SECONDS",
+    8 * 60,
+    {
+      integer: true,
+      min: 10,
+    },
+  ),
+  cacheTtlMs:
+    readEnvNumber("CHAT_CACHE_TTL", 24, {
+      integer: true,
+      min: 1,
+    }) *
+    60 *
+    60 *
+    1000,
+  fileUploadEnabled: readEnvBool("FILE_UPLOAD", true),
+  callsEnabled: readEnvBool("CALL", true),
+  videoCallsEnabled: readEnvBool("CALL_VIDEO", true),
+};
+
+// ─── Live override for admin-panel-configurable client settings ─────────────
+//
+// Settings that can be tuned from the admin panel. App.jsx calls this once
+// after fetching /api/app/info so DB values override build-time env defaults.
+export function setChatPageConfig({
+  messageFetchLimit,
+  messagePageSize,
+  cacheTtlHours,
+  fileUploadEnabled,
+  fileUploadMaxFiles,
+  fileUploadMaxSizeMb,
+  fileUploadMaxTotalSizeMb,
+  listRefreshIntervalMs,
+  healthCheckIntervalMs,
+  sseReconnectDelayMs,
+  searchMaxResults,
+  pendingTextTimeoutMs,
+  pendingFileTimeoutMs,
+  pendingRetryIntervalMs,
+  pendingStatusCheckIntervalMs,
+  callsEnabled,
+  videoCallsEnabled,
+} = {}) {
+  if (Number.isFinite(messageFetchLimit) && messageFetchLimit > 0) {
+    CHAT_PAGE_CONFIG.messageFetchLimit = Math.trunc(messageFetchLimit);
+  }
+  if (Number.isFinite(messagePageSize) && messagePageSize > 0) {
+    CHAT_PAGE_CONFIG.messagePageSize = Math.trunc(messagePageSize);
+  }
+  if (Number.isFinite(cacheTtlHours) && cacheTtlHours > 0) {
+    CHAT_PAGE_CONFIG.cacheTtlMs = Math.trunc(cacheTtlHours) * 60 * 60 * 1000;
+  }
+  if (typeof fileUploadEnabled === "boolean") {
+    CHAT_PAGE_CONFIG.fileUploadEnabled = fileUploadEnabled;
+  }
+  if (Number.isFinite(fileUploadMaxFiles) && fileUploadMaxFiles > 0) {
+    CHAT_PAGE_CONFIG.maxFilesPerMessage = Math.trunc(fileUploadMaxFiles);
+  }
+  if (Number.isFinite(fileUploadMaxSizeMb) && fileUploadMaxSizeMb > 0) {
+    CHAT_PAGE_CONFIG.maxFileSizeBytes = Math.trunc(fileUploadMaxSizeMb) * MB;
+  }
+  if (Number.isFinite(fileUploadMaxTotalSizeMb) && fileUploadMaxTotalSizeMb > 0) {
+    CHAT_PAGE_CONFIG.maxTotalUploadBytes = Math.trunc(fileUploadMaxTotalSizeMb) * MB;
+  }
+  if (Number.isFinite(listRefreshIntervalMs) && listRefreshIntervalMs > 0) {
+    CHAT_PAGE_CONFIG.chatsRefreshIntervalMs = Math.trunc(listRefreshIntervalMs);
+  }
+  if (Number.isFinite(healthCheckIntervalMs) && healthCheckIntervalMs > 0) {
+    CHAT_PAGE_CONFIG.healthCheckIntervalMs = Math.trunc(healthCheckIntervalMs);
+  }
+  if (Number.isFinite(sseReconnectDelayMs) && sseReconnectDelayMs > 0) {
+    CHAT_PAGE_CONFIG.sseReconnectDelayMs = Math.trunc(sseReconnectDelayMs);
+  }
+  if (Number.isFinite(searchMaxResults) && searchMaxResults > 0) {
+    CHAT_PAGE_CONFIG.newChatSearchMaxResults = Math.trunc(searchMaxResults);
+  }
+  if (Number.isFinite(pendingTextTimeoutMs) && pendingTextTimeoutMs > 0) {
+    CHAT_PAGE_CONFIG.pendingTextTimeoutMs = Math.trunc(pendingTextTimeoutMs);
+  }
+  if (Number.isFinite(pendingFileTimeoutMs) && pendingFileTimeoutMs > 0) {
+    CHAT_PAGE_CONFIG.pendingFileTimeoutMs = Math.trunc(pendingFileTimeoutMs);
+  }
+  if (Number.isFinite(pendingRetryIntervalMs) && pendingRetryIntervalMs > 0) {
+    CHAT_PAGE_CONFIG.pendingRetryIntervalMs = Math.trunc(pendingRetryIntervalMs);
+  }
+  if (Number.isFinite(pendingStatusCheckIntervalMs) && pendingStatusCheckIntervalMs > 0) {
+    CHAT_PAGE_CONFIG.pendingStatusCheckIntervalMs = Math.trunc(pendingStatusCheckIntervalMs);
+  }
+  if (typeof callsEnabled === "boolean") {
+    CHAT_PAGE_CONFIG.callsEnabled = callsEnabled;
+  }
+  if (typeof videoCallsEnabled === "boolean") {
+    CHAT_PAGE_CONFIG.videoCallsEnabled = videoCallsEnabled;
+  }
+}

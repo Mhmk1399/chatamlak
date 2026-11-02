@@ -1,0 +1,183 @@
+# Deployment Script
+
+The deployment script (`songbird-deploy`) is the recommended way to install and manage Songbird. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
+
+:::info
+
+The script targets Ubuntu (22.04+) and needs root privileges (it uses `sudo` automatically when not run as root). For Docker-based or fully manual setups, see [Install via Docker](./Installation-Docker.md) and [Manual Installation](./Manual-Installation.md).
+
+:::
+
+## First run
+
+Run the one-liner on your server:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bllackbull/Songbird/main/scripts/install.sh | bash
+```
+
+This downloads the script, opens the menu, and installs a global `songbird-deploy` command. From then on, launch it anytime with:
+
+```bash
+songbird-deploy
+```
+
+## Main menu
+
+| Option | Action | Description |
+|---|---|---|
+| 1 | 📥 Install Songbird | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
+| 2 | 🔄 Update Songbird | Update to latest version or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
+| 3 | ♻️ Restart Songbird | Restart the `songbird.service`. |
+| 4 | ⚙️ Edit Settings (.env) | Change ports, uploads, retention, sign-up, and other env values, then rebuild/apply. |
+| 5 | 🗃️ Manage Database | Open the database submenu (see below). |
+| 6 | 🗑️ Remove Songbird | Uninstall Songbird, optionally removing the global command. |
+| 7 | 🔄 Update menu | Check GitHub for newer script versions and update the global command (or reinstall current). |
+| 8 | 🌐 Configure mirrors | Set NodeSource, apt, and npm registry mirrors for restricted networks. |
+| 9 | 📋 View Logs | Open the logs submenu (script, service, Nginx access/error). |
+| 0 | 🚪 Exit | Leave the menu. |
+
+## Installation flow
+
+When you choose **Install**, the script walks you through a series of prompts:
+
+### 1. Source mode
+
+| Mode | Description |
+|---|---|
+| GitHub | Clone the project from the official GitHub repository. |
+| Offline | Install from a local source zip (useful for air-gapped servers). |
+
+### 2. Deploy mode
+
+| Mode | Description |
+|---|---|
+| Domain | Serve Songbird on a domain name (e.g. `example.com`). |
+| IP | Serve Songbird directly on the server's public IP. |
+
+### 3. Certificate mode
+
+| Mode | Description |
+|---|---|
+| Obtain certificate | Automatically request a certificate. For domains this uses Certbot (Let's Encrypt); for IPs it requests a short-lived 6-day certificate via `lego`. |
+| TLS certificate files | Use your own existing `fullchain.pem` and `privkey.pem`. |
+| HTTP only | Skip TLS and serve over plain HTTP. |
+| Self-signed certificate | Generate a self-signed certificate. Not recommended. |
+
+:::info
+
+HTTPS is required for push notifications (except on `localhost`). Choose a certificate mode other than HTTP only if you want push to work.
+
+:::
+
+### 4. Database engine selection
+
+| Option | Description |
+|---|---|
+| SQLite (Default) | In-memory SQLite database with debounced disk persistence (`better-sqlite3`). Best for small to medium instances. |
+| PostgreSQL | External PostgreSQL database engine. Recommended for larger instances (+500 users). Prompts for PostgreSQL host, port, database name, username, and password. |
+
+### 5. Environment prompts
+
+During install the script asks for core settings and writes them into `.env`:
+
+| Prompt | Env variable | Default |
+|---|---|---|
+| Server port | `SERVER_PORT` | `5174` |
+| Client port | `CLIENT_PORT` | `80` |
+| Media worker port | `WORKER_PORT` | `8080` |
+| Email for Let's Encrypt notices (certbot mode) | — | — |
+
+Encryption and push keys (`STORAGE_ENCRYPTION_KEY`, `VAPID_*`) are generated automatically. The full list of variables you can tune later lives in [Environment Variables](./Environment-Variables.md).
+
+### 6. Coturn TURN/STUN relay (Optional)
+
+Songbird supports audio and video calls via WebRTC. When users are behind symmetric NATs or restrictive firewalls, a TURN/STUN relay server is necessary to establish peer-to-peer media connections.
+
+The deployment script can automatically install and configure a dedicated [Coturn](https://github.com/coturn/coturn) relay server on the host.
+
+### 7. First-run owner creation
+
+After installation completes and the service starts, you'll be prompted to create an owner user on first access. This owner account has full admin panel access for managing users, chats, and system settings. See [Admin Panel](./Admin-Panel.md) for details.
+
+## Database submenu
+
+Option **5** opens a full database manager that wraps the [database commands](./Database-Commands.md) with guided prompts, so you do not need to remember flags:
+
+| Group | Actions |
+|---|---|
+| Inspect | Database summary, chats, users, files |
+| Backup & Repair | Backup, restore, vacuum, reset, delete |
+| User & Chat Management | Create user, generate users, edit user, ban/unban, create group/channel, add members, edit chat |
+| Remote Channels | Configure Remote Channel |
+| Destructive Actions | Delete chats, delete users, delete files |
+| Help & Navigation | Show help, go back, exit |
+
+## Updating and downgrading
+
+Choose **Update Songbird** (Option 2) from the menu to update or downgrade your installation:
+
+1. **Database backup**: The script offers to create a timestamped backup before touching application files.
+2. **GitHub mode**:
+   - **Update**: If updates are available on `origin/main`, the script automatically pulls them (`git pull --ff-only`), installs dependencies, runs database migrations, and restarts services.
+   - **Downgrade**: If the repository is already up to date, it prompts `Do you want to downgrade? [y/N]`. If confirmed, you can specify any valid version (semver tag like `v0.11.4`, custom tag, branch, or commit SHA). The script checks out that reference, runs migrations, and rebuilds.
+3. **Offline mode**:
+   - **Update**: If the `VERSION` file in the provided zip archive is newer than the installed version, it updates files and rebuilds.
+   - **Downgrade**: If the archive `VERSION` is the same or lower than the installed version, it prompts for confirmation before downgrading.
+
+See [Updating & Downgrading](./Updating.md) for full details and manual alternatives.
+
+## Updating the deployment menu
+
+Choose **Update menu** (Option 7) to check for updates to the `songbird-deploy` script itself:
+
+1. **Check for updates**: The script queries the official GitHub repository to check if a newer version of `scripts/install.sh` is available.
+2. **Automatic update**: If a newer version is found, it downloads and replaces the global `songbird-deploy` command (`/usr/local/bin/songbird-deploy`), updating it to the latest version.
+3. **Reinstall prompt**: If the menu is already up to date, or if fetching from GitHub fails (such as in restricted network environments), it prompts:
+   ```txt
+   Do you want to reinstall the current menu again? [y/N]
+   ```
+   Selecting `yes` reinstalls the global command using the existing local script.
+
+## Mirrors for restricted networks
+
+If your server has limited access to default package sources, use **Configure mirrors** to set:
+
+| Mirror | Purpose |
+|---|---|
+| NodeSource mirror | Alternate source for the Node.js apt setup. |
+| apt mirror source | Extra apt mirror for base packages. |
+| npm registry mirror | Alternate npm registry for installing dependencies. |
+
+You can also restore defaults (clear all mirrors) from the same menu.
+
+:::tip
+
+You can use these mirrors in Iran's restricted environment:
+- NodeSource:
+```
+https://mirror-nodejs.runflare.com/dist/v24.22.1/node-v24.22.1-linux-x64.tar.gz
+```
+- APT:
+```
+http://ubuntu.pars.host/ubuntu/
+```
+- NPM:
+```
+https://package-mirror.liara.ir/repository/npm/
+```
+
+:::
+
+## Logs
+
+The **View Logs** submenu surfaces the most useful logs without remembering paths:
+
+| Option | Source |
+|---|---|
+| Script logs | The installer's own log at `/opt/songbird/logs/install.log`. |
+| Service logs | `journalctl` output for `songbird.service`. |
+| Nginx access logs | Nginx access log. |
+| Nginx error logs | Nginx error log. |
+
+For more on diagnosing problems, see [Troubleshooting](./Troubleshooting.md).

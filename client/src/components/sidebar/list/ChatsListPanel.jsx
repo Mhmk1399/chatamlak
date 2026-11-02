@@ -1,0 +1,954 @@
+import { t as localize, useLocale as useAppLocale } from "../../../i18n/locale.js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ContextMenuSurface from "../../context-menu/ContextMenuSurface.jsx";
+import {
+  Check,
+  CheckCheck,
+  Clock12,
+  File,
+  Ghost,
+  ImageIcon,
+  Mic,
+  Minus,
+  Bookmark,
+  Megaphone,
+  Phone,
+  Users,
+  VolumeX,
+  Video,
+} from "../../../icons/lucide.js";
+import { getAvatarStyle } from "../../../utils/avatarColor.js";
+import { hasPersian } from "../../../utils/fontUtils.js";
+import { getAvatarInitials } from "../../../utils/avatarInitials.js";
+import { renderMarkdownInlinePlain } from "../../../utils/markdown.js";
+import { summarizeFiles } from "../../../utils/messagePreview.js";
+import {
+  getCallLogLabel,
+  parseCallLogBody,
+} from "../../../utils/messageContent.js";
+import { isMessageAuthoredByUser } from "../../../utils/messageOwnership.js";
+import { formatCompactCount } from "../../../utils/chatFormat.js";
+import Avatar from "../../common/Avatar.jsx";
+import UserRoleBadge from "../../common/UserRoleBadge.jsx";
+import VerifiedBadge from "../../common/VerifiedBadge.jsx";
+import Tooltip from "../../common/Tooltip.jsx";
+
+export default function ChatsListPanel({
+  loadingChats,
+  visibleChats,
+  user,
+  editMode,
+  activeChatId,
+  selectedChats,
+  formatChatTimestamp,
+  requestDeleteChats,
+  toggleSelectChat,
+  setActiveChatId,
+  setActivePeer,
+  setMobileTab,
+  setIsAtBottom: _setIsAtBottom,
+  setUnreadInChat,
+  lastMessageIdRef,
+  isAtBottomRef: _isAtBottomRef,
+  chatsSearchQuery,
+  chatsSearchFocused,
+  discoverLoading,
+  discoverUsers,
+  discoverGroups,
+  discoverChannels,
+  discoverSaved,
+  isSavedChatActive,
+  onOpenDiscoveredUser,
+  onOpenDiscoveredGroup,
+  onOpenUserProfileContext,
+  onOpenSavedMessages,
+  onOpenUserContextMenu,
+  onOpenChatContextMenu,
+}) {
+  useAppLocale();
+  const SIDEBAR_INITIAL_RENDER = 40;
+  const SIDEBAR_RENDER_BATCH = 24;
+  const loadMoreRef = useRef(null);
+  const [renderLimit, setRenderLimit] = useState(SIDEBAR_INITIAL_RENDER);
+  const wiggleDurations = [640, 700, 760, 820, 880, 940];
+  const wiggleDelays = [-80, -170, -260, -120, -220, -320];
+  const isEmptyState = !loadingChats && !visibleChats.length;
+  const fallbackUploadTextPattern =
+    /^Sent (a media file|a file|a document|a voice message|\d+ (files|documents|media files|voice messages))$/i;
+  const normalizePreviewText = (value) => {
+    if (typeof value === "string") {
+      return value === "[object Object]" ? "" : value;
+    }
+    if (value && typeof value === "object") {
+      const text = value.text ?? value.body;
+      return typeof text === "string" ? text : "";
+    }
+    if (value === null || value === undefined) return "";
+    const str = String(value);
+    return str === "[object Object]" ? "" : str;
+  };
+  const formatLastMessagePreview = (conv) => {
+    const files = Array.isArray(conv.last_message_files)
+      ? conv.last_message_files
+      : [];
+    const body = normalizePreviewText(conv.last_message).trim();
+    if (!files.length) {
+      const callLog = parseCallLogBody(body);
+      if (callLog) {
+        const own = isMessageAuthoredByUser(
+          {
+            username: conv.last_sender_username,
+            client_request_id: conv.last_message_client_request_id,
+          },
+          user,
+        );
+        return {
+          icon: callLog.type === "video" ? "callVideo" : "callVoice",
+          text: getCallLogLabel(callLog, own),
+        };
+      }
+      return {
+        icon: null,
+        text: body,
+      };
+    }
+
+    const summaryText = summarizeFiles(files);
+    const summaryIcon = /^Sent (a voice message|\d+ voice messages)$/i.test(
+      summaryText,
+    )
+      ? "voice"
+      : /^Sent (a video|\d+ videos)$/i.test(summaryText)
+        ? "video"
+        : /^Sent (a photo|\d+ photos|a media file|\d+ media files)$/i.test(
+              summaryText,
+            )
+          ? "image"
+          : files.length
+            ? "document"
+            : null;
+    const isFileOnlyBody = !body || fallbackUploadTextPattern.test(body);
+    if (!isFileOnlyBody) {
+      return { icon: summaryIcon, text: body };
+    }
+
+    return {
+      icon: summaryIcon,
+      text: summaryText,
+    };
+  };
+
+  const hasDiscoverQuery = Boolean(String(chatsSearchQuery || "").trim());
+  const showSearchMode = Boolean(chatsSearchFocused);
+  const showSearchEmptyState =
+    showSearchMode && !discoverLoading && !hasDiscoverQuery;
+  const hasDiscoverResults =
+    (Array.isArray(discoverUsers) && discoverUsers.length > 0) ||
+    (Array.isArray(discoverGroups) && discoverGroups.length > 0) ||
+    (Array.isArray(discoverChannels) && discoverChannels.length > 0) ||
+    Boolean(discoverSaved);
+  const sidebarChats = useMemo(() => {
+    if (showSearchMode) return visibleChats;
+    const safeLimit = Math.max(SIDEBAR_INITIAL_RENDER, renderLimit);
+    return visibleChats.slice(0, safeLimit);
+  }, [renderLimit, showSearchMode, visibleChats]);
+
+  useEffect(() => {
+    if (showSearchMode) return;
+    if (renderLimit >= visibleChats.length) return;
+    const node = loadMoreRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        setRenderLimit((prev) =>
+          Math.min(visibleChats.length, prev + SIDEBAR_RENDER_BATCH),
+        );
+      },
+      {
+        root: null,
+        rootMargin: "360px 0px",
+        threshold: 0.01,
+      },
+    );
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+    };
+  }, [renderLimit, showSearchMode, visibleChats.length]);
+
+  const resolveDmChatId = (username) => {
+    const target = String(username || "").toLowerCase();
+    if (!target) return null;
+    const dmChat = (visibleChats || []).find((chat) => {
+      if (chat?.type !== "dm") return false;
+      return (chat.members || []).some(
+        (member) => String(member?.username || "").toLowerCase() === target,
+      );
+    });
+    return dmChat?.id ?? null;
+  };
+
+  return (
+    <div
+      className={
+        showSearchMode || isEmptyState ? "min-h-full" : "w-full py-1"
+      }
+    >
+      {showSearchMode ? (
+        <div
+          className={
+            showSearchEmptyState
+              ? "flex min-h-full items-center justify-center px-4 py-8"
+              : "mb-3 space-y-0"
+          }
+        >
+          {discoverLoading ? (
+            <p className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{localize("Searching...")}</p>
+          ) : null}
+          {showSearchEmptyState ? (
+            <div className="px-4 text-center text-sm text-slate-500 dark:text-slate-400">
+              <p>{localize("Type to search users, groups, and channels.")}</p>
+            </div>
+          ) : null}
+          {!showSearchEmptyState &&
+          Array.isArray(discoverUsers) &&
+          discoverUsers.length > 0 ? (
+            <div className="space-y-0">
+              <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Users")}</p>
+              {discoverUsers.map((member, userIndex) => {
+                const label = member.nickname || member.username;
+                const initials = getAvatarInitials(label);
+                const dmChatId = resolveDmChatId(member.username);
+                const isActive =
+                  dmChatId && String(activeChatId) === String(dmChatId);
+                const showOnlineBadge =
+                  String(member.status || "").toLowerCase() === "online";
+                return (
+                  <div
+                    key={`discover-user-${member.id}-${member.username}`}
+                    className="relative flex w-full flex-col px-2"
+                  >
+                    <ContextMenuSurface
+                      as="button"
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onOpenDiscoveredUser?.(member)}
+                      contextMenu={{
+                        isMobile:
+                          typeof window !== "undefined" &&
+                          window.matchMedia("(max-width: 767px) and (pointer: coarse)")
+                            .matches,
+                        onOpen: ({ event, targetEl, isMobile }) =>
+                          onOpenUserContextMenu?.({
+                            kind: "user",
+                            event,
+                            targetEl,
+                            isMobile,
+                            data: {
+                              member,
+                              sourceChatType: "discover",
+                              onOpenProfile: onOpenUserProfileContext,
+                            },
+                          }),
+                      }}
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                        isActive
+                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="shrink-0">
+                        <Avatar
+                          src={member.avatar_url}
+                          alt={label}
+                          name={label}
+                          color={member.color || "#10b981"}
+                          initials={initials}
+                          showOnlineBadge={showOnlineBadge}
+                          className="h-12 w-12 text-lg font-semibold"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <Tooltip label={label} asChild>
+                          <p
+                            className="flex items-center gap-0.5 truncate text-base font-semibold"
+                            dir="ltr"
+                          >
+                            <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                            {Boolean(member.verified) && <VerifiedBadge size={16} />}
+                            <UserRoleBadge role={member.role} size={16} />
+                          </p>
+                        </Tooltip>
+                        <Tooltip label={member.username} asChild>
+                          <p
+                            className="truncate text-sm text-slate-500 dark:text-slate-400"
+                            dir="auto"
+                          >
+                            @{member.username}
+                          </p>
+                        </Tooltip>
+                      </div>
+                    </ContextMenuSurface>
+                    {userIndex < discoverUsers.length - 1 ? (
+                      <div className="my-1 ml-[72px] mr-2 border-b border-slate-200/70 dark:border-slate-800/80" />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {!showSearchEmptyState &&
+          Array.isArray(discoverGroups) &&
+          discoverGroups.length > 0 ? (
+            <div className="space-y-0">
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Groups")}</p>
+              {discoverGroups.map((group, groupIndex) => {
+                const label = group.name || "Group";
+                const initials = getAvatarInitials(label);
+                const isActive = String(activeChatId || "") === String(group.id || "");
+                return (
+                  <div
+                    key={`discover-group-${group.id}`}
+                    className="relative flex w-full flex-col px-2"
+                  >
+                    <button
+                      key={`discover-group-${group.id}`}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onOpenDiscoveredGroup?.(group)}
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                        isActive
+                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="shrink-0">
+                        {group.avatarUrl ? (
+                          <img
+                            src={group.avatarUrl}
+                            alt={label}
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${hasPersian(initials) ? "font-fa" : ""}`}
+                            style={getAvatarStyle(group.color || "#10b981")}
+                          >
+                            {initials}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <Tooltip label={label} asChild>
+                            <p
+                              className="flex items-center gap-0.5 truncate text-base font-semibold"
+                              dir="ltr"
+                            >
+                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                              {Boolean(group.verified) && <VerifiedBadge size={16} />}
+                            </p>
+                          </Tooltip>
+                          <p
+                            className="truncate text-sm text-slate-500 dark:text-slate-400"
+                            dir="auto"
+                          >
+                            @{group.username} •{" "}
+                            {Number(group.membersCount || 0).toLocaleString(
+                              "en-US",
+                            )}{" "}{localize("members")}</p>
+                        </div>
+                        {group.isMember ? (
+                          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">{localize("Joined")}</span>
+                        ) : null}
+                      </div>
+                    </button>
+                    {groupIndex < discoverGroups.length - 1 ? (
+                      <div className="my-1 ml-[72px] mr-2 border-b border-slate-200/70 dark:border-slate-800/80" />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {!showSearchEmptyState &&
+          Array.isArray(discoverChannels) &&
+          discoverChannels.length > 0 ? (
+            <div className="space-y-0">
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Channels")}</p>
+              {discoverChannels.map((channel, channelIndex) => {
+                const label = channel.name || "Channel";
+                const initials = getAvatarInitials(label);
+                const isActive = String(activeChatId || "") === String(channel.id || "");
+                return (
+                  <div
+                    key={`discover-channel-${channel.id}`}
+                    className="relative flex w-full flex-col px-2"
+                  >
+                    <button
+                      key={`discover-channel-${channel.id}`}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => onOpenDiscoveredGroup?.(channel)}
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                        isActive
+                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
+                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                      }`}
+                    >
+                      <div className="shrink-0">
+                        {channel.avatarUrl ? (
+                          <img
+                            src={channel.avatarUrl}
+                            alt={label}
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div
+                            className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${hasPersian(initials) ? "font-fa" : ""}`}
+                            style={getAvatarStyle(channel.color || "#10b981")}
+                          >
+                            {initials}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <Tooltip label={label} asChild>
+                            <p
+                              className="flex items-center gap-0.5 truncate text-base font-semibold"
+                              dir="ltr"
+                            >
+                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                              {Boolean(channel.verified) && <VerifiedBadge size={16} />}
+                            </p>
+                          </Tooltip>
+                          <p
+                            className="truncate text-sm text-slate-500 dark:text-slate-400"
+                            dir="auto"
+                          >
+                            @{channel.username} •{" "}
+                            {Number(channel.membersCount || 0).toLocaleString(
+                              "en-US",
+                            )}{" "}{localize("subscribers")}</p>
+                        </div>
+                        {channel.isMember ? (
+                          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">{localize("Joined")}</span>
+                        ) : null}
+                      </div>
+                    </button>
+                    {channelIndex < discoverChannels.length - 1 ? (
+                      <div className="my-1 ml-[72px] mr-2 border-b border-slate-200/70 dark:border-slate-800/80" />
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          {!showSearchEmptyState && discoverSaved ? (
+            <div className="space-y-0">
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Saved Messages")}</p>
+              <div className="relative flex w-full flex-col px-2">
+                <ContextMenuSurface
+                  type="button"
+                  as="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onOpenSavedMessages?.()}
+                  contextMenu={{
+                    disabled: true,
+                  }}
+                  className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                    isSavedChatActive
+                      ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
+                      : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                  }`}
+                >
+                  <div className="shrink-0">
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-full"
+                      style={getAvatarStyle("#10b981")}
+                    >
+                      <Bookmark size={22} className="text-white" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-semibold">{localize("Saved messages")}</p>
+                    <p className="truncate text-sm text-slate-500 dark:text-slate-400">{localize("Personal notes")}</p>
+                  </div>
+                </ContextMenuSurface>
+              </div>
+            </div>
+          ) : null}
+          {!showSearchEmptyState &&
+          hasDiscoverQuery &&
+          !discoverLoading &&
+          !hasDiscoverResults ? (
+            <p className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{localize("No results.")}</p>
+          ) : null}
+        </div>
+      ) : null}
+      {!showSearchMode && loadingChats && !visibleChats.length ? (
+        Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={`chat-skeleton-${index}`}
+            className="relative flex w-full flex-col px-2"
+          >
+            <div className="flex min-h-[72px] w-full animate-pulse items-center gap-3 rounded-xl px-3 py-2.5">
+              <div className="shrink-0">
+                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-1/2 rounded-sm bg-emerald-100 dark:bg-emerald-900/40" />
+                <div className="h-2 w-3/4 rounded-sm bg-emerald-100/80 dark:bg-emerald-900/30" />
+              </div>
+            </div>
+            {index < 5 ? (
+              <div className="my-1 ml-[72px] mr-2 border-b border-slate-200/50 dark:border-slate-800/50" />
+            ) : null}
+          </div>
+        ))
+      ) : !showSearchMode && sidebarChats.length ? (
+        sidebarChats.map((conv, index) => {
+          const members = conv.members || [];
+          const other =
+            conv.type === "dm"
+              ? members.find(
+                  (member) =>
+                    String(member?.username || "").toLowerCase() !==
+                    String(user?.username || "").toLowerCase(),
+                )
+              : null;
+          const isDeletedDm = conv.type === "dm" && !other;
+          const showOnlineBadge =
+            conv.type === "dm" &&
+            !isDeletedDm &&
+            String(other?.status || "").toLowerCase() === "online";
+          const isChannel = conv.type === "channel";
+          const isGroup = conv.type === "group";
+          const isSaved = conv.type === "saved";
+          const isChannelOwner =
+            isChannel &&
+            members.some(
+              (member) =>
+                String(member?.id || "") === String(user?.id || "") &&
+                String(member?.role || "").toLowerCase() === "owner",
+            );
+          const name =
+            conv.type === "dm"
+              ? other?.nickname ||
+                other?.username ||
+                (isDeletedDm ? localize("Deleted account") : "Direct message")
+              : isSaved
+                ? conv.name || "Saved messages"
+                : conv.name || "Chat";
+          const avatarColor =
+            isGroup || isChannel
+              ? conv.group_color || "#10b981"
+              : isSaved
+                ? "#10b981"
+                : isDeletedDm
+                  ? "#94a3b8"
+                  : other?.color || "#10b981";
+          const avatarInitials = getAvatarInitials(name);
+          const wiggleStyle = editMode
+            ? {
+                animationDuration: `${wiggleDurations[index % 6]}ms`,
+                animationDelay: `${wiggleDelays[index % 6]}ms`,
+              }
+            : undefined;
+          const isOwnLastMessage =
+            (Boolean(conv.last_message) ||
+              Boolean(conv.last_message_files?.length)) &&
+            isMessageAuthoredByUser(
+              {
+                username: conv.last_sender_username,
+                client_request_id: conv.last_message_client_request_id,
+              },
+              user,
+            );
+          const isOwnLastMessagePending =
+            Boolean(conv._lastMessagePending) && isOwnLastMessage;
+          const isOwnLastMessageSeen =
+            Boolean(conv.last_message_read_at) ||
+            (conv.type === "saved" && isOwnLastMessage);
+          const lastPreview = formatLastMessagePreview(conv);
+          const lastPreviewHtml = renderMarkdownInlinePlain(
+            isOwnLastMessagePending ? "Processing..." : lastPreview.text,
+          );
+
+          let unreadCount = conv.unread_count;
+          if (unreadCount > 999) unreadCount = formatCompactCount(unreadCount);
+
+          const isActive = activeChatId === conv.id;
+
+          const rowInner = (
+            <>
+              <div className="shrink-0">
+                <Avatar
+                  src={
+                    isGroup || isChannel
+                      ? conv.group_avatar_url
+                      : other?.avatar_url
+                  }
+                  alt={name}
+                  name={name}
+                  color={avatarColor}
+                  initials={avatarInitials}
+                  placeholderContent={
+                    isSaved ? (
+                      <Bookmark size={22} className="text-white" />
+                    ) : isDeletedDm ? (
+                      <Ghost size={22} className="text-slate-600" />
+                    ) : (
+                      avatarInitials
+                    )
+                  }
+                  className="h-12 w-12 shrink-0 text-lg font-semibold"
+                  showOnlineBadge={showOnlineBadge}
+                />
+              </div>
+              <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="flex min-w-0 items-center gap-0.5 text-base font-semibold" dir="ltr">
+                    {isChannel ? (
+                      <Megaphone
+                        size={16}
+                        className="shrink-0 text-emerald-500"
+                      />
+                    ) : isGroup ? (
+                      <Users size={16} className="shrink-0 text-emerald-500" />
+                    ) : null}
+                    <Tooltip label={name} asChild>
+                      <span
+                        className={`min-w-0 max-w-full truncate ${hasPersian(name) ? "font-fa" : ""} ${isDeletedDm ? "text-slate-500" : ""}`}
+                        dir="auto"
+                      >
+                        {name}
+                      </span>
+                    </Tooltip>
+                    {conv.type === "dm" && !isDeletedDm && other && Boolean(other.user_verified) ? (
+                      <VerifiedBadge size={16} />
+                    ) : null}
+                    {conv.type === "dm" && !isDeletedDm && other ? (
+                      <UserRoleBadge role={other.user_role} size={16} />
+                    ) : null}
+                    {conv.type !== "dm" && Boolean(conv.verified) ? (
+                      <VerifiedBadge size={16} />
+                    ) : null}
+                    {conv._muted ? (
+                      <VolumeX
+                        size={16}
+                        className="-translate-y-px shrink-0 text-slate-400 dark:text-slate-500"
+                        aria-label={localize("Muted chat")}
+                      />
+                    ) : null}
+                  </p>
+                  <p
+                    className="mt-0.5 min-h-[1.35em] w-full min-w-0 overflow-hidden whitespace-nowrap text-sm leading-[1.35] text-slate-500 dark:text-slate-400"
+                    style={{ unicodeBidi: "isolate" }}
+                  >
+                    {conv.last_message ||
+                    (conv.last_message_files || []).length ? (
+                      isOwnLastMessage && !isChannelOwner ? (
+                        <span
+                          className="flex w-full min-w-0 items-baseline gap-1 align-middle leading-[1.35]"
+                          dir="ltr"
+                          style={{ unicodeBidi: "isolate" }}
+                        >
+                          <span className="shrink-0 font-bold text-slate-500 dark:text-slate-400">{localize("You:")}</span>
+                          <span className="flex min-w-0 flex-1 items-baseline gap-1">
+                            {lastPreview.icon === "voice" ? (
+                              <Mic
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : lastPreview.icon === "video" ? (
+                              <Video
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : lastPreview.icon === "image" ? (
+                              <ImageIcon
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : lastPreview.icon === "file" ? (
+                              <File
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : lastPreview.icon === "callVoice" ? (
+                              <Phone
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : lastPreview.icon === "callVideo" ? (
+                              <Video
+                                size={14}
+                                className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                              />
+                            ) : null}
+                            <span
+                              dir="auto"
+                              className={`block min-w-0 max-w-full flex-1 truncate leading-[1.35] ${hasPersian(lastPreview.text) ? "font-fa" : ""}`}
+                              style={{ unicodeBidi: "isolate" }}
+                              dangerouslySetInnerHTML={{
+                                __html: String(lastPreviewHtml || ""),
+                              }}
+                            />
+                          </span>
+                        </span>
+                      ) : (
+                        <span
+                          className="flex w-full min-w-0 items-baseline gap-1 align-middle leading-[1.35]"
+                          dir="ltr"
+                          style={{ unicodeBidi: "isolate" }}
+                        >
+                          {isGroup &&
+                          (conv.last_sender_nickname ||
+                            conv.last_sender_username) ? (
+                            <Tooltip
+                              label={
+                                conv.last_sender_nickname ||
+                                conv.last_sender_username
+                              }
+                              asChild
+                            >
+                              <span
+                                className="shrink-0 inline-flex min-w-0 max-w-[48%] items-baseline font-bold text-slate-500 dark:text-slate-400"
+                                dir="ltr"
+                                style={{ unicodeBidi: "isolate" }}
+                              >
+                                <bdi
+                                  dir="auto"
+                                  className={`min-w-0 truncate ${
+                                    hasPersian(
+                                      conv.last_sender_nickname ||
+                                        conv.last_sender_username,
+                                    )
+                                      ? "font-fa"
+                                      : ""
+                                  }`}
+                                >
+                                  {conv.last_sender_nickname ||
+                                    conv.last_sender_username}
+                                </bdi>
+                                <span className="shrink-0">:</span>
+                              </span>
+                            </Tooltip>
+                          ) : null}
+                          {lastPreview.icon === "voice" ? (
+                            <Mic
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : lastPreview.icon === "video" ? (
+                            <Video
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : lastPreview.icon === "image" ? (
+                            <ImageIcon
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : lastPreview.icon === "document" ? (
+                            <File
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : lastPreview.icon === "callVoice" ? (
+                            <Phone
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : lastPreview.icon === "callVideo" ? (
+                            <Video
+                              size={14}
+                              className="translate-y-[3px] shrink-0 text-slate-500 dark:text-slate-400"
+                            />
+                          ) : null}
+                            <span
+                              dir="auto"
+                              className={`block min-w-0 max-w-full flex-1 truncate leading-[1.35] ${hasPersian(lastPreview.text) ? "font-fa" : ""}`}
+                              style={{ unicodeBidi: "isolate" }}
+                              dangerouslySetInnerHTML={{
+                                __html: String(lastPreviewHtml || ""),
+                              }}
+                            />
+                          </span>
+                        )
+                      ) : (
+                        <span
+                          className="invisible select-none leading-[1.35]"
+                          aria-hidden="true"
+                        >
+                          &nbsp;
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="ml-auto flex min-w-[58px] shrink-0 flex-col items-end gap-1.5 self-start">
+                    <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                      {isOwnLastMessage && !isChannelOwner ? (
+                        <span
+                          className={`inline-flex items-center ${
+                            isOwnLastMessagePending
+                              ? "text-emerald-900/80 dark:text-emerald-50/80"
+                              : isOwnLastMessageSeen
+                                ? "text-sky-400"
+                                : "text-slate-500 dark:text-slate-400"
+                          } -translate-y-px`}
+                        >
+                          {isOwnLastMessagePending ? (
+                            <Clock12
+                              size={14}
+                              strokeWidth={2.4}
+                              aria-hidden="true"
+                              className="animate-spin"
+                            />
+                          ) : isOwnLastMessageSeen ? (
+                            <CheckCheck
+                              size={14}
+                              strokeWidth={2.4}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Check
+                              size={14}
+                              strokeWidth={2.4}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </span>
+                      ) : null}
+                      <p className="whitespace-nowrap">
+                        {conv.last_time
+                          ? formatChatTimestamp(conv.last_time)
+                          : ""}
+                      </p>
+                    </div>
+                  {conv.unread_count > 0 ? (
+                    <span
+                      className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold text-white ${
+                        conv._muted
+                          ? "bg-slate-400 dark:bg-slate-500"
+                          : "bg-emerald-500"
+                      }`}
+                    >
+                      {unreadCount}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </>
+          );
+
+          return (
+            <div
+              key={conv.id}
+              className="relative flex w-full flex-col px-2"
+            >
+              <div
+                className={`group flex min-h-[72px] w-full items-center rounded-xl border transition ${
+                  isActive
+                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
+                    : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                } ${editMode ? "animate-chat-wiggle-ios" : ""}`}
+                style={wiggleStyle}
+              >
+                {editMode ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      requestDeleteChats([conv.id]);
+                    }}
+                    className="ml-2.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200"
+                    aria-label={localize("Remove chat")}
+                  >
+                    <Minus size={16} />
+                  </button>
+                ) : null}
+                <ContextMenuSurface
+                  type="button"
+                  as="button"
+                  aria-label={`${name}${conv.unread_count > 0 ? `, ${conv.unread_count} unread` : ""}`}
+                  onClick={() => {
+                    if (editMode) return;
+                    setActiveChatId(conv.id);
+                    const nextOther =
+                      conv.type === "dm"
+                        ? conv.members?.find(
+                            (member) =>
+                              String(member?.username || "").toLowerCase() !==
+                              String(user?.username || "").toLowerCase(),
+                          )
+                        : null;
+                    setActivePeer(nextOther || null);
+                    if (window.matchMedia("(max-width: 767px)").matches) {
+                      setMobileTab("chat");
+                    }
+                    setUnreadInChat(0);
+                    lastMessageIdRef.current = null;
+                  }}
+                  contextMenu={{
+                    disabled: editMode,
+                    isMobile:
+                      typeof window !== "undefined" &&
+                      window.matchMedia("(max-width: 767px) and (pointer: coarse)")
+                        .matches,
+                    onOpen: ({ event, targetEl, isMobile }) =>
+                      onOpenChatContextMenu?.({
+                        kind: "chat",
+                        event,
+                        targetEl,
+                        isMobile,
+                        data: { chat: conv },
+                      }),
+                  }}
+                  className={`flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 text-left ${
+                    editMode
+                      ? "pointer-events-none pl-2 pr-3"
+                      : "cursor-pointer px-3 focus-visible:outline-hidden"
+                  }`}
+                >
+                  {rowInner}
+                </ContextMenuSurface>
+                {editMode ? (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleSelectChat(conv.id);
+                    }}
+                    className={`mr-2.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
+                      selectedChats.includes(conv.id)
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : "border-emerald-200 text-emerald-600 dark:border-emerald-500/30 dark:text-emerald-200"
+                    }`}
+                    aria-label={localize("Select chat")}
+                  >
+                    {selectedChats.includes(conv.id) ? <Check size={16} /> : null}
+                  </button>
+                ) : null}
+              </div>
+              <div className="my-1 ml-[72px] mr-2 border-b border-slate-200/70 dark:border-slate-800/80" />
+            </div>
+          );
+        })
+      ) : !showSearchMode ? (
+        <div className="flex min-h-full items-center justify-center px-4 py-8">
+          <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+            <p>{localize("Your chat list is empty.")}</p>
+            <p className="mt-1">{localize("Search or use + button to start chatting.")}</p>
+          </div>
+        </div>
+      ) : null}
+      {!showSearchMode && renderLimit < visibleChats.length ? (
+        <div ref={loadMoreRef} className="h-8 w-full" aria-hidden="true" />
+      ) : null}
+    </div>
+  );
+}

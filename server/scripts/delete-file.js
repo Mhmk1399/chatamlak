@@ -1,0 +1,170 @@
+import path from "node:path";
+import { confirmAction, getCliArgs, getPositionalArgs, hasForceYes, hasFlag } from "./_cli.js";
+import {
+  openDatabase,
+  removeAvatarFiles,
+  removeStoredFiles,
+  runAdminActionViaServer,
+} from "./_db-admin.js";
+
+function normalizeSelectors(args = []) {
+  return getPositionalArgs(args)
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+}
+
+function isNumeric(value) {
+  return /^\d+$/.test(String(value || ""));
+}
+
+function basename(value) {
+  return path.basename(String(value || "").trim());
+}
+
+const args = getCliArgs();
+const selectors = normalizeSelectors(args);
+const force = hasForceYes(args);
+const hasAll = hasFlag(args, "--all");
+const deleteAll = selectors.length === 0 && hasAll;
+
+if (!selectors.length && !hasAll) {
+  console.error("Refusing to delete all files without --all.");
+  process.exit(1);
+}
+
+let remote = null;
+try {
+  remote = await runAdminActionViaServer("delete_files", { selectors, all: deleteAll });
+} catch (error) {
+  console.warn(`Server mode failed: ${String(error?.message || "unknown error")}`);
+  console.warn("Falling back to direct DB mode for this command.");
+}
+if (remote) {
+  console.log(`Server mode: messages deleted: ${remote.removedMessages ?? 0}`);
+  console.log(`Server mode: message files deleted: ${remote.removedMessageFiles ?? 0}`);
+  console.log(`Server mode: avatars cleared: ${remote.removedAvatars ?? 0}`);
+} else {
+  const dbApi = await openDatabase();
+  try {
+    const numericIds = selectors.filter(isNumeric).map((value) => Number(value));
+    const names = selectors.map(basename).filter(Boolean);
+
+    let targetMessageIds = [];
+    let messageStoredNames = [];
+    let avatarRows = [];
+
+    if (deleteAll) {
+      targetMessageIds = (await dbApi
+        .getAll("SELECT DISTINCT message_id FROM chat_message_files ORDER BY message_id ASC"))
+        .map((row) => String(row.message_id))
+        .filter(Boolean);
+      messageStoredNames = (await dbApi.getAll("SELECT stored_name FROM chat_message_files")).map((row) => row.stored_name);
+      avatarRows = await dbApi.getAll(
+        `SELECT id, avatar_url FROM users WHERE avatar_url LIKE '/uploads/avatars/%'`,
+      );
+    } else {
+      const byIdRows = numericIds.length
+        ? await dbApi.getAll(
+            `SELECT id, message_id, stored_name FROM chat_message_files WHERE id IN (${numericIds
+              .map(() => "?")
+              .join(", ")})`,
+            numericIds,
+          )
+        : [];
+      const byNameRows = names.length
+        ? await dbApi.getAll(
+            `SELECT id, message_id, stored_name FROM chat_message_files WHERE stored_name IN (${names
+              .map(() => "?")
+              .join(", ")})`,
+            names,
+          )
+        : [];
+      const allFileRows = [...byIdRows, ...byNameRows];
+      targetMessageIds = Array.from(
+        new Set(
+          allFileRows
+            .map((row) => String(row.message_id))
+            .filter(Boolean),
+        ),
+      );
+      if (targetMessageIds.length) {
+        messageStoredNames = (await dbApi
+          .getAll(
+            `SELECT stored_name FROM chat_message_files WHERE message_id IN (${targetMessageIds
+              .map(() => "?")
+              .join(", ")})`,
+            targetMessageIds,
+          ))
+          .map((row) => row.stored_name);
+      }
+      if (names.length) {
+        avatarRows = (await dbApi
+          .getAll(`SELECT id, avatar_url FROM users WHERE avatar_url LIKE '/uploads/avatars/%'`))
+          .filter((row) => names.includes(path.basename(String(row.avatar_url || ""))));
+      }
+    }
+
+    if (!targetMessageIds.length && !avatarRows.length) {
+      console.log("No matching files found. Nothing to delete.");
+      await dbApi.close();
+      process.exit(0);
+    }
+
+    const confirmed = await confirmAction({
+      prompt: deleteAll
+        ? "Delete ALL uploaded files (message files + avatars) and related records?"
+        : `Delete selected files (${targetMessageIds.length} message bubbles, ${avatarRows.length} avatar assignments)?`,
+      force,
+      forceHint:
+        "Refusing to delete files in non-interactive mode without -y/--yes. Run: npm run db:file:delete -- --all -y",
+    });
+
+    if (!confirmed) {
+      console.log("Aborted.");
+      await dbApi.close();
+      process.exit(0);
+    }
+
+    await dbApi.run("BEGIN");
+    try {
+      if (targetMessageIds.length) {
+        const placeholders = targetMessageIds.map(() => "?").join(", ");
+        await dbApi.run(
+          `DELETE FROM chat_message_files WHERE message_id IN (${placeholders})`,
+          targetMessageIds,
+        );
+        await dbApi.run(`DELETE FROM chat_messages WHERE id IN (${placeholders})`, targetMessageIds);
+      }
+      if (avatarRows.length) {
+        const userIds = avatarRows.map((row) => String(row.id)).filter(Boolean);
+        if (userIds.length) {
+          await dbApi.run(
+            `UPDATE users SET avatar_url = NULL WHERE id IN (${userIds.map(() => "?").join(", ")})`,
+            userIds,
+          );
+        }
+      }
+      await dbApi.run("COMMIT");
+    } catch (error) {
+      await dbApi.run("ROLLBACK");
+      throw error;
+    }
+
+    const fileCleanup = removeStoredFiles(messageStoredNames);
+    const avatarCleanup = removeAvatarFiles(
+      avatarRows.map((row) => path.basename(String(row.avatar_url || ""))),
+    );
+    await dbApi.save();
+
+    console.log(`Message bubbles deleted: ${targetMessageIds.length}`);
+    console.log(
+      `Message files removed from disk: ${fileCleanup.removed} (missing: ${fileCleanup.missing})`,
+    );
+    console.log(
+      `Avatar files removed from disk: ${avatarCleanup.removed} (missing: ${avatarCleanup.missing})`,
+    );
+    console.log(`Avatar assignments cleared: ${avatarRows.length}`);
+  } finally {
+    await dbApi.close();
+  }
+}

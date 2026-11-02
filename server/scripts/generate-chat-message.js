@@ -1,0 +1,263 @@
+import crypto from "node:crypto";
+import {
+  getCliArgs,
+  getPositionalArgs,
+  getFlagValue,
+  getNpmOriginalArgs,
+} from "./_cli.js";
+import { openDatabase, runAdminActionViaServer } from "./_db-admin.js";
+import { storageEncryption } from "../lib/storageEncryption.js";
+import { resolveChatRow, resolveUserRow } from "../lib/dbToolHelpers.js";
+
+const SAMPLE_MESSAGES = [
+  "Hello there",
+  "How are you doing?",
+  "Sounds good",
+  "I will check and reply",
+  "Can you send details?",
+  "Sure, one second",
+  "Thanks",
+  "Got it",
+  "Let us do it",
+  "Looks great",
+  "See you soon",
+  "On my way",
+  "Please review this",
+  "Done",
+  "Perfect",
+];
+const clampEnvInt = (value, fallback, { min, max } = {}) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const intValue = Math.trunc(parsed);
+  if (min !== undefined && intValue < min) return fallback;
+  if (max !== undefined && intValue > max) return fallback;
+  return intValue;
+};
+const MESSAGE_MAX_CHARS = clampEnvInt(
+  process.env.MESSAGE_MAX_CHARS || process.env.MESSAGE_MAX,
+  4000,
+  {
+  min: 1,
+  max: 20000,
+  },
+);
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function buildTimestampSchedule(count, daysBack) {
+  const days = Math.max(1, daysBack);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nowSecondsOfDay =
+    now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const startDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
+  startDay.setDate(startDay.getDate() - (days - 1));
+
+  const perDay = new Array(days).fill(0);
+  for (let i = 0; i < count; i += 1) {
+    perDay[i % days] += 1;
+  }
+
+  const stamps = [];
+  for (let dayIndex = 0; dayIndex < days; dayIndex += 1) {
+    const messagesInDay = perDay[dayIndex];
+    if (!messagesInDay) continue;
+    const dayStart = new Date(startDay);
+    dayStart.setDate(startDay.getDate() + dayIndex);
+    const isToday =
+      dayStart.getFullYear() === today.getFullYear() &&
+      dayStart.getMonth() === today.getMonth() &&
+      dayStart.getDate() === today.getDate();
+    const maxSecondOfDay = isToday
+      ? Math.max(0, Math.min(86399, nowSecondsOfDay))
+      : 86399;
+    const seconds = [];
+    for (let i = 0; i < messagesInDay; i += 1) {
+      const secondOfDay = Math.floor(Math.random() * (maxSecondOfDay + 1));
+      seconds.push(secondOfDay);
+    }
+    seconds.sort((a, b) => a - b);
+    for (let i = 0; i < seconds.length; i += 1) {
+      stamps.push(
+        new Date(dayStart.getTime() + seconds[i] * 1000).toISOString(),
+      );
+    }
+  }
+  return stamps;
+}
+
+async function resolveUserId(dbApi, selectorRaw) {
+  const user = await resolveUserRow(dbApi, selectorRaw);
+  return user?.id ? String(user.id) : null;
+}
+
+async function main() {
+  const args = getCliArgs();
+  const npmArgs = getNpmOriginalArgs();
+  const positional = getPositionalArgs(args);
+  const npmPositional = getPositionalArgs(npmArgs);
+
+  const chatIdRaw =
+    positional[0] ||
+    npmPositional[0] ||
+    getFlagValue(args, "--chat-id") ||
+    getFlagValue(npmArgs, "--chat-id") ||
+    getFlagValue(args, "--chatId") ||
+    getFlagValue(npmArgs, "--chatId");
+  const userOneRaw =
+    positional[1] ||
+    npmPositional[1] ||
+    getFlagValue(args, "--user-a") ||
+    getFlagValue(npmArgs, "--user-a") ||
+    getFlagValue(args, "--userA") ||
+    getFlagValue(npmArgs, "--userA");
+  const userTwoRaw =
+    positional[2] ||
+    npmPositional[2] ||
+    getFlagValue(args, "--user-b") ||
+    getFlagValue(npmArgs, "--user-b") ||
+    getFlagValue(args, "--userB") ||
+    getFlagValue(npmArgs, "--userB");
+  const countRaw =
+    positional[3] ||
+    npmPositional[3] ||
+    getFlagValue(args, "--count") ||
+    getFlagValue(npmArgs, "--count") ||
+    "1";
+  const daysBackRaw =
+    positional[4] ||
+    npmPositional[4] ||
+    getFlagValue(args, "--days") ||
+    getFlagValue(npmArgs, "--days") ||
+    "7";
+
+  const chatIdSelector = String(chatIdRaw || "").trim();
+  const count = Math.max(1, Math.min(10000, Number(countRaw) || 0));
+  const daysBack = Math.max(1, Math.min(365, Number(daysBackRaw) || 7));
+
+  if (
+    !chatIdSelector ||
+    !userOneRaw ||
+    !userTwoRaw ||
+    !count
+  ) {
+    console.error(
+      "Usage (recommended): npm run db:message:generate -- <chat-id-or-username> alice bob 300 7",
+    );
+    console.error(
+      "Usage (named args): npm run db:message:generate -- --chatId <chat-id-or-username> --userA alice --userB bob --count 300 --days 7",
+    );
+    console.error("Users can be username or user id.");
+    process.exitCode = 1;
+    return;
+  }
+
+  let remoteErrorMessage = "";
+  try {
+    const remoteResult = await runAdminActionViaServer(
+      "generate_chat_messages",
+      {
+        chatId: chatIdSelector,
+        userA: userOneRaw,
+        userB: userTwoRaw,
+        count,
+        days: daysBack,
+      },
+    );
+    if (remoteResult) {
+      console.log(
+        `Server mode generated messages: ${remoteResult.created ?? 0}`,
+      );
+      console.log(`Chat: ${remoteResult.chatId ?? chatIdSelector}`);
+      return;
+    }
+  } catch (error) {
+    remoteErrorMessage = String(error?.message || "");
+    console.warn(`Server mode failed: ${remoteErrorMessage}`);
+    console.warn("Falling back to direct DB mode for this command.");
+  }
+
+  const dbApi = await openDatabase();
+  try {
+    const chat = await resolveChatRow(dbApi, chatIdSelector, { groupOnly: false });
+    if (!chat?.id) {
+      console.error(`Chat not found: ${chatIdSelector}`);
+      if (remoteErrorMessage) {
+        console.error(`Server mode error was: ${remoteErrorMessage}`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    const chatId = String(chat.id);
+
+    const userAId = await resolveUserId(dbApi, userOneRaw);
+    const userBId = await resolveUserId(dbApi, userTwoRaw);
+    if (!userAId || !userBId) {
+      console.error("One or both users not found.");
+      if (remoteErrorMessage) {
+        console.error(`Server mode error was: ${remoteErrorMessage}`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    if (userAId === userBId) {
+      console.error("user-a and user-b must be different users.");
+      process.exitCode = 1;
+      return;
+    }
+
+    await dbApi.run("BEGIN");
+    try {
+      await dbApi.run(
+        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+        [chatId, userAId, "member"],
+      );
+      await dbApi.run(
+        "INSERT OR IGNORE INTO chat_members (chat_id, user_id, role) VALUES (?, ?, ?)",
+        [chatId, userBId, "member"],
+      );
+
+      const timestamps = buildTimestampSchedule(count, daysBack);
+
+      for (let index = 0; index < count; index += 1) {
+        const senderId = index % 2 === 0 ? userAId : userBId;
+        const rawBody = `${pickRandom(SAMPLE_MESSAGES)} #${index + 1}`;
+        const body =
+          rawBody.length > MESSAGE_MAX_CHARS
+            ? rawBody.slice(0, MESSAGE_MAX_CHARS)
+            : rawBody;
+        await dbApi.run(
+          "INSERT INTO chat_messages (id, chat_id, user_id, body, created_at, read_at, read_by_user_id) VALUES (?, ?, ?, ?, ?, NULL, NULL)",
+          [
+            crypto.randomUUID(),
+            chatId,
+            senderId,
+            storageEncryption.encryptText(body),
+            timestamps[index],
+          ],
+        );
+      }
+
+      await dbApi.run("COMMIT");
+    } catch (error) {
+      await dbApi.run("ROLLBACK");
+      throw error;
+    }
+
+    await dbApi.save();
+    console.log(`Generated messages: ${count}`);
+    console.log(`Chat: ${chatId}`);
+    console.log(`Users: ${userAId}, ${userBId}`);
+  } finally {
+    await dbApi.close();
+  }
+}
+
+await main();

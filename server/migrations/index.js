@@ -1,0 +1,89 @@
+import { migration001InitialSchema } from "./001-initial-schema.js";
+import { migration002LegacyChatRename } from "./002-legacy-chat-rename.js";
+import { migration003MessageFiles } from "./003-message-files.js";
+import { migration004MessageFileMetadata } from "./004-message-file-metadata.js";
+import { migration005DmDefaultName } from "./005-dm-default-name.js";
+import { migration006MessageFileExpiry } from "./006-message-file-expiry.js";
+import { migration007MessageReplies } from "./007-message-replies.js";
+import { migration008GroupInvites } from "./008-group-invites.js";
+import { migration009GroupColor } from "./009-group-color.js";
+import { migration010GroupSettings } from "./010-group-settings.js";
+import { migration011ChatMutes } from "./011-chat-mutes.js";
+import { migration012GroupRemovedMembers } from "./012-group-removed-members.js";
+import { migration013MessageReads } from "./013-message-reads.js";
+import { migration as migration014PushSubscriptions } from "./014-push-subscriptions.js";
+import { migration015RemoveIdleStatus } from "./015-remove-idle-status.js";
+import { migration016UserBans } from "./016-user-bans.js";
+import { migration017MessageEditsAndHides } from "./017-message-edits-and-hides.js";
+import { migration018MessageForwarding } from "./018-message-forwarding.js";
+import { migration019MessageForwardOriginUsers } from "./019-message-forward-origin-users.js";
+import { migration020ChatMessageExpiry } from "./020-chat-message-expiry.js";
+import { migration021ChatQueryIndexes } from "./021-chat-query-indexes.js";
+import { migration022MessageClientRequestId } from "./022-message-client-request-id.js";
+import { migration023ChatLeftMembers } from "./023-chat-left-members.js";
+import { migration024RemoteChannelQueue } from "./024-remote-channel-queue.js";
+import { migration025RemoteChannelPerformance } from "./025-remote-channel-performance.js";
+import { migration026RemoteChannelPause } from "./026-remote-channel-pause.js";
+import { migration027RemoteChannelSongbird } from "./027-remote-channel-songbird.js";
+import { migration as migration028PushMessagePreview } from "./028-push-message-preview.js";
+import { migration029RemoteChannelQueueSummaryIndex } from "./029-remote-channel-queue-summary-index.js";
+import { migration030HiddenMessagesCompositeIndex } from "./030-hidden-messages-composite-index.js";
+import { migration031UserRoles } from "./031-user-roles.js";
+import { migration032AppSettings } from "./032-app-settings.js";
+import { migration033AdminStatsIndexes } from "./033-admin-stats-indexes.js";
+import { migration034VerifiedField } from "./034-verified-field.js";
+import { migration035StorageAndMediaColumns } from "./035-storage-and-media-columns.js";
+import { migration036UuidPrimaryKeys } from "./036-uuid-primary-keys.js";
+import { migration037AutoAddNewUsers } from "./037-auto-add-new-users.js";
+import { migration038PendingPresignedUploads } from "./038-pending-presigned-uploads.js";
+import { migration039PostgresTimestampDefaults } from "./039-postgres-timestamp-defaults.js";
+import { migration040QueueMessageIdText } from "./040-queue-message-id-text.js";
+import { migration041AdminAuditLogs } from "./041-admin-audit-logs.js";
+import { migration042MessagingTools } from "./042-messaging-tools.js";
+import { migration043TransactionalChatEvents } from "./043-transactional-chat-events.js";
+
+export const migrations = [
+  migration001InitialSchema,
+  migration002LegacyChatRename,
+  migration003MessageFiles,
+  migration004MessageFileMetadata,
+  migration005DmDefaultName,
+  migration006MessageFileExpiry,
+  migration007MessageReplies,
+  migration008GroupInvites,
+  migration009GroupColor,
+  migration010GroupSettings,
+  migration011ChatMutes,
+  migration012GroupRemovedMembers,
+  migration013MessageReads,
+  migration014PushSubscriptions,
+  migration015RemoveIdleStatus,
+  migration016UserBans,
+  migration017MessageEditsAndHides,
+  migration018MessageForwarding,
+  migration019MessageForwardOriginUsers,
+  migration020ChatMessageExpiry,
+  migration021ChatQueryIndexes,
+  migration022MessageClientRequestId,
+  migration023ChatLeftMembers,
+  migration024RemoteChannelQueue,
+  migration025RemoteChannelPerformance,
+  migration026RemoteChannelPause,
+  migration027RemoteChannelSongbird,
+  migration028PushMessagePreview,
+  migration029RemoteChannelQueueSummaryIndex,
+  migration030HiddenMessagesCompositeIndex,
+  migration031UserRoles,
+  migration032AppSettings,
+  migration033AdminStatsIndexes,
+  migration034VerifiedField,
+  migration035StorageAndMediaColumns,
+  migration036UuidPrimaryKeys,
+  migration037AutoAddNewUsers,
+  migration038PendingPresignedUploads,
+  migration039PostgresTimestampDefaults,
+  migration040QueueMessageIdText,
+  migration041AdminAuditLogs,
+  migration042MessagingTools,
+  migration043TransactionalChatEvents,
+];
