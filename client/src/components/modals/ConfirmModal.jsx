@@ -28,17 +28,17 @@ export default function ConfirmModal({
         className="w-full max-w-sm rounded-2xl border border-rose-100/70 bg-white p-6 shadow-xl dark:border-rose-500/30 dark:bg-slate-950"
       >
         <h3 className="text-lg font-semibold text-rose-600 dark:text-rose-300">
-          {title}
+          {localize(title)}
         </h3>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          {message}
+          {localize(message)}
         </p>
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] disabled:opacity-50 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+            className="rounded-full border border-brand-200 bg-white px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
           >{localize("Cancel")}</button>
           <button
             type="button"
@@ -46,7 +46,7 @@ export default function ConfirmModal({
             disabled={busy}
             className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:shadow-[0_0_14px_rgba(244,63,94,0.2)] disabled:opacity-50 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200"
           >
-            {confirmLabel}
+            {localize(confirmLabel)}
           </button>
         </div>
       </div>

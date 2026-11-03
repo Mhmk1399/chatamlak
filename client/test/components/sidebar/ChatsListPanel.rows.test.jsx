@@ -178,7 +178,7 @@ describe("ChatsListPanel — row layout & dividers", () => {
     const bobButton = page.getByRole("button", { name: /Bob/i });
     await expect.element(bobButton).toBeInTheDocument();
 
-    const activeRows = document.querySelectorAll(".bg-emerald-50");
+    const activeRows = document.querySelectorAll(".bg-brand-50");
     expect(activeRows.length).toBe(1);
   });
 

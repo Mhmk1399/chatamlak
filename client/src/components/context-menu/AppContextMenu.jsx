@@ -151,7 +151,7 @@ export default function AppContextMenu({ menu, onClose }) {
                   onClose?.();
                 }}
                 onFocus={() => setFocusedIndex(index)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition ${
+                className={`flex w-full items-center gap-3 px-4 py-3 text-start text-sm transition ${
                   isDisabled
                     ? "cursor-not-allowed opacity-50 text-slate-400 dark:text-slate-500"
                     : item.danger
@@ -164,7 +164,7 @@ export default function AppContextMenu({ menu, onClose }) {
                     <Icon size={16} />
                   </span>
                 ) : null}
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate">{localize(item.label)}</span>
               </button>
             );
           })}

@@ -22,12 +22,13 @@ import ConfirmModal from "../modals/ConfirmModal.jsx";
 // ─── Status badge — shown on the right side of an action row ────────────────
 
 function StatusBadge({ status }) {
+  useAppLocale();
   if (!status) return null;
   const { type, label } = status;
   const cls =
     type === "error"
       ? "text-rose-600 dark:text-rose-300"
-      : "text-emerald-600 dark:text-emerald-300";
+      : "text-brand-600 dark:text-brand-300";
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${cls}`}>
       {type === "busy" ? (
@@ -37,7 +38,7 @@ function StatusBadge({ status }) {
       ) : (
         <Check size={13} />
       )}
-      {label}
+      {localize(label)}
     </span>
   );
 }
@@ -54,16 +55,17 @@ function ActionRow({
   status = null,
   danger = false,
 }) {
+  useAppLocale();
   const busy = status?.type === "busy";
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || busy}
-      className={`flex h-full w-full flex-col items-start gap-2 rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`flex h-full w-full flex-col items-start gap-2 rounded-2xl border p-4 text-start transition disabled:cursor-not-allowed disabled:opacity-60 ${
         danger
           ? "border-rose-200/70 bg-rose-50/40 hover:border-rose-300 hover:bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/4 dark:hover:bg-rose-500/10"
-          : "border-emerald-200/70 bg-white/90 hover:border-emerald-300 hover:bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-slate-950/50 dark:hover:bg-emerald-500/5"
+          : "border-brand-200/70 bg-white/90 hover:border-brand-300 hover:bg-brand-50/60 dark:border-brand-500/30 dark:bg-slate-950/50 dark:hover:bg-brand-500/5"
       }`}
     >
       <div className="flex w-full items-start justify-between gap-2">
@@ -71,7 +73,7 @@ function ActionRow({
           className={`flex h-9 w-9 shrink-0 items-center justify-center ${
             danger
               ? "text-rose-500 dark:text-rose-400"
-              : "text-emerald-600 dark:text-emerald-400"
+              : "text-brand-600 dark:text-brand-400"
           }`}
         >
           <Icon size={22} className={iconAnim} />
@@ -86,11 +88,11 @@ function ActionRow({
               : "text-slate-700 dark:text-slate-200"
           }`}
         >
-          {label}
+          {localize(label)}
         </p>
         {description && (
           <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            {description}
+            {localize(description)}
           </p>
         )}
       </div>
@@ -101,6 +103,7 @@ function ActionRow({
 // ─── Check for updates row — has its own dynamic status trailing badge ───────
 
 function CheckUpdateRow({ appInfo }) {
+  useAppLocale();
   const [status, setStatus] = useState(null);
   const resetRef = useRef(null);
   const versionLabel = String(appInfo?.version || "Unknown").trim() || "Unknown";
@@ -143,8 +146,8 @@ function CheckUpdateRow({ appInfo }) {
     <ActionRow
       icon={Refresh}
       iconAnim="icon-anim-spin-full"
-      label="Check for updates"
-      description={`Current version: ${versionLabel}`}
+      label={localize("Check for updates")}
+      description={localize("Current version: {value0}", { value0: versionLabel })}
       onClick={check}
       status={status}
     />
@@ -319,11 +322,11 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={Rotate}
             iconAnim="icon-anim-spin-full"
-            label="Restart service"
+            label={localize("Restart service")}
             description={
               serviceAvailable === false
-                ? "Not available in this deployment environment."
-                : "Briefly interrupts the app while the service restarts."
+                ? localize("Not available in this deployment environment.")
+                : localize("Briefly interrupts the app while the service restarts.")
             }
             onClick={() => setServiceAction("restart")}
             status={rowStatus.restart}
@@ -332,11 +335,11 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={Power}
             iconAnim="icon-anim-beat"
-            label="Stop service"
+            label={localize("Stop service")}
             description={
               serviceAvailable === false
-                ? "Not available in this deployment environment."
-                : "Takes the app offline until restarted from the server."
+                ? localize("Not available in this deployment environment.")
+                : localize("Takes the app offline until restarted from the server.")
             }
             onClick={() => setServiceAction("stop")}
             status={rowStatus.stop}
@@ -353,8 +356,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={HardDriveDownload}
             iconAnim="icon-anim-drop"
-            label="Backup database"
-            description={maintenanceInfo.engine === "postgres" ? "Create and download a native PostgreSQL backup archive." : "Download the database file to your device."}
+            label={localize("Backup database")}
+            description={maintenanceInfo.engine === "postgres" ? localize("Create and download a native PostgreSQL backup archive.") : localize("Download the database file to your device.")}
             onClick={downloadDb}
             status={rowStatus.backup}
           />
@@ -362,7 +365,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             icon={HardDriveUpload}
             iconAnim="icon-anim-lift"
             label={localize("Restore database")}
-            description={maintenanceInfo.offlineRestoreRequired ? "PostgreSQL restores require Songbird to be stopped; use the db:restore CLI command." : "Replace the current database by uploading a backup file."}
+            description={maintenanceInfo.offlineRestoreRequired ? localize("PostgreSQL restores require Songbird to be stopped; use the db:restore CLI command.") : localize("Replace the current database by uploading a backup file.")}
             onClick={() => fileRef.current?.click()}
             status={rowStatus.restore}
             disabled={maintenanceInfo.offlineRestoreRequired}
@@ -378,7 +381,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             icon={Brush}
             iconAnim="icon-anim-wiggle"
             label={localize("Vacuum database")}
-            description={maintenanceInfo.engine === "postgres" ? "Run PostgreSQL VACUUM ANALYZE." : "Reclaim unused space and defragment the DB file."}
+            description={maintenanceInfo.engine === "postgres" ? localize("Run PostgreSQL VACUUM ANALYZE.") : localize("Reclaim unused space and defragment the DB file.")}
             onClick={() => setVacuumConfirmOpen(true)}
             status={rowStatus.vacuum}
           />
@@ -392,8 +395,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={MessageCircleX}
             iconAnim="icon-anim-sway"
-            label="Clear all messages"
-            description="Permanently delete every message and uploaded file. Users and chats are kept."
+            label={localize("Clear all messages")}
+            description={localize("Permanently delete every message and uploaded file. Users and chats are kept.")}
             onClick={() =>
               setDanger({
                 key: "clearMessages",
@@ -412,8 +415,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={Trash}
             iconAnim="icon-anim-slide"
-            label="Reset database"
-            description="Wipe users, chats, messages, sessions, and files while keeping the schema."
+            label={localize("Reset database")}
+            description={localize("Wipe users, chats, messages, sessions, and files while keeping the schema.")}
             onClick={() =>
               setDanger({
                 key: "resetDb",
@@ -432,8 +435,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             <ActionRow
               icon={Trash}
               iconAnim="icon-anim-slide"
-              label="Delete PostgreSQL database"
-              description={maintenanceInfo.offlineDeleteRequired ? "Requires Songbird to be stopped; use the db:delete CLI command." : "Drop the entire PostgreSQL database. Songbird will stop working until it is recreated."}
+              label={localize("Delete PostgreSQL database")}
+              description={maintenanceInfo.offlineDeleteRequired ? localize("Requires Songbird to be stopped; use the db:delete CLI command.") : localize("Drop the entire PostgreSQL database. Songbird will stop working until it is recreated.")}
               onClick={() =>
                 setDanger({
                   key: "deleteDb",
@@ -457,7 +460,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
         open={vacuumConfirmOpen}
         title={localize("Vacuum database")}
         message={maintenanceInfo.engine === "postgres" ? "Run PostgreSQL VACUUM ANALYZE now?" : "Run VACUUM now? This rewrites the database file to reclaim space."}
-        confirmLabel={rowStatus.vacuum?.type === "busy" ? "Vacuuming…" : "Vacuum"}
+        confirmLabel={rowStatus.vacuum?.type === "busy" ? localize("Vacuuming…") : localize("Vacuum")}
         busy={rowStatus.vacuum?.type === "busy"}
         onConfirm={confirmVacuum}
         onClose={() => {
@@ -473,7 +476,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             ? `Replace the current database with "${pendingFile.name}"? This overwrites all existing data and cannot be undone.`
             : ""
         }
-        confirmLabel={rowStatus.restore?.type === "busy" ? "Restoring…" : "Restore"}
+        confirmLabel={rowStatus.restore?.type === "busy" ? localize("Restoring…") : localize("Restore")}
         busy={rowStatus.restore?.type === "busy"}
         onConfirm={confirmRestore}
         onClose={() => {
@@ -483,7 +486,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
 
       <ConfirmModal
         open={Boolean(serviceAction)}
-        title={serviceAction === "stop" ? "Stop service" : "Restart service"}
+        title={serviceAction === "stop" ? localize("Stop service") : localize("Restart service")}
         message={
           serviceAction === "stop"
             ? "Stop the Songbird service? The app will go offline until it is started again from the server."
@@ -491,10 +494,10 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
         }
         confirmLabel={
           rowStatus[serviceAction]?.type === "busy"
-            ? "Working…"
+            ? localize("Working…")
             : serviceAction === "stop"
-              ? "Stop"
-              : "Restart"
+              ? localize("Stop")
+              : localize("Restart")
         }
         busy={rowStatus[serviceAction]?.type === "busy"}
         onConfirm={confirmServiceAction}

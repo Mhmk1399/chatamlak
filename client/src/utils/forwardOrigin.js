@@ -22,7 +22,7 @@ export function resolveForwardedTarget({
   forwardedFromUsername = "",
   forwardedFromLabel = "",
   forwardedOriginAvatarUrl = "",
-  forwardedOriginColor = "#10b981",
+  forwardedOriginColor = "#66308d",
   remoteForwardedChatId = null,
   storedForwardedLabel = "",
   chatName = "",
@@ -56,7 +56,7 @@ export function resolveForwardedTarget({
       chatId: remoteForwardedChatId,
       label: chatName || forwardedFromLabel,
       avatar_url: "",
-      color: chatColor || "#10b981",
+      color: chatColor || "#66308d",
     };
   }
   if (storedForwardedLabel) return { kind: "self" };

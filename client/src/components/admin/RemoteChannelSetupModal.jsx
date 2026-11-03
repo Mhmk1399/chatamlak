@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../api/chatApi.js";
@@ -18,11 +19,11 @@ const BASE = "/api/admin/remote-channel";
 // Inputs mirror AdminUserModal's password fields; buttons reuse the shared
 // Settings-tab inline button styles, with a thickened modal primary.
 const TEXT_INPUT =
-  "w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100";
+  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
 const PW_INPUT =
-  "w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 disabled:opacity-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100";
+  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
 const EYE_BTN =
-  "absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-500/10";
+  "absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 dark:text-brand-200 dark:hover:bg-brand-500/10";
 const BTN_PRIMARY =
   btnPrimary + " h-11 w-full justify-center text-sm disabled:cursor-not-allowed disabled:opacity-50";
 const BTN_INLINE = " w-44 justify-center";
@@ -36,8 +37,9 @@ async function readJson(res) {
 }
 
 function PwToggle({ show, onToggle }) {
+  useAppLocale();
   return (
-    <button type="button" onClick={onToggle} className={EYE_BTN} aria-label={show ? "Hide" : "Show"}>
+    <button type="button" onClick={onToggle} className={EYE_BTN} aria-label={show ? localize("Hide") : localize("Show")}>
       {show ? <EyeOff size={16} className="icon-anim-peek" /> : <Eye size={16} className="icon-anim-peek" />}
     </button>
   );
@@ -186,14 +188,14 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
           )}
           {error && (
             <p className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
-              <AlertCircle size={12} /> {error}
+              <AlertCircle size={12} /> {localizeError(error)}
             </p>
           )}
 
 
           {step === "credentials" && (
             <>
-              <Field label="Telegram API ID">
+              <Field label={localize("Telegram API ID")}>
                 <div className="relative">
                   <input
                     type={showApiId ? "text" : "password"}
@@ -208,7 +210,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
                   <PwToggle show={showApiId} onToggle={() => setShowApiId((p) => !p)} />
                 </div>
               </Field>
-              <Field label="Telegram API hash">
+              <Field label={localize("Telegram API hash")}>
                 <div className="relative">
                   <input
                     type={showHash ? "text" : "password"}
@@ -222,7 +224,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
                   <PwToggle show={showHash} onToggle={() => setShowHash((p) => !p)} />
                 </div>
               </Field>
-              <Field label="Phone number">
+              <Field label={localize("Phone number")}>
                 <input
                   type="tel"
                   value={phone}
@@ -240,10 +242,8 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
 
           {step === "code" && (
             <>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{localize("Code sent")}{codeViaApp ? " via the Telegram app" : " via SMS"}.
-                Enter it below.
-              </p>
-              <Field label="Login code">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{localize("Code sent")}{codeViaApp ? localize(" via the Telegram app") : localize(" via SMS")}{localize(". Enter it below.")}</p>
+              <Field label={localize("Login code")}>
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
@@ -263,7 +263,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
           {step === "password" && (
             <>
               <p className="text-xs text-slate-500 dark:text-slate-400">{localize("This account has two-step verification. Enter the password.")}</p>
-              <Field label="Two-step password">
+              <Field label={localize("Two-step password")}>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -293,7 +293,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
                 title={testState?.ok ? testState.account : undefined}
                 className={
                   testState?.ok
-                    ? "inline-flex h-9 w-44 items-center justify-center gap-1.5 truncate rounded-xl bg-emerald-500 px-3 text-xs font-semibold text-white transition hover:bg-emerald-400"
+                    ? "inline-flex h-9 w-44 items-center justify-center gap-1.5 truncate rounded-xl bg-brand-600 px-3 text-xs font-semibold text-white transition hover:bg-brand-500"
                     : testState
                       ? "inline-flex h-9 w-44 items-center justify-center gap-1.5 rounded-xl bg-rose-500 px-3 text-xs font-semibold text-white transition hover:bg-rose-400"
                       : btnSecondary + BTN_INLINE
@@ -308,7 +308,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
                 ) : (
                   <Zap size={14} className="icon-anim-beat" />
                 )}
-                {busy ? "Testing…" : testState?.ok ? testState.account : testState ? "Failed" : "Test connection"}
+                {busy ? localize("Testing…") : testState?.ok ? testState.account : testState ? localize("Failed") : localize("Test connection")}
               </button>
               <button type="button" onClick={disconnect} disabled={busy} className={btnDanger + BTN_INLINE}>
                 <Unplug size={14} className="icon-anim-slide" />{localize("Disconnect")}</button>
@@ -317,7 +317,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
 
           {step === "success" && (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-500/30">
                 <Check size={26} />
               </span>
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Remote channel activated")}</p>
@@ -332,7 +332,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
                 href="https://docs.songbird.website/Remote-Channel-Setup"
                 target="_blank"
                 rel="noreferrer"
-                className="font-semibold text-emerald-600 hover:underline dark:text-emerald-400"
+                className="font-semibold text-brand-600 hover:underline dark:text-brand-400"
               >{localize("docs")}</a>
             </p>
           )}

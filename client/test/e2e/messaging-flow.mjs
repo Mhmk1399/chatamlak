@@ -11,6 +11,7 @@ if (!baseURL || !["127.0.0.1", "localhost"].includes(new URL(baseURL).hostname))
 const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
 const contextA = await browser.newContext({ baseURL, permissions: ["microphone", "camera"] });
 const contextB = await browser.newContext({ baseURL, permissions: ["microphone", "camera"] });
+for (const context of [contextA, contextB]) await context.addInitScript(() => localStorage.setItem("songbird-locale", "en"));
 const failures = [];
 const suffix = Date.now().toString(36);
 const alice = `qa${suffix}`;
@@ -164,7 +165,7 @@ try {
   const hiddenExtras = await api(contextA, "GET", `/api/messaging/chats/${chat.id}`);
   assert(!hiddenExtras.pins.includes(sent.id), "A personally hidden message must also disappear from the pinned preview");
   assert((await api(contextB, "GET", `/api/messaging/chats/${chat.id}`)).pins.includes(sent.id), "A personal hide must not hide another member's pin");
-  await pageA.getByRole("button", { name: "Language", exact: true }).click();
+  await pageA.getByRole("button", { name: "Language", exact: true }).first().click();
   assert.equal(await pageA.locator("html").getAttribute("dir"), "rtl");
   assert(await pageA.getByText("۲ عضو", { exact: true }).isVisible());
   assert.equal(await pageA.getByText("0:04 / 0:08", { exact: true }).evaluate((element) => getComputedStyle(element).direction), "ltr");

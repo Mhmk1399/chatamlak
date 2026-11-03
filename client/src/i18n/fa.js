@@ -1,3 +1,6 @@
+import { faUi } from "./fa-ui.js";
+import { faSettings } from "./fa-settings.js";
+import { faErrors } from "./fa-errors.js";
 export const fa = {
   "{count} member": "{count} عضو", "{count} members": "{count} عضو",
   "Unable to remove this queued message. Try again.": "حذف پیام از صف انجام نشد. دوباره تلاش کنید.",
@@ -37,6 +40,8 @@ export const fa = {
   "Online": "آنلاین", "Offline": "آفلاین", "Connecting": "در حال اتصال", "No messages yet": "هنوز پیامی نیست",
   "Download": "دانلود", "Voice message playback position": "موقعیت پخش ویس", "Change playback speed": "تغییر سرعت پخش",
 };
+Object.assign(fa, faUi);
+Object.assign(fa, faSettings, faErrors);
 
 Object.assign(fa, {
   "Group": "گروه", "Channel": "کانال", "group": "گروه", "channel": "کانال",

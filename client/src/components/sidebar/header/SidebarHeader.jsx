@@ -1,3 +1,6 @@
+import BrandIdentity from "../../common/BrandIdentity.jsx";
+import LanguageSwitcher from "../../common/LanguageSwitcher.jsx";
+import ThemeSwitcher from "../../common/ThemeSwitcher.jsx";
 import { t as localize, useLocale as useAppLocale } from "../../../i18n/locale.js";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -19,6 +22,8 @@ import { hasPersian } from "../../../utils/fontUtils.js";
 import UserMenuButton from "./UserMenuButton.jsx";
 
 export default function SidebarHeader({
+  isDark,
+  toggleTheme,
   mobileTab = "chats",
   editMode,
   isConnected,
@@ -108,15 +113,16 @@ export default function SidebarHeader({
 
   return (
     <div
-      className={`border-b border-slate-300/80 bg-white px-6 dark:border-emerald-500/20 dark:bg-slate-900 ${
+      className={`ouj-glass border-b border-slate-300/80 bg-white px-5 dark:border-brand-500/20 dark:bg-slate-900 ${
         isCallsMode ? "flex h-[72px] shrink-0 items-center" : "py-3"
       }`}
     >
+      {isChatsTab && !chatsSearchFocused && <div className="mb-3 flex items-center justify-between gap-3"><BrandIdentity compact /><div className="flex items-center gap-2"><ThemeSwitcher isDark={isDark} onToggle={toggleTheme} /><LanguageSwitcher compact /></div></div>}
       {mobileTab === "settings" ? (
         <div className="text-center text-lg font-semibold md:hidden">
           <span className="inline-flex items-center gap-2">
             {!isConnected ? (
-              <LoaderCircle className="h-5 w-5 animate-spin text-emerald-500" />
+              <LoaderCircle className="h-5 w-5 animate-spin text-brand-500" />
             ) : null}
             {isConnected ? localize("Settings") : localize("Connecting...")}
           </span>
@@ -152,8 +158,8 @@ export default function SidebarHeader({
                     type="button"
                     onClick={isCallsMode ? onEnterCallsEditMode : onEnterEdit}
                     disabled={!hasChats}
-                    className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white/80 p-2 text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-emerald-200 disabled:hover:shadow-none dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 md:hidden"
-                    aria-label={editAriaLabel}
+                    className="inline-flex items-center justify-center rounded-full border border-brand-200 bg-white/80 p-2 text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-brand-200 disabled:hover:shadow-none dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 md:hidden"
+                    aria-label={localize(editAriaLabel)}
                   >
                     <Pencil size={18} className="icon-anim-sway" />
                   </button>
@@ -181,7 +187,7 @@ export default function SidebarHeader({
             <h2 className="text-center text-lg font-semibold">
               <span className="inline-flex items-center gap-2">
                 {!editMode && (!isConnected || isUpdating) ? (
-                  <LoaderCircle className="h-5 w-5 animate-spin text-emerald-500" />
+                  <LoaderCircle className="h-5 w-5 animate-spin text-brand-500" />
                 ) : null}
                 {editMode ? (
                   localize("Edit")
@@ -190,15 +196,15 @@ export default function SidebarHeader({
                 ) : !isConnected ? (
                   localize("Connecting...")
                 ) : isUpdating ? (
-                  "Updating..."
+                  localize("Updating...")
                 ) :                 chatsScrollable ? (
                   <button
                     type="button"
                     onClick={onScrollToTop}
                     className="inline-flex cursor-pointer items-center gap-2 px-1 py-0.5 text-inherit"
-                    aria-label={`${title} to top`}
+                    aria-label={localize("{value0} to top", { value0: title })}
                   >
-                    {title}
+                    {localize(title)}
                   </button>
                 ) : (
                   title
@@ -214,7 +220,7 @@ export default function SidebarHeader({
                   onClick={isCallsMode ? onDeleteCalls : onDeleteChats}
                   disabled={!selectedChatsCount}
                   className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 p-2 text-rose-600 transition hover:border-rose-300 hover:shadow-[0_0_16px_rgba(244,63,94,0.22)] disabled:opacity-50 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200"
-                  aria-label={deleteAriaLabel}
+                  aria-label={localize(deleteAriaLabel)}
                 >
                   <Trash size={18} className="icon-anim-slide" />
                 </button>
@@ -225,15 +231,15 @@ export default function SidebarHeader({
                   disabled={isInCall || callsDisabled}
                   title={
                     callsDisabled
-                      ? "Calls are disabled by the server"
+                      ? localize("Calls are disabled by the server")
                       : isInCall
-                        ? "Already in a call"
+                        ? localize("Already in a call")
                         : undefined
                   }
-                  className={`inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white/80 p-2 text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 ${
+                  className={`inline-flex items-center justify-center rounded-full border border-brand-200 bg-white/80 p-2 text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
                     isInCall || callsDisabled ? "cursor-not-allowed opacity-50" : ""
                   }`}
-                  aria-label={newCallAriaLabel}
+                  aria-label={localize(newCallAriaLabel)}
                 >
                   <PhoneCall size={18} className={isInCall || callsDisabled ? "" : "icon-anim-pop"} />
                 </button>
@@ -242,25 +248,25 @@ export default function SidebarHeader({
                   <button
                     type="button"
                     onClick={() => setShowCreateMenu((prev) => !prev)}
-                    className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-white/80 p-2 text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+                    className="inline-flex items-center justify-center rounded-full border border-brand-200 bg-white/80 p-2 text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
                     aria-label={localize("Create")}
                     aria-expanded={showCreateMenu}
                   >
                     <Plus size={18} className="icon-anim-pop" />
                   </button>
                   {showCreateMenu ? (
-                    <div className="absolute right-0 top-12 z-20 w-44 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-emerald-950/10 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100">
+                    <div className="absolute right-0 top-12 z-20 w-44 overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100">
                       <button
                         type="button"
                         onClick={() => {
                           setShowCreateMenu(false);
                           onNewChat?.();
                         }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                       >
                         <Chat
                           size={16}
-                          className="text-emerald-500 icon-anim-bob"
+                          className="text-brand-500 icon-anim-bob"
                         />{localize("New DM")}</button>
                       <button
                         type="button"
@@ -268,11 +274,11 @@ export default function SidebarHeader({
                           setShowCreateMenu(false);
                           onNewGroup?.();
                         }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                       >
                         <Users
                           size={18}
-                          className="text-emerald-500 icon-anim-sway"
+                          className="text-brand-500 icon-anim-sway"
                         />{localize("New group")}</button>
                       <button
                         type="button"
@@ -280,11 +286,11 @@ export default function SidebarHeader({
                           setShowCreateMenu(false);
                           onNewChannel?.();
                         }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                       >
                         <Megaphone
                           size={18}
-                          className="text-emerald-500 icon-anim-swing"
+                          className="text-brand-500 icon-anim-swing"
                         />{localize("New channel")}</button>
                     </div>
                   ) : null}
@@ -300,7 +306,7 @@ export default function SidebarHeader({
                   <span className="inline-flex -translate-y-px md:translate-y-0">
                     <Search
                       size={14}
-                      className="icon-anim-pop block text-emerald-600 dark:text-emerald-300"
+                      className="icon-anim-pop block text-brand-600 dark:text-brand-300"
                     />
                   </span>
                   <span>{localize("Search")}</span>
@@ -311,7 +317,7 @@ export default function SidebarHeader({
                   <span className="inline-flex -translate-y-px md:translate-y-0">
                     <Search
                       size={14}
-                      className="icon-anim-pop block text-emerald-600 dark:text-emerald-300"
+                      className="icon-anim-pop block text-brand-600 dark:text-brand-300"
                     />
                   </span>
                 </span>
@@ -325,11 +331,11 @@ export default function SidebarHeader({
                 placeholder={localize("Search")}
                 lang={searchIsRtl ? "fa" : "en"}
                 dir={searchIsRtl ? "rtl" : "ltr"}
-                className={`w-full rounded-2xl border border-emerald-200 bg-white py-2 pr-10 text-sm text-slate-700 outline-hidden transition hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.18)] focus:border-emerald-400 focus:bg-white/80 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-emerald-500/50 dark:hover:shadow-[0_0_18px_rgba(16,185,129,0.12)] dark:focus:bg-slate-950 ${
+                className={`w-full rounded-2xl border border-brand-200 bg-white py-2 pr-10 text-sm text-slate-700 outline-hidden transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] focus:border-brand-400 focus:bg-white/80 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-brand-500/50 dark:hover:shadow-[0_0_18px_rgba(102,48,141,0.12)] dark:focus:bg-slate-950 ${
                   chatsSearchFocused || hasSearchText
                     ? searchIsRtl
-                      ? "pl-9 text-right font-fa placeholder-slate-500 dark:placeholder-slate-400"
-                      : "pl-9 text-left placeholder-slate-500 dark:placeholder-slate-400"
+                      ? "pl-9 text-end font-fa placeholder-slate-500 dark:placeholder-slate-400"
+                      : "pl-9 text-start placeholder-slate-500 dark:placeholder-slate-400"
                     : "px-9 text-center placeholder-transparent"
                 }`}
                 style={{ unicodeBidi: "plaintext" }}
@@ -371,13 +377,13 @@ export default function SidebarHeader({
                   }
                 }
               }}
-              className="mt-3 flex cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-100/70 focus:outline-hidden focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-800/60 dark:text-emerald-200 dark:hover:bg-slate-800/90"
+              className="mt-3 flex cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-2xl border border-brand-200/80 bg-brand-50/70 px-3 py-2 text-xs font-semibold text-brand-800 shadow-xs transition hover:border-brand-300 hover:bg-brand-100/70 focus:outline-hidden focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-800/60 dark:text-brand-200 dark:hover:bg-slate-800/90"
             >
               {permissionsPrompt?.notification?.show &&
               permissionsPrompt?.mode === "notification" ? (
                 <>
                   <div className="flex min-w-0 items-center gap-2">
-                    <Bell className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <Bell className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                     <span className="truncate whitespace-nowrap">{localize("Enable notifications")}</span>
                   </div>
                   <button
@@ -397,7 +403,7 @@ export default function SidebarHeader({
               permissionsPrompt?.mode === "microphone" ? (
                 <>
                   <div className="flex min-w-0 items-center gap-2">
-                    <Mic className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <Mic className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                     <span className="truncate whitespace-nowrap">{localize("Enable microphone")}</span>
                   </div>
                   <button

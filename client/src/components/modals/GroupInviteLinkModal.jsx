@@ -32,9 +32,9 @@ export default function GroupInviteLinkModal({ open, inviteLink, onClose, type =
         role="dialog"
         aria-modal="true"
         aria-labelledby="invite-link-modal-title"
-        className="w-full max-w-md rounded-2xl border border-emerald-100/70 bg-white p-6 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950"
+        className="w-full max-w-md rounded-2xl border border-brand-100/70 bg-white p-6 shadow-xl dark:border-brand-500/30 dark:bg-slate-950"
       >
-        <h3 id="invite-link-modal-title" className="flex items-center gap-2 text-lg font-semibold text-emerald-700 dark:text-emerald-200">
+        <h3 id="invite-link-modal-title" className="flex items-center gap-2 text-lg font-semibold text-brand-700 dark:text-brand-200">
           <Icon size={18} />
           {localize("{entity} created", { entity: localize(label) })}</h3>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{localize("Share this invite link so others can join your {entity}.", { entity: localize(label.toLowerCase()) })}
@@ -42,11 +42,11 @@ export default function GroupInviteLinkModal({ open, inviteLink, onClose, type =
         <button
           type="button"
           onClick={handleCopyInviteLink}
-          className="mt-3 flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-left text-xs text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-hidden focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+          className="mt-3 flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-start text-xs text-brand-800 transition hover:border-brand-300 hover:bg-brand-50 focus:outline-hidden focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/15"
           aria-label={localize("Copy invite link")}
         >
           <span className="min-w-0 flex-1 break-all">{inviteLink}</span>
-          <span className="ml-1 shrink-0 text-emerald-600 dark:text-emerald-400">
+          <span className="ml-1 shrink-0 text-brand-600 dark:text-brand-400">
             {copied ? <Check size={14} /> : <Copy size={14} />}
           </span>
         </button>
@@ -54,7 +54,7 @@ export default function GroupInviteLinkModal({ open, inviteLink, onClose, type =
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400"
+            className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500"
           >{localize("Done")}</button>
         </div>
       </div>

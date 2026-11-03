@@ -68,12 +68,12 @@ export default function NewCallModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-call-modal-title"
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-emerald-100/70 bg-white px-6 py-5 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950"
+        className="flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-brand-100/70 bg-white px-6 py-5 shadow-xl dark:border-brand-500/30 dark:bg-slate-950"
       >
         <div className="flex items-center justify-between pb-1">
           <h3
             id="new-call-modal-title"
-            className="text-base font-semibold text-emerald-800 dark:text-emerald-200"
+            className="text-base font-semibold text-brand-800 dark:text-brand-200"
           >{localize("Start voice call")}</h3>
           <button
             type="button"
@@ -94,7 +94,7 @@ export default function NewCallModal({
             return (
               <ForwardChatGridItem
                 key={chat.id}
-                title={display.title}
+                title={localize(display.title)}
                 avatarUrl={display.avatarUrl}
                 color={display.color}
                 kind={display.kind}
@@ -120,14 +120,14 @@ export default function NewCallModal({
             type="button"
             disabled={!selectedChatId || submitting}
             onClick={handleSubmit}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-emerald-500 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-brand-600 px-5 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-brand-500/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? (
               <LoaderCircle size={16} className="animate-spin" />
             ) : (
               <PhoneCall size={16} className="icon-anim-slide" />
             )}
-            {submitting ? "Calling..." : localize("Call")}
+            {submitting ? localize("Calling...") : localize("Call")}
           </button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -48,7 +49,7 @@ export default function NewGroupModal({
   title = "New group",
   submitLabel = "Create",
   avatarPreview = "",
-  avatarColor = "#10b981",
+  avatarColor = "#66308d",
   avatarName = "Group",
   onAvatarChange,
   onAvatarRemove,
@@ -182,18 +183,18 @@ export default function NewGroupModal({
       ? "https://example.com/invite/channelname"
       : "@channel or https://t.me/channel";
   const privacyOptionClass = (locked = false) =>
-    `flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+    `flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-start text-sm font-semibold transition ${
       locked
         ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-500"
-        : "border-emerald-200/70 bg-white/90 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_18px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+        : "border-brand-200/70 bg-white/90 text-brand-700 hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_18px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200 dark:hover:bg-brand-500/10"
     }`;
   const renderSwitch = (enabled, muted = false) => (
     <span
       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
         enabled && muted
-          ? "justify-end bg-emerald-300 dark:bg-emerald-500/50"
+          ? "justify-end bg-brand-300 dark:bg-brand-500/50"
           : enabled
-          ? "justify-end bg-emerald-500"
+          ? "justify-end bg-brand-600"
           : "justify-start bg-slate-300 dark:bg-slate-700"
       }`}
       aria-hidden="true"
@@ -210,11 +211,11 @@ export default function NewGroupModal({
           role="dialog"
           aria-modal="true"
           aria-labelledby="new-group-modal-title"
-          className="app-scroll max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-emerald-100/70 bg-white p-6 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950"
+          className="app-scroll max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border border-brand-100/70 bg-white p-6 shadow-xl dark:border-brand-500/30 dark:bg-slate-950"
         >
           <div className="flex items-center justify-between">
-            <h3 id="new-group-modal-title" className="text-lg font-semibold text-emerald-700 dark:text-emerald-200">
-              {title}
+            <h3 id="new-group-modal-title" className="text-lg font-semibold text-brand-700 dark:text-brand-200">
+              {localize(title)}
             </h3>
             <button
               type="button"
@@ -239,23 +240,23 @@ export default function NewGroupModal({
                         groupPhotoInputRef.current?.click();
                       }}
                       disabled={!fileUploadEnabled}
-                      className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-emerald-300/70 ${
+                      className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-brand-300/70 ${
                         fileUploadEnabled
-                          ? "cursor-pointer border-emerald-200 hover:border-emerald-300 hover:shadow-lg dark:border-emerald-500/30 dark:hover:border-emerald-400/60"
+                          ? "cursor-pointer border-brand-200 hover:border-brand-300 hover:shadow-lg dark:border-brand-500/30 dark:hover:border-brand-400/60"
                           : "cursor-not-allowed border-slate-300 opacity-70 dark:border-slate-700"
                       }`}
-                      aria-label={`Change ${entityLabel.toLowerCase()} photo`}
+                      aria-label={localize("Change {value0} photo", { value0: localize(entityLabel.toLowerCase()) })}
                     >
                       {avatarPreview ? (
                         <img
                           src={avatarPreview}
-                          alt={`${entityLabel} avatar preview`}
+                          alt={localize("{value0} avatar preview", { value0: localize(entityLabel) })}
                           className="h-full w-full object-cover"
                         />
                       ) : (
                         <span
                           className={`flex h-full w-full items-center justify-center text-lg font-bold ${hasPersian(getAvatarInitials(avatarName || "G")) ? "font-fa" : ""}`}
-                          style={getAvatarStyle(avatarColor || "#10b981")}
+                          style={getAvatarStyle(avatarColor || "#66308d")}
                         >
                           {getAvatarInitials(avatarName || "G")}
                         </span>
@@ -285,7 +286,7 @@ export default function NewGroupModal({
                           onAvatarRemove?.();
                         }}
                         className="absolute -right-2 -top-2 z-10 inline-flex h-6 min-h-6 w-6 min-w-6 flex-none items-center justify-center rounded-full border border-rose-200 bg-rose-50 p-0 text-rose-600 shadow-md transition hover:border-rose-300 hover:bg-rose-100 hover:shadow-lg dark:border-rose-500/30 dark:bg-rose-900 dark:text-rose-200 dark:hover:bg-rose-800"
-                        aria-label={`Remove ${entityLabel.toLowerCase()} photo`}
+                        aria-label={localize("Remove {value0} photo", { value0: localize(entityLabel.toLowerCase()) })}
                       >
                         <Trash size={12} className="icon-anim-sway" />
                       </button>
@@ -309,11 +310,11 @@ export default function NewGroupModal({
                     setGroupError("");
                   }}
                   maxLength={NICKNAME_MAX}
-                  placeholder={`My ${entityLabel.toLowerCase()}`}
+                  placeholder={localize("My {value0}", { value0: localize(entityLabel.toLowerCase()) })}
                   lang={nicknameHasPersian ? "fa" : "en"}
                   dir={nicknameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                    nicknameHasPersian ? "font-fa text-right" : "text-left"
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    nicknameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
                 />
@@ -340,8 +341,8 @@ export default function NewGroupModal({
                   placeholder={`my${entityLabel.toLowerCase()}`}
                   lang={usernameHasPersian ? "fa" : "en"}
                   dir={usernameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                    usernameHasPersian ? "font-fa text-right" : "text-left"
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    usernameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
                 />
@@ -353,7 +354,7 @@ export default function NewGroupModal({
 
             {extraFields}
 
-            <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+            <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Privacy")}</p>
               <div className="mt-2 space-y-2">
                 <button
@@ -404,7 +405,7 @@ export default function NewGroupModal({
             </div>
 
             {showInviteManagement ? (
-              <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+              <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Invite link")}</p>
                 {onRegenerateInvite ? (
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{localize("Regenerating creates a new link and expires the previous one.")}</p>
@@ -419,14 +420,14 @@ export default function NewGroupModal({
                     setTimeout(() => setInviteLinkCopied(false), 1500);
                   }}
                   disabled={!currentInviteLink}
-                  className="mt-2 flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-left text-xs text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-hidden focus:ring-2 focus:ring-emerald-300/60 disabled:cursor-default disabled:opacity-70 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+                  className="mt-2 flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-start text-xs text-brand-800 transition hover:border-brand-300 hover:bg-brand-50 focus:outline-hidden focus:ring-2 focus:ring-brand-300/60 disabled:cursor-default disabled:opacity-70 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/15"
                   aria-label={localize("Copy invite link")}
                 >
                   <span className="min-w-0 flex-1 break-all">
-                    {currentInviteLink || "No invite link available."}
+                    {currentInviteLink || localize("No invite link available.")}
                   </span>
                   {currentInviteLink ? (
-                    <span className="ml-1 shrink-0 text-emerald-600 dark:text-emerald-400">
+                    <span className="ml-1 shrink-0 text-brand-600 dark:text-brand-400">
                       {inviteLinkCopied ? <Check size={14} /> : <Copy size={14} />}
                     </span>
                   ) : null}
@@ -436,8 +437,8 @@ export default function NewGroupModal({
                     <Tooltip
                       label={
                         privateChatEnabled
-                          ? "Regenerate invite link"
-                          : "Private chats can regenerate invite links"
+                          ? localize("Regenerate invite link")
+                          : localize("Private chats can regenerate invite links")
                       }
                     >
                       <button
@@ -447,7 +448,7 @@ export default function NewGroupModal({
                           onRegenerateInvite();
                         }}
                         disabled={!privateChatEnabled || regeneratingInviteLink}
-                        className="inline-flex h-8 items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                        className="inline-flex h-8 items-center gap-2 rounded-full border border-brand-200 bg-white px-3 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
                       >
                         {regeneratingInviteLink ? (
                           <LoaderCircle size={12} className="animate-spin" />
@@ -461,17 +462,17 @@ export default function NewGroupModal({
             ) : null}
 
             {showRemoteChannelSettings ? (
-              <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+              <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Connection")}</p>
                   {groupForm.remoteChannelLoading ? (
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                      <LoaderCircle size={14} className="animate-spin text-emerald-500" />{localize("Loading...")}</span>
+                      <LoaderCircle size={14} className="animate-spin text-brand-500" />{localize("Loading...")}</span>
                   ) : null}
                 </div>
                 {!groupForm.remoteChannelLoading && remoteLastError ? (
                   <p className="mt-2 wrap-break-word text-xs text-rose-600 dark:text-rose-200">
-                    {remoteLastError}
+                    {localizeError(remoteLastError)}
                   </p>
                 ) : null}
                 {!groupForm.remoteChannelLoading ? (
@@ -489,10 +490,10 @@ export default function NewGroupModal({
                         remoteChannelEnabled: !prev.remoteChannelEnabled,
                       }));
                     }}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-start text-sm font-semibold transition ${
                       remoteChannelLocked
                         ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-500"
-                        : "border-emerald-200/70 bg-white/90 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_18px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                        : "border-brand-200/70 bg-white/90 text-brand-700 hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_18px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200 dark:hover:bg-brand-500/10"
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -500,7 +501,7 @@ export default function NewGroupModal({
                     <span
                       className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition ${
                         effectiveRemoteChannelEnabled
-                          ? "justify-end bg-emerald-500"
+                          ? "justify-end bg-brand-600"
                           : "justify-start bg-slate-300 dark:bg-slate-700"
                       }`}
                     >
@@ -523,7 +524,7 @@ export default function NewGroupModal({
                           }
                           setRemoteSourceMenuOpen((current) => !current);
                         }}
-                        className="relative mt-2 flex w-full items-center rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-12 text-left text-sm font-semibold text-slate-700 outline-hidden transition hover:border-emerald-300 hover:bg-emerald-50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-emerald-500/10"
+                        className="relative mt-2 flex w-full items-center rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-12 text-start text-sm font-semibold text-slate-700 outline-hidden transition hover:border-brand-300 hover:bg-brand-50 focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-brand-500/10"
                         aria-expanded={remoteSourceMenuOpen}
                         aria-haspopup="listbox"
                       >
@@ -535,7 +536,7 @@ export default function NewGroupModal({
                         </span>
                         <ChevronDown
                           size={16}
-                          className={`absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 transition-transform ${
+                          className={`absolute right-4 top-1/2 -translate-y-1/2 text-brand-500 transition-transform ${
                             remoteSourceMenuOpen ? "rotate-180" : ""
                           }`}
                         />
@@ -543,10 +544,10 @@ export default function NewGroupModal({
                       {remoteSourceMenuOpen ? (
                         <div
                           ref={remoteSourceMenuRef}
-                          className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-emerald-950/10 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+                          className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                         >
                           <Tooltip
-                            label={!remoteChannelTelegramAvailable ? "Telegram is not configured on this server" : ""}
+                            label={!remoteChannelTelegramAvailable ? localize("Telegram is not configured on this server") : ""}
                             className="w-full"
                           >
                             <button
@@ -561,19 +562,17 @@ export default function NewGroupModal({
                                   remoteChannelSource: "",
                                 }));
                               }}
-                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition ${
+                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start transition ${
                                 remoteChannelTelegramAvailable
-                                  ? "hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                                  ? "hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                                   : "cursor-not-allowed opacity-40"
                               }`}
                             >
                               <span className="flex items-center gap-2">
-                                <TelegramIcon size={16} className="shrink-0" />
-                                Telegram
-                              </span>
+                                <TelegramIcon size={16} className="shrink-0" />{localize("Telegram")}</span>
                               {(groupForm.remoteChannelProvider === "telegram" ||
                                 !groupForm.remoteChannelProvider) && remoteChannelTelegramAvailable ? (
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                <span className="h-2 w-2 rounded-full bg-brand-600" />
                               ) : null}
                             </button>
                           </Tooltip>
@@ -587,14 +586,12 @@ export default function NewGroupModal({
                                 remoteChannelSource: "",
                               }));
                             }}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                           >
                             <span className="flex items-center gap-2">
-                              <SongbirdIcon size={16} />
-                              Songbird
-                            </span>
+                              <SongbirdIcon size={16} />{localize("Songbird")}</span>
                             {groupForm.remoteChannelProvider === "songbird" ? (
-                              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                              <span className="h-2 w-2 rounded-full bg-brand-600" />
                             ) : null}
                           </button>
                         </div>
@@ -614,10 +611,10 @@ export default function NewGroupModal({
                         placeholder={remoteSourcePlaceholder}
                         lang={remoteSourceHasPersian ? "fa" : "en"}
                         dir={remoteSourceHasPersian ? "rtl" : "ltr"}
-                        className={`mt-2 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                        className={`mt-2 w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                           remoteSourceHasPersian
-                            ? "font-fa text-right"
-                            : "text-left"
+                            ? "font-fa text-end"
+                            : "text-start"
                         }`}
                         style={{ unicodeBidi: "plaintext" }}
                       />
@@ -633,14 +630,14 @@ export default function NewGroupModal({
                             !prev.remoteChannelSyncMetadata,
                         }))
                       }
-                      className="flex w-full items-center justify-between rounded-2xl border border-emerald-200/70 bg-white/90 px-4 py-3 text-left text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_18px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                      className="flex w-full items-center justify-between rounded-2xl border border-brand-200/70 bg-white/90 px-4 py-3 text-start text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_18px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200 dark:hover:bg-brand-500/10"
                     >
                       <span className="flex items-center gap-3">
                         <CloudSync size={18} className="icon-anim-sway" />{localize("Sync Channel Metadata")}</span>
                       <span
                         className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition ${
                           remoteChannelSyncMetadata
-                            ? "justify-end bg-emerald-500"
+                            ? "justify-end bg-brand-600"
                             : "justify-start bg-slate-300 dark:bg-slate-700"
                         }`}
                       >
@@ -660,9 +657,9 @@ export default function NewGroupModal({
                             !prev.remoteChannelStreamMedia,
                         }));
                       }}
-                      className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-start text-sm font-semibold transition ${
                         !remoteChannelStreamMediaLocked
-                          ? "border-emerald-200/70 bg-white/90 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_18px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                          ? "border-brand-200/70 bg-white/90 text-brand-700 hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_18px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200 dark:hover:bg-brand-500/10"
                           : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-500"
                       }`}
                     >
@@ -671,7 +668,7 @@ export default function NewGroupModal({
                       <span
                         className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition ${
                           remoteChannelStreamMedia
-                            ? "justify-end bg-emerald-500"
+                            ? "justify-end bg-brand-600"
                             : "justify-start bg-slate-300 dark:bg-slate-700"
                         }`}
                       >
@@ -686,7 +683,7 @@ export default function NewGroupModal({
             {showRemoteChannelSettings && remoteQueueSlot ? remoteQueueSlot : null}
 
             {showMemberSearch ? (
-            <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+            <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Add Members")}</p>
               </div>
@@ -703,8 +700,8 @@ export default function NewGroupModal({
                   disabled={addAllMembersSelected}
                   lang={groupSearchHasPersian ? "fa" : "en"}
                   dir={groupSearchHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 ${onToggleAddAllMembers ? "pr-24" : "pr-14"} text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                    groupSearchHasPersian ? "font-fa text-right" : "text-left"
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 ${onToggleAddAllMembers ? "pr-24" : "pr-14"} text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    groupSearchHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
                 />
@@ -727,13 +724,13 @@ export default function NewGroupModal({
                     }}
                     className={`absolute right-2 top-1/2 inline-flex h-8 -translate-y-1/2 items-center gap-1 rounded-2xl border px-2 text-[11px] font-semibold transition ${
                       addAllMembersSelected
-                        ? "border-emerald-500 bg-emerald-500 text-white hover:bg-emerald-400"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                        ? "border-brand-500 bg-brand-600 text-white hover:bg-brand-500"
+                        : "border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-300 hover:bg-brand-100 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/20"
                     }`}
                     aria-pressed={addAllMembersSelected}
                   >
                     <Users size={14} />
-                    {addAllMembersSelected ? "All selected" : "Add all"}
+                    {addAllMembersSelected ? localize("All selected") : localize("Add all")}
                   </button>
                 ) : null}
               </div>
@@ -767,17 +764,17 @@ export default function NewGroupModal({
                             setGroupSearchQuery("");
                             groupSearchInputRef.current?.focus?.();
                           }}
-                          className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-medium transition ${
+                          className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-start text-sm font-medium transition ${
                             selected
-                              ? "border-emerald-500 border-2 bg-emerald-50 text-emerald-900 shadow-md dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
-                              : "border-emerald-100/70 bg-white/80 text-slate-700 hover:border-emerald-300 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50"
+                              ? "border-brand-500 border-2 bg-brand-50 text-brand-900 shadow-md dark:border-brand-400 dark:bg-brand-500/20 dark:text-brand-100"
+                              : "border-brand-100/70 bg-white/80 text-slate-700 hover:border-brand-300 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50"
                           }`}
                         >
                           <Avatar
                             src={result.avatar_url}
-                            alt={label}
+                            alt={localize(label)}
                             name={label}
-                            color={result.color || "#10b981"}
+                            color={result.color || "#66308d"}
                             initials={avatarInitials}
                             showOnlineBadge={
                               String(result.status || "").toLowerCase() ===
@@ -786,12 +783,12 @@ export default function NewGroupModal({
                             className="h-8 w-8"
                           />
                           <div className="min-w-0">
-                            <Tooltip label={label} asChild>
+                            <Tooltip label={localize(label)} asChild>
                               <p
                                 className="flex items-center gap-0.5 truncate font-semibold"
                                 dir="ltr"
                               >
-                                <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                                <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                                 {Boolean(result.verified) && <VerifiedBadge size={14} />}
                                 <UserRoleBadge role={result.role} size={14} />
                               </p>
@@ -829,13 +826,13 @@ export default function NewGroupModal({
                             ),
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200"
                       >
                         <Avatar
                           src={member.avatar_url}
-                          alt={label}
+                          alt={localize(label)}
                           name={label}
-                          color={member.color || "#10b981"}
+                          color={member.color || "#66308d"}
                           initials={initials}
                           className="h-4 w-4 text-[9px]"
                         />
@@ -856,7 +853,7 @@ export default function NewGroupModal({
 
           {groupError ? (
             <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200">
-              {groupError}
+              {localizeError(groupError)}
             </p>
           ) : null}
 
@@ -880,7 +877,7 @@ export default function NewGroupModal({
               type="button"
               onClick={onCreate}
               disabled={creatingGroup}
-              className="inline-flex min-w-[88px] items-center justify-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400 disabled:opacity-70"
+              className="inline-flex min-w-[88px] items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500 disabled:opacity-70"
             >
               {creatingGroup ? (
                 <>
@@ -895,10 +892,10 @@ export default function NewGroupModal({
 
       <ConfirmPasswordModal
         open={deleteModalOpen}
-        title={`Delete ${entityLabel.toLowerCase()}`}
-        description={`This permanently deletes the ${entityLabel.toLowerCase()}, removes all members, and erases all messages.`}
-        confirmLabel="Continue"
-        deleteLabel={`Delete ${entityLabel.toLowerCase()}`}
+        title={localize("Delete {value0}", { value0: localize(entityLabel.toLowerCase()) })}
+        description={localize("This permanently deletes the {value0}, removes all members, and erases all messages.", { value0: localize(entityLabel.toLowerCase()) })}
+        confirmLabel={localize("Continue")}
+        deleteLabel={localize("Delete {value0}", { value0: localize(entityLabel.toLowerCase()) })}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={async (password) => {
           await onDeleteChat?.(password);

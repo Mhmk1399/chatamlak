@@ -24,7 +24,7 @@ export function getForwardChatDisplay(chat, currentUsername) {
     return {
       title: "Saved messages",
       avatarUrl: "",
-      color: "#10b981",
+      color: "#66308d",
       kind: "saved",
       initials: "S",
     };
@@ -36,7 +36,7 @@ export function getForwardChatDisplay(chat, currentUsername) {
     return {
       title,
       avatarUrl: String(chat?.group_avatar_url || "").trim(),
-      color: String(chat?.group_color || "#10b981"),
+      color: String(chat?.group_color || "#66308d"),
       kind: type,
       initials: title,
       verified: Boolean(chat?.verified),

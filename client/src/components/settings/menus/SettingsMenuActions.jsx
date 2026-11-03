@@ -32,11 +32,11 @@ export function SettingsMenuActions({
   useAppLocale();
   const isMobile = variant === "mobile";
   const buttonBase = isMobile
-    ? "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-medium"
-    : "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold";
+    ? "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-start text-base font-medium"
+    : "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start text-sm font-semibold";
   const accentHover =
-    "text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200";
-  const iconCls = "shrink-0 text-emerald-500";
+    "text-slate-700 transition hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200";
+  const iconCls = "shrink-0 text-brand-500";
   const isAdmin = userRole === "admin" || userRole === "owner";
   const showAdminPanel = isAdmin && adminPanelEnabled;
   const divider = <div className="my-1 h-px bg-slate-100 dark:bg-white/5" />;

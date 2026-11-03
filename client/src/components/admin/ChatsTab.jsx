@@ -175,13 +175,13 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
             <ChevronDown size={12} className={`hidden transition-transform sm:inline-flex ${createMenuOpen ? "rotate-180" : ""}`} />
           </button>
           {createMenuOpen ? (
-            <div className="absolute right-0 z-50 mt-1.5 w-44 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-emerald-950/10 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100">
+            <div className="absolute right-0 z-50 mt-1.5 w-44 overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100">
               <button type="button" onClick={() => { setCreateMenuOpen(false); setCreateType("group"); }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200">
-                <Users size={15} className="text-emerald-500 icon-anim-sway" />{localize("New group")}</button>
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200">
+                <Users size={15} className="text-brand-500 icon-anim-sway" />{localize("New group")}</button>
               <button type="button" onClick={() => { setCreateMenuOpen(false); setCreateType("channel"); }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200">
-                <Megaphone size={15} className="text-emerald-500 icon-anim-swing" />{localize("New channel")}</button>
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200">
+                <Megaphone size={15} className="text-brand-500 icon-anim-swing" />{localize("New channel")}</button>
             </div>
           ) : null}
         </div>
@@ -200,7 +200,7 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
                   <Avatar
                     src={c.group_avatar_url}
                     name={c.name || "Chat"}
-                    color={c.group_color || "#10b981"}
+                    color={c.group_color || "#66308d"}
                     className="h-10 w-10 shrink-0 text-sm font-bold text-white"
                   />
                   <div className="min-w-0 flex-1">
@@ -219,12 +219,12 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                       <span className="flex items-center gap-1 capitalize">
-                        {c.type === "channel" ? <Megaphone size={12} className="text-emerald-500" /> : <Users size={12} className="text-emerald-500" />}
+                        {c.type === "channel" ? <Megaphone size={12} className="text-brand-500" /> : <Users size={12} className="text-brand-500" />}
                         {c.type}
                       </span>
                       <span className="flex items-center gap-1 capitalize">
-                        {(c.group_visibility || "public") === "private" ? <Lock size={12} className="text-emerald-500" /> : <Globe size={12} className="text-emerald-500" />}
-                        {c.group_visibility || "public"}
+                        {(c.group_visibility || "public") === "private" ? <Lock size={12} className="text-brand-500" /> : <Globe size={12} className="text-brand-500" />}
+                        {c.group_visibility || localize("public")}
                       </span>
                       <span className="flex items-center gap-1"><Users size={11} className="text-slate-400" />{c.member_count}</span>
                       <span className="flex items-center gap-1"><MessageCircleMore size={11} className="text-slate-400" />{c.message_count}</span>
@@ -240,7 +240,7 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
           {/* Desktop table */}
           <div className={"hidden overflow-hidden sm:block " + cardCls}>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-start text-sm">
                 <thead className="border-b border-slate-100 dark:border-white/5">
                   <tr>
                     <SortTh field="name" sortBy={sortBy} sortDir={sortDir} onToggle={toggleSort}>{localize("Chat")}</SortTh>
@@ -257,13 +257,13 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
                     const chatName = c.name || `Chat #${c.id}`;
                     const nameHasPersian = hasPersian(chatName);
                     return (
-                    <tr key={c.id} className="hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5">
+                    <tr key={c.id} className="hover:bg-brand-50/30 dark:hover:bg-brand-500/5">
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2.5">
                           <Avatar
                             src={c.group_avatar_url}
                             name={c.name || "Chat"}
-                            color={c.group_color || "#10b981"}
+                            color={c.group_color || "#66308d"}
                             className="h-7 w-7 shrink-0 text-xs font-bold text-white"
                           />
                           <div className="min-w-0">
@@ -277,14 +277,14 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
                       </td>
                       <td className="px-4 py-2.5 text-xs capitalize text-slate-600 dark:text-slate-300">
                         <span className="flex items-center gap-1.5">
-                          {c.type === "channel" ? <Megaphone size={13} className="text-emerald-500" /> : <Users size={13} className="text-emerald-500" />}
+                          {c.type === "channel" ? <Megaphone size={13} className="text-brand-500" /> : <Users size={13} className="text-brand-500" />}
                           {c.type}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-xs capitalize text-slate-600 dark:text-slate-300">
                         <span className="flex items-center gap-1.5">
-                          {(c.group_visibility || "public") === "private" ? <Lock size={13} className="text-emerald-500" /> : <Globe size={13} className="text-emerald-500" />}
-                          {c.group_visibility || "public"}
+                          {(c.group_visibility || "public") === "private" ? <Lock size={13} className="text-brand-500" /> : <Globe size={13} className="text-brand-500" />}
+                          {c.group_visibility || localize("public")}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-slate-600 dark:text-slate-300">
@@ -319,7 +319,7 @@ const ChatsTab = forwardRef(function ChatsTab({ active = true, onMutated, onStat
         open={Boolean(pendingDelete)}
         title={localize("Delete chat")}
         message={`Permanently delete "${pendingDelete?.name || `Chat #${pendingDelete?.id}`}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        confirmLabel={localize("Delete")}
         onConfirm={async () => { await handleDelete(pendingDelete); setPendingDelete(null); }}
         onClose={() => setPendingDelete(null)}
       />

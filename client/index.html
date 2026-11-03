@@ -1,41 +1,44 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+    <link rel="icon" href="/ouj-logo.png" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ouj-logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/ouj-logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/ouj-icons/icon-180.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#ecfdf5" />
+    <meta name="theme-color" content="#f8f8fb" />
     <style>
       html,
       body {
-        background: #ffffff;
+        background: #f8f8fb;
       }
       html.sb-preload-dark,
       html.sb-preload-dark body {
-        background: #020617;
+        background: #110f18;
       }
     </style>
     <script>
       (function () {
         try {
           var stored = localStorage.getItem("songbird-theme");
-          var isDark = stored === "dark";
+          var isDark = stored === "dark" || (stored !== "light" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var english = localStorage.getItem("songbird-locale") === "en";
+          document.documentElement.lang = english ? "en" : "fa";
+          document.documentElement.dir = english ? "ltr" : "rtl";
           if (isDark) {
             var root = document.documentElement;
             root.classList.add("dark", "sb-preload-dark");
             root.style.colorScheme = "dark";
-            root.style.backgroundColor = "#020617";
+            root.style.backgroundColor = "#110f18";
             var meta = document.querySelector('meta[name="theme-color"]');
-            if (meta) meta.setAttribute("content", "#020617");
+            if (meta) meta.setAttribute("content", "#110f18");
           }
         } catch (_) {}
       })();
     </script>
-    <title>Songbird</title>
+    <title>گفتگوی اوج</title>
   </head>
   <body>
     <div id="root"></div>

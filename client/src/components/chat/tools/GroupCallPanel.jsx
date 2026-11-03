@@ -1,9 +1,11 @@
+import { tError as localizeError } from "../../../i18n/locale.js";
 import { useEffect, useRef, useState } from "react";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { t, useLocale } from "../../../i18n/locale.js";
 import { toolButton } from "./ToolDialog.jsx";
 
 function StreamMedia({ stream, audioOnly = false }) {
+  useLocale();
   const ref = useRef(null);
   useEffect(() => {
     const element = ref.current;
@@ -15,6 +17,7 @@ function StreamMedia({ stream, audioOnly = false }) {
 }
 
 export function GroupCallMedia() {
+  useLocale();
   const context = useMessagingContext();
   if (!context?.groupCall?.room) return null;
   return <>{Object.entries(context.groupCall.streams).map(([id, stream]) => <StreamMedia key={id} stream={stream} audioOnly />)}</>;
@@ -26,13 +29,13 @@ export default function GroupCallPanel() {
   const call = context.groupCall;
   const [video, setVideo] = useState(false);
   return <div className="space-y-3">
-    {call.error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{call.error}</p>}
+    {call.error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{localizeError(call.error)}</p>}
     {!call.room ? <>
       <p className="text-sm text-slate-500">{t("Group calls support up to six participants.")}</p>
       <label className="flex min-h-10 items-center gap-2 text-sm"><input type="checkbox" checked={video} onChange={(event) => setVideo(event.target.checked)} />{t("Camera")}</label>
       <button type="button" className={toolButton} disabled={call.joining || context.isInCall} onClick={() => call.join(context.chat, video)}>{t(call.joining ? t("Connecting") : t("Join call"))}</button>
     </> : <>
-      <p className="text-sm font-semibold" dir="auto">{call.room.title} · {call.peers.length}/6</p>
+      <p className="text-sm font-semibold" dir="auto">{t(call.room.title)} · {call.peers.length}/6</p>
       <div className="flex flex-wrap gap-2"><button type="button" className={toolButton} aria-pressed={call.muted} onClick={call.toggleMute}>{t(call.muted ? t("Unmute") : t("Mute"))}</button>
         {call.room.stream.getVideoTracks().length > 0 && <button type="button" className={toolButton} aria-pressed={!call.cameraOff} onClick={call.toggleCamera}>{t("Camera")}</button>}
         <button type="button" className={`${toolButton} text-rose-600 dark:text-rose-300`} onClick={call.leave}>{t("Leave call")}</button></div>

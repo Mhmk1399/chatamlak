@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Vitest browser test artifacts
+.vitest/
 .vitest-attachments
 test/components/*/__screenshots__
 

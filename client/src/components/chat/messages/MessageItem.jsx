@@ -244,16 +244,16 @@ export const MessageItem = memo(function MessageItem({
   const forwardedOriginColor = forwardedFromChatId
     ? isDeletedForwardedChat
       ? deletedForwardOriginColor
-      : String(forwardedChat?.group_color || "#10b981").trim() || "#10b981"
+      : String(forwardedChat?.group_color || "#66308d").trim() || "#66308d"
     : forwardedFromUserId
       ? isDeletedForwardedUser
         ? deletedForwardOriginColor
         : String(
-            forwardedUser?.color || msg?.forwarded_from_color || "#10b981",
-          ).trim() || "#10b981"
+            forwardedUser?.color || msg?.forwarded_from_color || "#66308d",
+          ).trim() || "#66308d"
       : isRemoteForwardedOrigin
-        ? "#10b981"
-        : String(msg?.forwarded_from_color || "#10b981").trim() || "#10b981";
+        ? "#66308d"
+        : String(msg?.forwarded_from_color || "#66308d").trim() || "#66308d";
   const forwardedTarget = resolveForwardedTarget({
     forwardedFromChatId,
     forwardedFromUserId,
@@ -570,15 +570,15 @@ export const MessageItem = memo(function MessageItem({
     const dayMs = 24 * hourMs;
     if (diffMs < hourMs) {
       const minutes = Math.max(1, Math.ceil(diffMs / minuteMs));
-      return { label: `${minutes}m`, danger: true };
+      return { label: localize("{count}m", { count: minutes }), danger: true };
     }
     if (diffMs < dayMs) {
       const hours = Math.max(1, Math.ceil(diffMs / hourMs));
-      return { label: `${hours}h`, danger: true };
+      return { label: localize("{count}h", { count: hours }), danger: true };
     }
     const dayDisplayBiasMs = 55 * minuteMs;
     const days = Math.max(1, Math.floor((diffMs + dayDisplayBiasMs) / dayMs));
-    return { label: `${days}d`, danger: days <= 1 };
+    return { label: localize("{count}d", { count: days }), danger: days <= 1 };
   };
   const expiryBadge = formatExpiryBadge();
   const dayLabel = getMessageDayLabel
@@ -597,8 +597,8 @@ export const MessageItem = memo(function MessageItem({
         "Unknown";
   const replyColor =
     isChannelChat && replyTarget
-      ? chatColor || "#10b981"
-      : replyTarget?.color || "#10b981";
+      ? chatColor || "#66308d"
+      : replyTarget?.color || "#66308d";
   const replyPreviewRaw =
     extractMessageBodyText(replyTarget?.body).trim() || "Message";
   const truncateReplyPreview = (value, maxChars = 90) => {
@@ -674,7 +674,7 @@ export const MessageItem = memo(function MessageItem({
     ? "Deleted account"
     : msg.nickname || msg.username || "Unknown";
   const senderInitials = getAvatarInitials(senderName);
-  const senderColor = isDeletedAuthor ? "#94a3b8" : msg.color || "#10b981";
+  const senderColor = isDeletedAuthor ? "#94a3b8" : msg.color || "#66308d";
   const forwardedInitials = getAvatarInitials(forwardedFromLabel || "C");
   const forwardedOriginButtonLabel = forwardedFromLabel
     ? `Open forwarded origin: ${forwardedFromLabel}`
@@ -688,7 +688,7 @@ export const MessageItem = memo(function MessageItem({
     username: msg.username || "",
     nickname: msg.nickname || "",
     avatar_url: msg.avatar_url || "",
-    color: msg.color || "#10b981",
+    color: msg.color || "#66308d",
     role: "",
   };
   const senderContextMenu = {
@@ -747,7 +747,7 @@ export const MessageItem = memo(function MessageItem({
               : undefined
           }
           disabled={!canOpenForwardedOrigin}
-          className={`inline-flex max-w-full items-center gap-1.5 text-left font-semibold not-italic transition ${
+          className={`inline-flex max-w-full items-center gap-1.5 text-start font-semibold not-italic transition ${
             canOpenForwardedOrigin ? "hover:text-sky-300" : "cursor-default"
           }`}
           aria-label={forwardedOriginButtonLabel}
@@ -915,15 +915,15 @@ export const MessageItem = memo(function MessageItem({
           className="flex items-center gap-3 py-3"
           style={{ scrollMarginTop: "96px" }}
         >
-          <span className="h-px flex-1 bg-emerald-200/70 dark:bg-emerald-500/30" />
-          <span className="rounded-full border border-emerald-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200">{localize("Unread Messages")}</span>
-          <span className="h-px flex-1 bg-emerald-200/70 dark:bg-emerald-500/30" />
+          <span className="h-px flex-1 bg-brand-200/70 dark:bg-brand-500/30" />
+          <span className="rounded-full border border-brand-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200">{localize("Unread Messages")}</span>
+          <span className="h-px flex-1 bg-brand-200/70 dark:bg-brand-500/30" />
         </div>
       ) : null}
       {msg?._systemEvent ? (
         <div className="flex justify-center px-3 py-1 md:px-0">
           <span
-            className="inline-flex max-w-full items-center justify-center rounded-full border border-emerald-200/60 bg-white/90 px-3 py-1 text-center text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+            className="inline-flex max-w-full items-center justify-center rounded-full border border-brand-200/60 bg-white/90 px-3 py-1 text-center text-[11px] font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
             style={{ lineHeight: 1.35 }}
           >
             <span className="min-w-0 truncate">
@@ -934,7 +934,7 @@ export const MessageItem = memo(function MessageItem({
                 dir="auto"
                 style={{ unicodeBidi: "isolate" }}
               >
-                {msg?._systemEvent?.name || "A member"}
+                {msg?._systemEvent?.name || localize("A member")}
               </span>{" "}
               <span
                 dir="ltr"
@@ -1043,7 +1043,7 @@ export const MessageItem = memo(function MessageItem({
           {showSwipeHint ? (
             <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2">
               <div
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-500/30"
                 style={{
                   opacity: swipeProgress,
                   transform: `translateX(${124 - swipeProgress * 124}px) scale(${
@@ -1084,7 +1084,7 @@ export const MessageItem = memo(function MessageItem({
                   }
                   className={`h-7 w-7 shrink-0 text-[10px] transition ${
                     canOpenSenderProfile
-                      ? "group-hover:ring-2 group-hover:ring-emerald-300"
+                      ? "group-hover:ring-2 group-hover:ring-brand-300"
                       : ""
                   }`}
                 />
@@ -1145,8 +1145,8 @@ export const MessageItem = memo(function MessageItem({
                   <button
                     type="button"
                     onClick={() => onJumpToMessage?.(replyTarget.id)}
-                    className="group mb-2 inline-flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2.5 text-left text-xs text-slate-700 transition hover:border-emerald-300 hover:bg-white hover:shadow-[0_0_16px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(16,185,129,0.14)]"
-                    aria-label={`Reply to ${replyDisplayName}`}
+                    className="group mb-2 inline-flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-brand-200/70 bg-white/70 px-3 py-2.5 text-start text-xs text-slate-700 transition hover:border-brand-300 hover:bg-white hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(102,48,141,0.14)]"
+                    aria-label={localize("Reply to {value0}", { value0: replyDisplayName })}
                   >
                     <span className="min-w-0 flex-1">
                       <Tooltip label={replyDisplayName} asChild>
@@ -1259,7 +1259,7 @@ export const MessageItem = memo(function MessageItem({
                   : "max-w-[82%] sm:max-w-[86%] md:max-w-[80%]"
               } ${
                 isOwn
-                  ? "rounded-br-md bg-emerald-200 text-emerald-950 dark:bg-emerald-800 dark:text-white"
+                  ? "rounded-br-md bg-brand-100 text-slate-900 dark:bg-brand-900/60 dark:text-slate-100"
                   : "bg-white/90 text-slate-800 rounded-bl-md dark:bg-slate-800/75 dark:text-slate-100"
               }`}
               onDoubleClick={() => {
@@ -1297,8 +1297,8 @@ export const MessageItem = memo(function MessageItem({
                 <button
                   type="button"
                   onClick={() => onJumpToMessage?.(replyTarget.id)}
-                  className="group mb-2 inline-flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2.5 text-left text-xs text-slate-700 transition hover:border-emerald-300 hover:bg-white hover:shadow-[0_0_16px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(16,185,129,0.14)]"
-                  aria-label={`Reply to ${replyDisplayName}`}
+                  className="group mb-2 inline-flex w-full max-w-full min-w-0 items-center gap-2 overflow-hidden rounded-xl border border-brand-200/70 bg-white/70 px-3 py-2.5 text-start text-xs text-slate-700 transition hover:border-brand-300 hover:bg-white hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(102,48,141,0.14)]"
+                  aria-label={localize("Reply to {value0}", { value0: replyDisplayName })}
                 >
                   <span className="min-w-0 flex-1">
                     <Tooltip label={replyDisplayName} asChild>
@@ -1381,13 +1381,13 @@ export const MessageItem = memo(function MessageItem({
                     onCallLogCall(callLog.type)
                   }
                   className="-my-1 flex w-full items-center gap-2.5 py-1 text-start"
-                  aria-label={`${callLogLabel} — call back`}
+                  aria-label={localize("{value0} — call back", { value0: callLogLabel })}
                 >
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white ${
                       callLog.status === "failed" || callLog.status === "cancelled"
                         ? "bg-rose-500 dark:bg-rose-600"
-                        : "bg-emerald-500 dark:bg-emerald-600"
+                        : "bg-brand-600 dark:bg-brand-600"
                     }`}
                     aria-hidden="true"
                   >
@@ -1427,7 +1427,7 @@ export const MessageItem = memo(function MessageItem({
               <div
                 className={`mt-2 flex w-full items-center text-[10px] ${
                   isOwn
-                    ? "text-emerald-900/80 dark:text-emerald-50/80"
+                    ? "text-brand-900/80 dark:text-brand-50/80"
                     : "text-slate-500 dark:text-slate-400"
                 }`}
               >
@@ -1438,14 +1438,14 @@ export const MessageItem = memo(function MessageItem({
                     <span
                       className={`inline-flex items-center gap-1 ${
                         isSending
-                          ? "text-emerald-900/80 dark:text-emerald-50/80"
+                          ? "text-brand-900/80 dark:text-brand-50/80"
                           : isFailed
                             ? "text-rose-500"
                             : isChannelChat
                               ? "text-slate-500 dark:text-slate-400"
                               : isRead
                                 ? "text-sky-400"
-                                : "text-emerald-900/80 dark:text-emerald-50/80"
+                                : "text-brand-900/80 dark:text-brand-50/80"
                       }`}
                     >
                       {isSending ? (
@@ -1503,7 +1503,7 @@ export const MessageItem = memo(function MessageItem({
                     }`}
                   >
                     <ClockFading size={12} className="-translate-y-px" />
-                    <span>{expiryBadge.label}</span>
+                    <span>{localize(expiryBadge.label)}</span>
                   </span>
                 ) : null}
               </div>
@@ -1511,7 +1511,7 @@ export const MessageItem = memo(function MessageItem({
                 <button
                   type="button"
                   onClick={() => onForwardMessage(msg)}
-                  className="absolute bottom-2 -right-12 inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-xs transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                  className="absolute bottom-2 -right-12 inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-700 shadow-xs transition hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
                   aria-label={localize("Forward message")}
                 >
                   <Forward size={15} className="icon-anim-pop" />

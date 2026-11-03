@@ -77,11 +77,11 @@ export default function CallsPanel({
           >
             <div className="flex min-h-[72px] w-full animate-pulse items-center gap-3 rounded-xl px-3 py-2.5">
               <div className="shrink-0">
-                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40" />
+                <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/40" />
               </div>
               <div className="flex-1 space-y-2">
-                <div className="h-3 w-1/2 rounded-sm bg-emerald-100 dark:bg-emerald-900/40" />
-                <div className="h-2 w-3/4 rounded-sm bg-emerald-100/80 dark:bg-emerald-900/30" />
+                <div className="h-3 w-1/2 rounded-sm bg-brand-100 dark:bg-brand-900/40" />
+                <div className="h-2 w-3/4 rounded-sm bg-brand-100/80 dark:bg-brand-900/30" />
               </div>
             </div>
             {index < 5 ? (
@@ -113,7 +113,7 @@ export default function CallsPanel({
                 className={`group flex min-h-[72px] w-full items-center rounded-xl border border-transparent text-slate-700 transition ${
                   isInCall || callsDisabled
                     ? ""
-                    : "hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                    : "hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                 } dark:text-slate-100 ${callsEditMode ? "animate-chat-wiggle-ios" : ""}`}
                 style={wiggleStyle}
               >
@@ -140,12 +140,12 @@ export default function CallsPanel({
                   }}
                   title={
                     callsDisabled
-                      ? "Calls are disabled by the server"
+                      ? localize("Calls are disabled by the server")
                       : isInCall
-                        ? "Already in a call"
+                        ? localize("Already in a call")
                         : undefined
                   }
-                  className={`flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 text-left ${
+                  className={`flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 text-start ${
                     callsEditMode
                       ? "pointer-events-none pl-2 pr-3"
                       : isInCall || callsDisabled
@@ -159,7 +159,7 @@ export default function CallsPanel({
                       src={peer.avatarUrl}
                       alt={name}
                       name={name}
-                      color={peer.color || "#10b981"}
+                      color={peer.color || "#66308d"}
                       initials={getAvatarInitials(name)}
                       placeholderContent={null}
                       className="h-12 w-12 text-lg font-semibold"
@@ -202,7 +202,7 @@ export default function CallsPanel({
                           className={`truncate ${hasPersian(call.label) ? "font-fa" : ""}`}
                           dir="auto"
                         >
-                          {call.label}
+                          {localize(call.label)}
                         </span>
                       </p>
                     </div>
@@ -222,8 +222,8 @@ export default function CallsPanel({
                     }}
                     className={`mr-2.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
                       selectedCalls.includes(call.messageId)
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-emerald-200 text-emerald-600 dark:border-emerald-500/30 dark:text-emerald-200"
+                        ? "border-brand-500 bg-brand-600 text-white"
+                        : "border-brand-200 text-brand-600 dark:border-brand-500/30 dark:text-brand-200"
                     }`}
                     aria-label={localize("Select call entry")}
                   >

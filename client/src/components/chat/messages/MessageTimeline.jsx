@@ -361,7 +361,7 @@ export function MessageTimeline({
               <div
                 className={`animate-pulse rounded-2xl ${
                   own
-                    ? "h-12 w-40 bg-emerald-300/70 dark:bg-emerald-700/60"
+                    ? "h-12 w-40 bg-brand-300/70 dark:bg-brand-700/60"
                     : "h-14 w-52 bg-white/80 dark:bg-slate-800/80"
                 }`}
               />
@@ -420,8 +420,8 @@ export function MessageTimeline({
                     <button
                       type="button"
                       onClick={() => handleGroupChipClick(row.dayKey)}
-                      aria-label={`Jump to messages from ${row.dayLabel || row.dayKey}`}
-                      className="inline-flex w-max items-center justify-center rounded-full border border-emerald-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-xs transition hover:border-emerald-300 hover:shadow-md dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+                      aria-label={localize("Jump to messages from {value0}", { value0: row.dayLabel || row.dayKey })}
+                      className="inline-flex w-max items-center justify-center rounded-full border border-brand-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-brand-700 shadow-xs transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
                     >
                       <span
                         data-day-chip={row.dayLabel || ""}
@@ -455,7 +455,7 @@ export function MessageTimeline({
       onScroll={handleTimelineScroll}
       style={chatScrollStyle}
     >
-      <div className="rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200">{localize("Say something to start")}</div>
+      <div className="rounded-full border border-brand-200 bg-white/80 px-4 py-2 text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200">{localize("Say something to start")}</div>
     </div>
   );
 }

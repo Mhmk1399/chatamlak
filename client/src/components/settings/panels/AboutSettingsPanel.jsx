@@ -23,12 +23,13 @@ const SOCIAL_ICONS = {
 };
 
 function WalletRow({ label, address }) {
+  useAppLocale();
   const [copied, setCopied] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-emerald-200/70 bg-white/90 p-3 dark:border-emerald-500/30 dark:bg-slate-900/50">
+    <div className="rounded-2xl border border-brand-200/70 bg-white/90 p-3 dark:border-brand-500/30 dark:bg-slate-900/50">
       <p className="text-xs font-semibold uppercase text-slate-600 dark:text-white">
-        {label}
+        {localize(label)}
       </p>
       <button
         type="button"
@@ -38,11 +39,11 @@ function WalletRow({ label, address }) {
           setCopied(true);
           window.setTimeout(() => setCopied(false), 1500);
         }}
-        className="mt-2 flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-left text-xs text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-hidden focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
-        aria-label={`Copy ${label} wallet address`}
+        className="mt-2 flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-start text-xs text-brand-800 transition hover:border-brand-300 hover:bg-brand-50 focus:outline-hidden focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/15"
+        aria-label={localize("Copy {value0} wallet address", { value0: label })}
       >
         <code className="min-w-0 flex-1 break-all font-mono">{address}</code>
-        <span className="ml-1 shrink-0 text-emerald-600 dark:text-emerald-400">
+        <span className="ml-1 shrink-0 text-brand-600 dark:text-brand-400">
           {copied ? <Check size={14} /> : <Copy size={14} />}
         </span>
       </button>
@@ -51,6 +52,7 @@ function WalletRow({ label, address }) {
 }
 
 function DonationLinkRow({ donationLink }) {
+  useAppLocale();
   if (!donationLink?.href) return null;
 
   return (
@@ -62,10 +64,10 @@ function DonationLinkRow({ donationLink }) {
             {donationLink.eyebrow}
           </p>
           <p className="mt-2 text-base font-bold leading-6 text-slate-900 dark:text-white">
-            {donationLink.title}
+            {localize(donationLink.title)}
           </p>
           <p className="mt-1.5 max-w-[34ch] text-sm leading-6 text-slate-700 dark:text-slate-200/90">
-            {donationLink.description}
+            {localize(donationLink.description)}
           </p>
         </div>
         <a
@@ -73,10 +75,10 @@ function DonationLinkRow({ donationLink }) {
           target="_blank"
           rel="noreferrer noopener"
           className="inline-flex shrink-0 items-center gap-2 rounded-full border border-sky-300 bg-[#64ACFF] px-4 py-2.5 text-sm font-bold text-white shadow-[0_0_14px_rgba(100,172,255,0.24)] transition hover:border-sky-200 hover:bg-[#7AB8FF] hover:shadow-[0_0_14px_rgba(100,172,255,0.32)] focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-sky-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13171c] dark:border-sky-300/60 dark:bg-[#64ACFF] dark:hover:bg-[#7AB8FF]"
-          aria-label={donationLink.buttonLabel}
+          aria-label={localize(donationLink.buttonLabel)}
         >
           <Heart size={15} className="icon-anim-pop fill-current" />
-          {donationLink.buttonLabel}
+          {localize(donationLink.buttonLabel)}
         </a>
       </div>
     </div>
@@ -97,7 +99,7 @@ export function AboutSettingsPanel({
   const ownerLabel = ABOUT_CONTENT.copyright?.ownerLabel || "bllackbull";
   const year = new Date().getFullYear();
   const rowBase =
-    "flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-200/70 bg-white/90 px-4 py-3 text-left text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200";
+    "flex w-full items-center justify-between gap-3 rounded-2xl border border-brand-200/70 bg-white/90 px-4 py-3 text-start text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200";
 
   return (
     <div className="space-y-4 text-slate-600 dark:text-slate-300">
@@ -115,24 +117,24 @@ export function AboutSettingsPanel({
           </span>
         </div>
 
-        <div className="rounded-2xl border border-emerald-200/70 bg-white/90 p-4 dark:border-emerald-500/30 dark:bg-slate-900/50">
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-200">{localize("Support the project")}</p>
+        <div className="rounded-2xl border border-brand-200/70 bg-white/90 p-4 dark:border-brand-500/30 dark:bg-slate-900/50">
+          <p className="text-sm font-semibold text-brand-700 dark:text-brand-200">{localize("Support the project")}</p>
           <p className="mt-1.5 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            {ABOUT_CONTENT.supportIntro}
+            {localize(ABOUT_CONTENT.supportIntro)}
           </p>
           <div className="mt-3 space-y-2.5">
             <DonationLinkRow donationLink={ABOUT_CONTENT.donationLink} />
             {ABOUT_CONTENT.wallets.map((wallet) => (
               <WalletRow
                 key={wallet.label}
-                label={wallet.label}
+                label={localize(wallet.label)}
                 address={wallet.address}
               />
             ))}
           </div>
         </div>
 
-        <div className="border-t border-emerald-100/80 pt-4 dark:border-emerald-500/20">
+        <div className="border-t border-brand-100/80 pt-4 dark:border-brand-500/20">
           <div className="flex flex-wrap items-center justify-center gap-1.5">
             {ABOUT_CONTENT.socials.map((item) => {
               const Icon = SOCIAL_ICONS[item.icon];
@@ -143,9 +145,9 @@ export function AboutSettingsPanel({
                     target="_blank"
                     rel="noreferrer"
                     aria-label={item.icon}
-                    className="group inline-flex items-center justify-center p-1 text-slate-500 transition hover:text-emerald-700 dark:text-slate-400 dark:hover:text-emerald-200"
+                    className="group inline-flex items-center justify-center p-1 text-slate-500 transition hover:text-brand-700 dark:text-slate-400 dark:hover:text-brand-200"
                   >
-                    <span className="inline-flex items-center justify-center text-slate-600 transition group-hover:text-emerald-700 dark:text-slate-300 dark:group-hover:text-emerald-200">
+                    <span className="inline-flex items-center justify-center text-slate-600 transition group-hover:text-brand-700 dark:text-slate-300 dark:group-hover:text-brand-200">
                       {Icon ? <Icon size={24} /> : null}
                     </span>
                   </a>
@@ -160,7 +162,7 @@ export function AboutSettingsPanel({
               href={ownerHref}
               target="_blank"
               rel="noreferrer"
-              className="font-semibold text-slate-600 underline-offset-4 transition hover:text-emerald-700 hover:underline dark:text-slate-300 dark:hover:text-emerald-200"
+              className="font-semibold text-slate-600 underline-offset-4 transition hover:text-brand-700 hover:underline dark:text-slate-300 dark:hover:text-brand-200"
             >
               {ownerLabel}
             </a>
@@ -175,7 +177,7 @@ export function AboutSettingsPanel({
           <button
             type="button"
             onClick={() => onDone?.()}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400"
+            className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500"
           >{localize("Done")}</button>
         </div>
       ) : null}

@@ -152,7 +152,7 @@ export default function ChatWindowPanel({
     activeHeaderPeer?.color ||
     headerAvatarColor ||
     groupAvatarColor ||
-    "#10b981";
+    "#66308d";
   const activePeerInitials = getAvatarInitials(activeFallbackTitle || "S");
   const isDeletedPeer = Boolean(activeHeaderPeer?.isDeleted || !activeHeaderPeer?.username);
   const callSupported = isCallSupported();
@@ -908,9 +908,9 @@ export default function ChatWindowPanel({
   const chatScrollStaticStyle = useMemo(
     () => ({
       backgroundImage: isDark
-        ? "radial-gradient(circle at top right, rgba(16,185,129,0.22), transparent 48%), radial-gradient(circle at bottom left, rgba(16,185,129,0.20), transparent 44%)"
-        : "radial-gradient(circle at top right, rgba(16,185,129,0.10), transparent 45%), radial-gradient(circle at bottom left, rgba(16,185,129,0.09), transparent 40%)",
-      backgroundColor: isDark ? "#0b1320" : "#dcfce7",
+        ? "radial-gradient(ellipse at top right, rgba(102,48,141,0.035), transparent 65%)"
+        : "radial-gradient(ellipse at top right, rgba(102,48,141,0.025), transparent 65%)",
+      backgroundColor: "var(--ouj-chat-canvas)",
       scrollbarGutter: "stable both-edges",
       overflowAnchor: "none",
     }),
@@ -1138,7 +1138,7 @@ export default function ChatWindowPanel({
   return (
     <section
       ref={sectionRef}
-      className="fixed inset-0 top-0 md:relative md:inset-auto md:top-auto flex h-full flex-1 flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-xl shadow-emerald-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:w-[65%] md:shadow-2xl md:shadow-emerald-500/15 transition-transform duration-300 ease-out will-change-transform"
+      className="fixed inset-0 top-0 md:relative md:inset-auto md:top-auto flex h-full flex-1 flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-xl shadow-brand-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:w-[65%] md:shadow-2xl md:shadow-brand-500/15 transition-transform duration-300 ease-out will-change-transform"
       style={{
         top: "0px",
         height: isDesktop
@@ -1156,7 +1156,7 @@ export default function ChatWindowPanel({
         <>
           <div className="sticky top-0 z-30 shrink-0">
             <div
-              className="flex h-[72px] items-center justify-between gap-3 border-b border-slate-300/80 bg-white px-6 py-4 dark:border-emerald-500/20 dark:bg-slate-900"
+              className="ouj-glass flex h-[72px] items-center justify-between gap-3 border-b border-slate-300/80 bg-white px-6 py-4 dark:border-brand-500/20 dark:bg-slate-900"
               style={{
                 position: "relative",
               }}
@@ -1165,7 +1165,7 @@ export default function ChatWindowPanel({
               <button
                 type="button"
                 onClick={closeChat}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition hover:border-emerald-300 hover:shadow-md dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 ${
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
                   isDmChat && (onStartVoiceCall || onStartVideoCall)
                     ? "md:hidden"
                     : "md:invisible md:pointer-events-none"
@@ -1180,13 +1180,13 @@ export default function ChatWindowPanel({
                     <Tooltip
                       label={
                         callsDisabled
-                          ? "Calls are disabled by the server"
+                          ? localize("Calls are disabled by the server")
                           : isDeletedPeer
-                            ? "Calls unavailable for deleted account"
+                            ? localize("Calls unavailable for deleted account")
                             : !callSupported
-                              ? "Calls require a secure connection"
+                              ? localize("Calls require a secure connection")
                               : isInCall
-                                ? "Already in a call"
+                                ? localize("Already in a call")
                                 : localize("Voice call")
                       }
                       placement="bottom"
@@ -1195,10 +1195,10 @@ export default function ChatWindowPanel({
                         type="button"
                         onClick={isVoiceCallDisabled ? undefined : onStartVoiceCall}
                         disabled={isVoiceCallDisabled}
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 ${
+                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
                           isVoiceCallDisabled
-                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-emerald-200 dark:hover:border-emerald-500/30"
-                            : "hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] cursor-pointer"
+                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-brand-200 dark:hover:border-brand-500/30"
+                            : "hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] cursor-pointer"
                         }`}
                         aria-label={localize("Voice call")}
                       >
@@ -1210,13 +1210,13 @@ export default function ChatWindowPanel({
                     <Tooltip
                       label={
                         videoCallsDisabled
-                          ? "Video calls are disabled by the server"
+                          ? localize("Video calls are disabled by the server")
                           : isDeletedPeer
-                            ? "Calls unavailable for deleted account"
+                            ? localize("Calls unavailable for deleted account")
                             : !callSupported
-                              ? "Calls require a secure connection"
+                              ? localize("Calls require a secure connection")
                               : isInCall
-                                ? "Already in a call"
+                                ? localize("Already in a call")
                                 : localize("Video call")
                       }
                       placement="bottom"
@@ -1225,10 +1225,10 @@ export default function ChatWindowPanel({
                         type="button"
                         onClick={isVideoCallDisabled ? undefined : onStartVideoCall}
                         disabled={isVideoCallDisabled}
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 ${
+                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
                           isVideoCallDisabled
-                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-emerald-200 dark:hover:border-emerald-500/30"
-                            : "hover:border-emerald-300 hover:shadow-[0_0_16px_rgba(16,185,129,0.22)] cursor-pointer"
+                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-brand-200 dark:hover:border-brand-500/30"
+                            : "hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] cursor-pointer"
                         }`}
                         aria-label={localize("Video call")}
                       >
@@ -1262,7 +1262,7 @@ export default function ChatWindowPanel({
                     <button
                       type="button"
                       onClick={onOpenHeaderProfile}
-                      className="inline-flex min-w-0 max-w-[60vw] items-center gap-0.5 text-center text-lg font-semibold transition hover:text-emerald-600 dark:hover:text-emerald-300 sm:max-w-[40vw] md:max-w-[28vw]"
+                      className="inline-flex min-w-0 max-w-[60vw] items-center gap-0.5 text-center text-lg font-semibold transition hover:text-brand-600 dark:hover:text-brand-300 sm:max-w-[40vw] md:max-w-[28vw]"
                       dir="ltr"
                     >
                       <span
@@ -1293,7 +1293,7 @@ export default function ChatWindowPanel({
                   <p className="flex min-w-0 max-w-[70vw] items-center gap-2 text-xs text-slate-500 dark:text-slate-400 sm:max-w-[42vw] md:max-w-[30vw]">
                     {!isConnected ? (
                       <>
-                        <LoaderCircle className="h-4 w-4 animate-spin text-emerald-500" />{localize("Connecting...")}</>
+                        <LoaderCircle className="h-4 w-4 animate-spin text-brand-500" />{localize("Connecting...")}</>
                     ) : isTypingActive ? (
                       <>
                         <span
@@ -1313,18 +1313,18 @@ export default function ChatWindowPanel({
                           whenTruncated={false}
                         >
                           <span
-                            className={`block min-w-0 truncate whitespace-nowrap font-semibold leading-[1.2] text-emerald-500 dark:text-emerald-300 ${
+                            className={`block min-w-0 truncate whitespace-nowrap font-semibold leading-[1.2] text-brand-500 dark:text-brand-300 ${
                               hasPersian(typingIndicator?.label) ? "font-fa sb-fa-baseline-fix" : ""
                             }`}
                             dir="auto"
                             style={{ unicodeBidi: "plaintext" }}
                           >
-                            {typingIndicator?.label}
+                            {localize(typingIndicator?.label)}
                           </span>
                         </Tooltip>
                       </>
                     ) : isGroupChat || isChannelChat ? (
-                      <Tooltip label={peerStatusLabel} placement="bottom" asChild>
+                      <Tooltip label={localize(peerStatusLabel)} placement="bottom" asChild>
                         <span
                           className={`block min-w-0 truncate whitespace-nowrap text-[11px] leading-[1.2] sm:text-xs ${
                             hasPersian(peerStatusLabel) ? "font-fa sb-fa-baseline-fix" : ""
@@ -1332,15 +1332,15 @@ export default function ChatWindowPanel({
                           dir="auto"
                           style={{ unicodeBidi: "plaintext" }}
                         >
-                          {peerStatusLabel}
+                          {localize(peerStatusLabel)}
                         </span>
                       </Tooltip>
                     ) : (
-                      <Tooltip label={peerStatusLabel} placement="bottom" asChild>
+                      <Tooltip label={localize(peerStatusLabel)} placement="bottom" asChild>
                         <span
                           className={`block min-w-0 truncate leading-[1.2] ${
                             peerStatusLabel === "online"
-                              ? "font-semibold text-emerald-500 dark:text-emerald-300"
+                              ? "font-semibold text-brand-500 dark:text-brand-300"
                               : ""
                           } ${
                             hasPersian(peerStatusLabel) ? "font-fa sb-fa-baseline-fix" : ""
@@ -1348,7 +1348,7 @@ export default function ChatWindowPanel({
                           dir="auto"
                           style={{ unicodeBidi: "plaintext" }}
                         >
-                          {peerStatusLabel}
+                          {localize(peerStatusLabel)}
                         </span>
                       </Tooltip>
                     )}
@@ -1390,7 +1390,7 @@ export default function ChatWindowPanel({
                       name={activeFallbackTitle}
                       color={activePeerColor}
                       initials={activePeerInitials}
-                      className="h-9 w-9 shrink-0 transition group-hover:ring-2 group-hover:ring-emerald-300"
+                      className="h-9 w-9 shrink-0 transition group-hover:ring-2 group-hover:ring-brand-300"
                     />
                   </ContextMenuSurface>
                 ) : (
@@ -1413,7 +1413,7 @@ export default function ChatWindowPanel({
                   as="button"
                   type="button"
                   onClick={onOpenHeaderProfile}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:ring-2 hover:ring-emerald-300 ${hasPersian(activePeerInitials) ? "font-fa" : ""}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:ring-2 hover:ring-brand-300 ${hasPersian(activePeerInitials) ? "font-fa" : ""}`}
                   style={getAvatarStyle(activePeerColor)}
                   contextMenu={headerPrimaryContextMenu}
                 >
@@ -1441,7 +1441,7 @@ export default function ChatWindowPanel({
                   <img
                     src={groupAvatarUrl}
                     alt={activeFallbackTitle}
-                    className="h-9 w-9 shrink-0 rounded-full object-cover transition group-hover:ring-2 group-hover:ring-emerald-300"
+                    className="h-9 w-9 shrink-0 rounded-full object-cover transition group-hover:ring-2 group-hover:ring-brand-300"
                   />
                 </ContextMenuSurface>
               ) : (
@@ -1461,7 +1461,7 @@ export default function ChatWindowPanel({
                   as="button"
                   type="button"
                   onClick={onOpenHeaderProfile}
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:ring-2 hover:ring-emerald-300 ${hasPersian(activePeerInitials) ? "font-fa" : ""}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition hover:ring-2 hover:ring-brand-300 ${hasPersian(activePeerInitials) ? "font-fa" : ""}`}
                   style={getAvatarStyle(activePeerColor)}
                   contextMenu={headerPrimaryContextMenu}
                 >
@@ -1506,9 +1506,9 @@ export default function ChatWindowPanel({
                   floatingDay,
                 });
               }}
-              className="inline-flex items-center justify-center rounded-full border border-emerald-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-xs transition hover:border-emerald-300 hover:shadow-md dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+              className="inline-flex items-center justify-center rounded-full border border-brand-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-brand-700 shadow-xs transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
             >
-              <span className="leading-none">{floatingDay.label}</span>
+              <span className="leading-none">{localize(floatingDay.label)}</span>
             </button>
           </div>
         ) : null}
@@ -1519,7 +1519,7 @@ export default function ChatWindowPanel({
             className="chat-scroll flex h-full items-center justify-center overflow-y-auto overflow-x-hidden px-6 py-6"
             style={chatScrollStyle}
           >
-            <div className="rounded-full border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200">{localize("Select a chat to start")}</div>
+            <div className="rounded-full border border-brand-200 bg-white/80 px-4 py-2 text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200">{localize("Select a chat to start")}</div>
           </div>
         ) : (
           <MessageTimeline
@@ -1603,14 +1603,14 @@ export default function ChatWindowPanel({
           }}
           aria-hidden={!copyToastVisible}
         >
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/70 bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand-300/70 bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30">
             <Copy size={14} strokeWidth={2.4} className="icon-anim-pop" />{localize("Copied")}</div>
         </div>
       ) : null}
 
       {showChannelMuteFooter ? (
         <div
-          className="sticky bottom-0 z-30 flex min-h-[68px] shrink-0 items-center justify-center border-t border-slate-300/80 bg-white px-4 py-3 dark:border-emerald-500/20 dark:bg-slate-900 sm:px-6 md:static md:mt-auto"
+          className="sticky bottom-0 z-30 flex min-h-[68px] shrink-0 items-center justify-center border-t border-slate-300/80 bg-white px-4 py-3 dark:border-brand-500/20 dark:bg-slate-900 sm:px-6 md:static md:mt-auto"
           style={{
             paddingBottom: isDesktop
               ? "0.75rem"
@@ -1620,7 +1620,7 @@ export default function ChatWindowPanel({
           <button
             type="button"
             onClick={() => onToggleChannelMute?.()}
-            className="inline-flex h-11 items-center rounded-2xl border border-emerald-200 bg-white px-6 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+            className="inline-flex h-11 items-center rounded-2xl border border-brand-200 bg-white px-6 text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
           >
             {isChannelMuted ? localize("Unmute") : localize("Mute")}
           </button>
@@ -1631,7 +1631,7 @@ export default function ChatWindowPanel({
         <button
           type="button"
           onClick={onJumpToLatest}
-          className="absolute inline-flex h-11 w-11 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 shadow-lg transition hover:border-emerald-300 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+          className="absolute inline-flex h-11 w-11 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-700 shadow-lg transition hover:border-brand-300 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
           style={{
             bottom: isDesktop
               ? `${jumpButtonBaseBottomPx}px`
@@ -1647,7 +1647,7 @@ export default function ChatWindowPanel({
             <ArrowDown size={18} className="icon-anim-bob" />
           </span>
           {unreadInChat > 0 ? (
-            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-2 text-[10px] font-bold text-white">
+            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand-600 px-2 text-[10px] font-bold text-white">
               {unreadInChat > 999 ? formatCompactCount(unreadInChat) : unreadInChat}
             </span>
           ) : null}

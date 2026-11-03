@@ -1,4 +1,7 @@
 import {
+  Languages,
+  ArrowUpLeft,
+  MessageSquare,
   Activity,
   AlertCircle,
   AppWindow,
@@ -123,6 +126,9 @@ import {
 } from "lucide-react";
 
 export {
+  Languages,
+  ArrowUpLeft,
+  MessageSquare,
   Activity,
   AlertCircle,
   AppWindow,

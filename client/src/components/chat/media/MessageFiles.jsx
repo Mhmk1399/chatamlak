@@ -799,12 +799,12 @@ const VoiceMessageChip = memo(
     const canPlay = Boolean(serverUrl);
     const waveformMaxHeight = 32;
     return (
-      <div className="inline-flex w-max max-w-full items-center gap-2 rounded-xl border border-emerald-200/70 bg-white px-3 py-2 text-xs text-slate-900 transition hover:border-emerald-300 hover:bg-white/90 hover:shadow-[0_0_16px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(16,185,129,0.14)]">
+      <div className="inline-flex w-max max-w-full items-center gap-2 rounded-xl border border-brand-200/70 bg-white px-3 py-2 text-xs text-slate-900 transition hover:border-brand-300 hover:bg-white/90 hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(102,48,141,0.14)]">
         <button
           type="button"
           onClick={togglePlay}
           disabled={!canPlay}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-emerald-200 bg-emerald-100 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-200/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-200 bg-brand-100 text-brand-700 transition hover:border-brand-300 hover:bg-brand-200/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200"
           aria-label={
             hasActivePlayback ? localize("Pause voice message") : localize("Play voice message")
           }
@@ -838,23 +838,23 @@ const VoiceMessageChip = memo(
               return (
                 <span
                   key={`wave-${cacheKey}-${idx}`}
-                  className={`w-[4px] rounded-full transition-colors duration-150 ${isPlayed ? "bg-emerald-600" : "bg-emerald-200/90 dark:bg-emerald-500/30"}`}
+                  className={`w-[4px] rounded-full transition-colors duration-150 ${isPlayed ? "bg-brand-600" : "bg-brand-200/90 dark:bg-brand-500/30"}`}
                   style={{ height: `${barHeight}px` }}
                 />
               );
             })}
           </div>
           </VoicePlaybackControls>
-          <span dir="ltr" className="text-[10px] text-slate-900/80 dark:text-emerald-200/80">
+          <span dir="ltr" className="text-[10px] text-slate-900/80 dark:text-brand-200/80">
             {canPlay
               ? hasActivePlayback || hasProgressPosition
                 ? `${formatSeconds((progress || 0) * (duration || file?.durationSeconds || 0))} / ${formatSeconds(duration || file?.durationSeconds || 0)}`
                 : formatSeconds(duration || file?.durationSeconds || 0)
-              : "Processing..."}
+              : localize("Processing...")}
           </span>
           {debugInfo ? (
             <span className="text-[9px] text-slate-500">
-              {`ct:${debugInfo.ct.toFixed(2)} dur:${debugInfo.dur.toFixed(2)} rs:${debugInfo.rs} paused:${debugInfo.paused ? "1" : "0"}`}
+              {localize("ct:{value0} dur:{value1} rs:{value2} paused:{value3}", { value0: debugInfo.ct.toFixed(2), value1: debugInfo.dur.toFixed(2), value2: debugInfo.rs, value3: debugInfo.paused ? "1" : "0" })}
             </span>
           ) : null}
         </div>
@@ -1228,7 +1228,7 @@ export function MessageFiles({
                     });
                   }
                 }}
-                className="relative block w-full overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100/70 text-left transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70"
+                className="relative block w-full overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100/70 text-start transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70"
                 data-testid="offline-media-placeholder"
                 aria-label={`Image unavailable offline: ${file.name || ""}`.trim()}
               >
@@ -1259,12 +1259,12 @@ export function MessageFiles({
                   expiresAt: file.expiresAt || null,
                 })
               }
-              className="relative block w-full overflow-hidden rounded-xl border border-emerald-200/70 bg-white/70 dark:border-emerald-500/30 dark:bg-slate-900/50"
+              className="relative block w-full overflow-hidden rounded-xl border border-brand-200/70 bg-white/70 dark:border-brand-500/30 dark:bg-slate-900/50"
             >
               <div className={imageFrameClass} style={mediaFrameStyle}>
                 <img
                   src={file.url}
-                  alt={file.name || "image"}
+                  alt={file.name || localize("image")}
                   referrerPolicy="no-referrer"
                   onLoad={(event) => {
                     cacheMediaAspectRatio(
@@ -1283,11 +1283,11 @@ export function MessageFiles({
                   className={imageClass}
                 />
                 {isDesktop && !thumbLoaded ? (
-                  <div className="pointer-events-none absolute inset-0 animate-pulse bg-emerald-100/70 dark:bg-slate-800/80" />
+                  <div className="pointer-events-none absolute inset-0 animate-pulse bg-brand-100/70 dark:bg-slate-800/80" />
                 ) : null}
                 {!mediaAspectRatio && !thumbLoaded ? (
                   <div
-                    className="pointer-events-none w-full animate-pulse bg-emerald-100/70 dark:bg-slate-800/80"
+                    className="pointer-events-none w-full animate-pulse bg-brand-100/70 dark:bg-slate-800/80"
                     style={{ height: "180px" }}
                   />
                 ) : null}
@@ -1300,7 +1300,7 @@ export function MessageFiles({
           return (
             <div
               key={key}
-              className="relative block w-full overflow-hidden rounded-xl border border-emerald-200/70 bg-slate-200/70 dark:border-emerald-500/30 dark:bg-slate-800/70"
+              className="relative block w-full overflow-hidden rounded-xl border border-brand-200/70 bg-slate-200/70 dark:border-brand-500/30 dark:bg-slate-800/70"
             >
               <div className={videoFrameClass} style={mediaFrameStyle}>
                 <div className="absolute inset-0 animate-pulse bg-slate-200/80 dark:bg-slate-800/80" />
@@ -1328,7 +1328,7 @@ export function MessageFiles({
                     });
                   }
                 }}
-                className="relative block w-full overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100/70 text-left transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70"
+                className="relative block w-full overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100/70 text-start transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/70"
                 data-testid="offline-media-placeholder"
                 aria-label={`Video unavailable offline: ${file.name || ""}`.trim()}
               >
@@ -1361,14 +1361,14 @@ export function MessageFiles({
                   expiresAt: file.expiresAt || null,
                 })
               }
-              className="relative block w-full overflow-hidden rounded-xl border border-emerald-200/70 bg-black/60 dark:border-emerald-500/30"
+              className="relative block w-full overflow-hidden rounded-xl border border-brand-200/70 bg-black/60 dark:border-brand-500/30"
               aria-label={`Open video ${file.name || ""}`.trim()}
             >
               <div className={videoFrameClass} style={mediaFrameStyle}>
                 {cachedPoster ? (
                   <img
                     src={cachedPoster}
-                    alt={file.name || "video thumbnail"}
+                    alt={file.name || localize("video thumbnail")}
                     onLoad={() => markMediaThumbLoaded(thumbKey)}
                     onError={() => handleMediaError(key, thumbKey)}
                     className={videoClass}
@@ -1438,16 +1438,16 @@ export function MessageFiles({
                 void saveMedia(file.url, file.name);
               }
             }}
-            className={`group ${docChipClass} items-center gap-2 rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2.5 text-xs text-slate-700 transition hover:border-emerald-300 hover:bg-white hover:shadow-[0_0_16px_rgba(16,185,129,0.18)] dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(16,185,129,0.14)]`}
+            className={`group ${docChipClass} items-center gap-2 rounded-xl border border-brand-200/70 bg-white/70 px-3 py-2.5 text-xs text-slate-700 transition hover:border-brand-300 hover:bg-white hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(102,48,141,0.14)]`}
           >
             <span className="relative inline-flex h-5 w-5 shrink-0 items-center justify-center">
               <File
                 size={18}
-                className="absolute text-emerald-600 transition-opacity duration-150 group-hover:opacity-0 dark:text-emerald-300"
+                className="absolute text-brand-600 transition-opacity duration-150 group-hover:opacity-0 dark:text-brand-300"
               />
               <Download
                 size={18}
-                className="absolute text-emerald-600 opacity-0 transition-opacity duration-150 group-hover:opacity-100 dark:text-emerald-300"
+                className="absolute text-brand-600 opacity-0 transition-opacity duration-150 group-hover:opacity-100 dark:text-brand-300"
               />
             </span>
             <span className="min-w-0 flex-1">
@@ -1470,11 +1470,11 @@ export function MessageFiles({
         ) : (
           <div
             key={key}
-            className={`${docChipClass} items-center gap-2 rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2.5 text-xs text-slate-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200`}
+            className={`${docChipClass} items-center gap-2 rounded-xl border border-brand-200/70 bg-white/70 px-3 py-2.5 text-xs text-slate-700 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200`}
           >
             <File
               size={18}
-              className="shrink-0 text-emerald-600 dark:text-emerald-300"
+              className="shrink-0 text-brand-600 dark:text-brand-300"
             />
             <span className="min-w-0 flex-1">
               {(() => {

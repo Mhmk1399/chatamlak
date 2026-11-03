@@ -67,7 +67,7 @@ function CountUp({ value }) {
 }
 
 const GAUGE_COLORS = {
-  emerald: { track: "#d1fae5", fill: "#10b981", dark_track: "#064e3b" },
+  emerald: { track: "#d1fae5", fill: "#66308d", dark_track: "#064e3b" },
   orange: { track: "#fed7aa", fill: "#f97316", dark_track: "#431407" },
   rose: { track: "#fecdd3", fill: "#f43f5e", dark_track: "#4c0519" },
 };
@@ -79,6 +79,7 @@ function SemiCircleGauge({
   sublabel,
   size = 120,
 }) {
+  useAppLocale();
   const target = Math.max(0, Math.min(100, pct || 0));
   const safe = useCountUp(target);
   const r = 44,
@@ -131,7 +132,7 @@ function SemiCircleGauge({
       </svg>
       {label && (
         <p className="mt-1 text-center text-xs font-semibold text-slate-600 dark:text-slate-300">
-          {label}
+          {localize(label)}
         </p>
       )}
       {sublabel && (
@@ -325,25 +326,25 @@ const DashboardTab = forwardRef(function DashboardTab({ stats, onStatsChange }, 
             <SemiCircleGauge
               pct={loadPct}
               color={gaugeColor(loadPct)}
-              label="CPU Load"
+              label={localize("CPU Load")}
               sublabel={displaySys ? `${load1?.toFixed(2)} avg · ${displaySys.cpuCount} core${displaySys.cpuCount !== 1 ? "s" : ""}` : "—"}
             />
             <SemiCircleGauge
               pct={heapPct}
               color={gaugeColor(heapPct)}
-              label="App Memory"
+              label={localize("App Memory")}
               sublabel={displaySys ? `${fmtBytes(displaySys.memory.heapUsed)} / ${fmtBytes(displaySys.memory.heapTotal)}` : "—"}
             />
             <SemiCircleGauge
               pct={sysPct}
               color={gaugeColor(sysPct)}
-              label="System Memory"
+              label={localize("System Memory")}
               sublabel={displaySys ? `${fmtBytes(displaySys.memory.systemUsed)} / ${fmtBytes(displaySys.memory.systemTotal)}` : "—"}
             />
             <SemiCircleGauge
               pct={diskPct}
               color={gaugeColor(diskPct)}
-              label="Disk Storage"
+              label={localize("Disk Storage")}
               sublabel={displaySys
                 ? (diskTotal > 0 ? `${fmtBytes(diskUsed)} / ${fmtBytes(diskTotal)}` : "Unavailable")
                 : "—"}
@@ -353,16 +354,16 @@ const DashboardTab = forwardRef(function DashboardTab({ stats, onStatsChange }, 
 
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {infoCards.map(({ label, value, icon: Icon, accent, hint }) => (
-            <Tooltip key={label} label={hint} placement="bottom" as="div" className="w-full">
+            <Tooltip key={label} label={localize(hint)} placement="bottom" as="div" className="w-full">
               <div className={cardCls + " w-full px-4 py-3"}>
                 <div className="mb-1 flex items-center gap-1.5">
-                  <Icon size={11} className="shrink-0 text-emerald-500" />
+                  <Icon size={11} className="shrink-0 text-brand-500" />
                   <span className="truncate text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-                    {label}
+                    {localize(label)}
                   </span>
                 </div>
                 <span
-                  className={`text-base font-bold ${accent ? "text-emerald-600 dark:text-emerald-400" : "text-slate-700 dark:text-slate-200"}`}
+                  className={`text-base font-bold ${accent ? "text-brand-600 dark:text-brand-400" : "text-slate-700 dark:text-slate-200"}`}
                 >
                   {value}
                 </span>
@@ -377,21 +378,21 @@ const DashboardTab = forwardRef(function DashboardTab({ stats, onStatsChange }, 
         <SectionHeading>{localize("Overview")}</SectionHeading>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {statCards.map(({ label, value, icon: Icon, accent, hint }) => (
-            <Tooltip key={label} label={hint} placement="bottom" as="div" className="w-full">
+            <Tooltip key={label} label={localize(hint)} placement="bottom" as="div" className="w-full">
               <div className={cardCls + " w-full px-4 py-3"}>
                 <div className="flex items-center gap-1.5">
                   <Icon
                     size={12}
                     className={
-                      accent === "rose" ? "text-rose-400" : "text-emerald-500"
+                      accent === "rose" ? "text-rose-400" : "text-brand-500"
                     }
                   />
                   <p className="truncate text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-                    {label}
+                    {localize(label)}
                   </p>
                 </div>
                 <p
-                  className={`mt-1.5 text-2xl font-bold ${accent === "rose" ? "text-rose-500 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"}`}
+                  className={`mt-1.5 text-2xl font-bold ${accent === "rose" ? "text-rose-500 dark:text-rose-400" : "text-brand-700 dark:text-brand-300"}`}
                 >
                   <CountUp value={value} />
                 </p>

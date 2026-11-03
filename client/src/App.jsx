@@ -1,6 +1,8 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import logo from './assets/songbird-logo.svg'
+import BrandIdentity from './components/common/BrandIdentity.jsx'
+import LanguageSwitcher from './components/common/LanguageSwitcher.jsx'
+import { t, useLocale } from './i18n/locale.js'
 import { APP_CONFIG, setMessageMaxChars } from './settings/appConfig.js'
 import { fetchAppInfo } from './api/appMetaApi.js'
 import { setNameLimits } from './utils/nameLimits.js'
@@ -42,6 +44,7 @@ function getPreloadMode() {
 }
 
 function RouteLoadingFallback({ themeColor, onVisibleChange = null }) {
+  useLocale()
   const [dots, setDots] = useState(0)
   useEffect(() => {
     onVisibleChange?.(true)
@@ -59,9 +62,9 @@ function RouteLoadingFallback({ themeColor, onVisibleChange = null }) {
       className="fixed inset-0 z-1200 flex min-h-screen w-full items-center justify-center"
       style={{ backgroundColor: themeColor }}
     >
-      <div className="flex flex-col items-center gap-3 text-center text-emerald-700 dark:text-emerald-300">
-        <img src={logo} alt="Songbird logo" className="h-10 w-10 animate-pulse" />
-        <p className="text-xs font-semibold tracking-wide">{`Loading${'.'.repeat(dots)}`}</p>
+      <div className="flex flex-col items-center gap-3 text-center text-brand-700 dark:text-brand-300">
+        <BrandIdentity compact />
+        <p className="text-xs font-semibold tracking-wide">{t('Loading')}{'.'.repeat(dots)}</p>
       </div>
     </div>
   )
@@ -98,6 +101,8 @@ function isChunkLoadFailure(error) {
 }
 
 export default function App() {
+  const locale = useLocale()
+  useEffect(() => { document.title = t('Ouj Chat') }, [locale])
   async function recoverFromStaleShell() {
     if (typeof window === 'undefined') return
     if (window.sessionStorage.getItem(CHUNK_RECOVERY_ATTEMPT_KEY) === '1') return
@@ -248,7 +253,7 @@ export default function App() {
 
   function refreshThemeColorForSafari(color, allowScrollNudge = true) {
     clearThemeRefreshTimers()
-    const nudgeColor = color === '#ffffff' ? '#fefefe' : '#0e1728'
+    const nudgeColor = color === '#ffffff' ? '#fefefe' : '#17141e'
     commitThemeColor(nudgeColor)
     window.requestAnimationFrame(() => commitThemeColor(color))
 
@@ -284,7 +289,7 @@ export default function App() {
   function getThemeColor(nextIsDark, nextRoute = route) {
     const onChatRoute = nextRoute === 'chat'
     if (nextIsDark) {
-      return onChatRoute ? '#0f172a' : '#020617'
+      return onChatRoute ? '#1b1823' : '#110f18'
     }
     return '#ffffff'
   }
@@ -903,8 +908,8 @@ export default function App() {
   const safeAreaKey = `${route}-${isDark ? 'dark' : 'light'}`
   const safeAreaThemeColor = getThemeColor(isDark, route)
   const appShellClass = isAuthRoute
-    ? 'min-h-screen bg-linear-to-b from-white via-emerald-50/70 to-white text-slate-900 transition-colors duration-300 dark:bg-linear-to-b dark:from-emerald-950 dark:via-slate-950 dark:to-slate-900 dark:text-slate-100'
-    : 'h-dvh bg-white text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100'
+    ? 'ouj-auth-shell min-h-screen text-slate-900 transition-colors duration-300 dark:text-slate-100'
+    : 'ouj-shell h-dvh text-slate-900 transition-colors duration-300 dark:text-slate-100'
 
   const appContainerStyle = {
     paddingTop: 'var(--install-bar-height, 0px)',
@@ -976,8 +981,7 @@ export default function App() {
         ) : null}
         {isAuthRoute ? (
           <>
-            <div className="pointer-events-none fixed -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-emerald-400/30 blur-[130px]" />
-            <div className="pointer-events-none fixed bottom-0 right-0 h-80 w-80 translate-x-1/3 rounded-full bg-lime-400/40 blur-[120px]" />
+            <div aria-hidden="true" className="pointer-events-none fixed -top-40 start-1/2 h-96 w-96 rounded-full bg-brand-400/5 blur-[130px]" />
           </>
         ) : null}
 
@@ -993,15 +997,9 @@ export default function App() {
           }}
         >
           {isAuthRoute ? (
-            <header className="flex flex-wrap items-center justify-center gap-3 text-center sm:gap-4">
-              <div className="flex items-center gap-1 text-black dark:text-white">
-                <div className="flex h-8 w-8 items-center justify-center sm:h-9 sm:w-9">
-                  <img src={logo} alt="Songbird logo" className="h-8 w-8" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold tracking-tight sm:text-2xl">Songbird</p>
-                </div>
-              </div>
+            <header className="flex items-center justify-between gap-3">
+              <BrandIdentity />
+              <LanguageSwitcher />
             </header>
           ) : null}
 

@@ -4,6 +4,8 @@ import AuthFormFields from "../components/auth/AuthFormFields.jsx";
 import AuthHeader from "../components/auth/AuthHeader.jsx";
 import AuthOverlay from "../components/auth/AuthOverlay.jsx";
 import AuthStatusBanner from "../components/auth/AuthStatusBanner.jsx";
+import { t, useLocale } from "../i18n/locale.js";
+import { ArrowUpLeft, Files, MessageSquare, ShieldCheck } from "../icons/lucide.js";
 
 export default function AuthPage({
   mode,
@@ -19,6 +21,7 @@ export default function AuthPage({
   subtitle,
   children,
 }) {
+  useLocale();
   const isLogin = mode === "login";
   const canSignup = Boolean(allowSignup);
   const [showPassword, setShowPassword] = useState(false);
@@ -85,9 +88,17 @@ export default function AuthPage({
   };
 
   return (
+    <div className="ouj-auth-layout">
+      <aside className="ouj-auth-story hidden lg:block">
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent-200/70 bg-accent-50/70 px-3 py-1.5 text-xs font-medium text-accent-800 dark:border-accent-500/20 dark:bg-accent-500/10 dark:text-accent-300"><span className="h-1.5 w-1.5 rounded-full bg-accent-500" />{t("Built for the Ouj team")}</div>
+        <h2 className="font-bold text-slate-900 dark:text-slate-100">{t("A closer team.")}<br /><span className="text-brand-600 dark:text-brand-300">{t("A clearer path forward.")}</span></h2>
+        <p className="mt-5 max-w-md text-sm leading-8 text-slate-500 dark:text-slate-400">{t("One calm workspace for consultants, supervisors and managers to share reports, property files and everyday conversations.")}</p>
+        <div className="mt-8 flex flex-wrap gap-3">{[[MessageSquare, "Daily reports"], [Files, "Property files"], [ShieldCheck, "Team coordination"]].map(([Icon, label]) => <div key={label} className="ouj-glass flex items-center gap-2 rounded-2xl border px-3 py-3 text-xs font-medium text-slate-600 dark:text-slate-300"><Icon size={16} className="text-brand-500 dark:text-brand-300" /><span>{t(label)}</span></div>)}</div>
+        <a href="https://oujamlak.ir/" target="_blank" rel="noreferrer" className="mt-10 inline-flex min-h-10 items-center gap-2 text-xs font-medium text-slate-500 transition hover:text-brand-600 dark:hover:text-brand-300">{t("Visit Ouj Real Estate")}<ArrowUpLeft size={15} className="ouj-directional" /></a>
+      </aside>
     <section
       ref={cardRef}
-      className={`relative w-full max-w-md rounded-3xl border border-emerald-200/70 bg-white/80 p-6 shadow-2xl shadow-emerald-500/10 backdrop-blur-sm dark:border-white/5 dark:bg-slate-900/80 sm:p-8 ${
+      className={`ouj-auth-card ouj-glass relative w-full max-w-md border p-6 sm:p-9 ${
         fitsViewport ? "my-auto self-center" : "my-0 self-start"
       }`}
     >
@@ -96,7 +107,7 @@ export default function AuthPage({
         isDark={isDark}
         themeToggleAnimating={themeToggleAnimating}
         onToggleTheme={handleToggleTheme}
-        title={title}
+        title={t(title)}
         subtitle={subtitle}
       />
 
@@ -135,6 +146,7 @@ export default function AuthPage({
 
       <AuthOverlay isLogin={isLogin} show={showSigningOverlay} />
     </section>
+    </div>
   );
 }
 

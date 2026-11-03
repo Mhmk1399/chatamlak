@@ -996,8 +996,8 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       ? (activeChat?.name || "Channel")
       : (msg.nickname || msg.username || msg.replyTo?.nickname || msg.replyTo?.username || "");
     const replyColor = isActiveChannelChat
-      ? (activeChat?.group_color || "#10b981")
-      : (msg.color || "#10b981");
+      ? (activeChat?.group_color || "#66308d")
+      : (msg.color || "#66308d");
     const preview = resolveReplyPreview(msg);
     setReplyTarget({
       id: targetId,
@@ -1053,7 +1053,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
               type: "saved",
               name: "Saved messages",
               members: [],
-              group_color: "#10b981",
+              group_color: "#66308d",
               group_avatar_url: "",
               last_outgoing_time: null,
               last_time: null,
@@ -1144,7 +1144,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         username: target.username || "",
         nickname: target.nickname || "",
         avatar_url: target.avatar_url || "",
-        color: target.color || "#10b981",
+        color: target.color || "#66308d",
         status: "online",
         role: "",
       };
@@ -1170,7 +1170,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
               fallbackMember.username ||
               "",
             avatar_url: data?.avatarUrl || fallbackMember.avatar_url || "",
-            color: data?.color || fallbackMember.color || "#10b981",
+            color: data?.color || fallbackMember.color || "#66308d",
             status: data?.status || fallbackMember.status || "online",
             role: "",
           });
@@ -1208,7 +1208,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           name: data?.name || "Chat",
           group_username: data?.username || "",
           group_visibility: data?.visibility || "public",
-          group_color: data?.color || "#10b981",
+          group_color: data?.color || "#66308d",
           group_avatar_url: data?.avatarUrl || "",
           invite_token: data?.inviteToken || "",
           membersCount: Number(data?.membersCount || 0),
@@ -1223,7 +1223,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           name: target.label || "Chat",
           username: "",
           visibility: "private",
-          color: target.color || "#10b981",
+          color: target.color || "#66308d",
           avatarUrl: target.avatar_url || "",
           inviteToken: "",
           membersCount: 0,
@@ -1252,7 +1252,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       name: targetChat.name || "Chat",
       username: targetChat.group_username || "",
       visibility: targetChat.group_visibility || "public",
-      color: targetChat.group_color || "#10b981",
+      color: targetChat.group_color || "#66308d",
       avatarUrl: targetChat.group_avatar_url || "",
       inviteToken: targetChat.invite_token || "",
       membersCount:
@@ -2199,7 +2199,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     [handleChatScroll, enqueueChannelSeenCounts],
   );
   const canStartChat = Boolean(newChatSelection);
-  const userColor = user?.color || "#10b981";
+  const userColor = user?.color || "#66308d";
   const handleExitEdit = () => {
     setEditMode(false);
     setSelectedChats([]);
@@ -2220,7 +2220,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
   const statusValue = user.status || "online";
   const statusTextClass =
     statusValue === "online"
-      ? "font-semibold text-emerald-500 dark:text-emerald-300"
+      ? "font-semibold text-brand-500 dark:text-brand-300"
       : "";
 
   const parsePresenceDate = (value) => {
@@ -2338,7 +2338,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     const nextNickname =
       String(payload?.nickname || "").trim() || nextUsername || previousUsername || "";
     const nextAvatarUrl = String(payload?.avatarUrl || "").trim();
-    const nextColor = String(payload?.color || "#10b981").trim() || "#10b981";
+    const nextColor = String(payload?.color || "#66308d").trim() || "#66308d";
     const nextStatus = String(payload?.status || "online").trim().toLowerCase() || "online";
     const usernames = new Set([nextUsername, previousUsername].filter(Boolean));
     const matchesUser = (candidateId, candidateUsername) => {
@@ -2582,7 +2582,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         return {
           type: "group_single",
           name,
-          label: `${name} typing`,
+          label: localize("{value0} typing", { value0: name }),
           fullLabel: activeTypingUsers[0].displayName,
         };
       }
@@ -2593,7 +2593,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           type: "group_pair",
           firstName: first,
           secondName: second,
-          label: `${first} and ${second} typing`,
+          label: localize("{value0} and {value1} typing", { value0: first, value1: second }),
           fullLabel: `${activeTypingUsers[0].displayName} and ${activeTypingUsers[1].displayName}`,
         };
       }
@@ -2601,15 +2601,15 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       const othersCount = activeTypingUsers.length - 1;
       return {
         type: "group_multi",
-        label: `${first} and ${othersCount.toLocaleString("en-US")} others typing`,
+        label: localize("{value0} and {value1} others typing", { value0: first, value1: othersCount }),
         fullLabel: `${activeTypingUsers[0].displayName} and ${othersCount.toLocaleString("en-US")} others`,
       };
     }
     return {
       type: "dm",
-      label: "typing",
+      label: localize("typing"),
     };
-  }, [activeTypingUsers, buildTypingDisplayName, isActiveChannelChat, isActiveGroupChat]);
+  }, [activeTypingUsers, buildTypingDisplayName, isActiveChannelChat, isActiveGroupChat, appLocale]);
   const activeHeaderSubtitle = isActiveGroupChat || isActiveChannelChat
     ? localize(activeMembers.length === 1 ? "{count} member" : "{count} members", { count: Number(activeMembers.length || 0) })
     : isActiveSavedChat
@@ -2692,7 +2692,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         username: user.username || "",
         nickname: user.nickname || user.username || "",
         avatar_url: user.avatarUrl || "",
-        color: user.color || "#10b981",
+        color: user.color || "#66308d",
         status: user.status || "online",
       };
     }
@@ -2705,7 +2705,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           username: member?.username || "",
           nickname: member?.nickname || member?.username || "",
           avatar_url: member?.avatar_url || "",
-          color: member?.color || "#10b981",
+          color: member?.color || "#66308d",
           status: member?.status || "online",
         };
       });
@@ -2757,7 +2757,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
                   username: data?.username || username,
                   nickname: data?.nickname || data?.username || username,
                   avatar_url: data?.avatarUrl || "",
-                  color: data?.color || "#10b981",
+                  color: data?.color || "#66308d",
                   status: data?.status || "online",
                   verified: Boolean(data?.verified),
                   role: data?.role || "user",
@@ -2814,7 +2814,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
               name: data?.name || "Chat",
               group_username: data?.username || "",
               group_visibility: data?.visibility || "public",
-              group_color: data?.color || "#10b981",
+              group_color: data?.color || "#66308d",
               group_avatar_url: data?.avatarUrl || "",
               invite_token: data?.inviteToken || "",
               membersCount: Number(data?.membersCount || 0),
@@ -2854,7 +2854,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           username: mentionProfile.username,
           nickname: mentionProfile.nickname || mentionProfile.username,
           avatar_url: mentionProfile.avatarUrl || "",
-          color: mentionProfile.color || "#10b981",
+          color: mentionProfile.color || "#66308d",
           status: "online",
           role: mentionProfile.role || "user",
           verified: Boolean(mentionProfile.verified),
@@ -2899,7 +2899,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
           group_color:
             liveMentionProfileChat?.group_color ||
             mentionProfile.color ||
-            "#10b981",
+            "#66308d",
           group_avatar_url:
             liveMentionProfileChat?.group_avatar_url ??
             mentionProfile.avatarUrl ??
@@ -3246,7 +3246,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         forwardedFromColor: isActiveChannelChat
           ? ""
           : String(
-              capturedTarget?.color || user?.color || "#10b981",
+              capturedTarget?.color || user?.color || "#66308d",
             ).trim(),
       });
       const data = await res.json();
@@ -3988,7 +3988,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         const nextUsername = liveMentionProfileChat.group_username || prev.username || "";
         const nextVisibility =
           liveMentionProfileChat.group_visibility || prev.visibility || "public";
-        const nextColor = liveMentionProfileChat.group_color || prev.color || "#10b981";
+        const nextColor = liveMentionProfileChat.group_color || prev.color || "#66308d";
         const nextAvatarUrl =
           liveMentionProfileChat.group_avatar_url ?? prev.avatarUrl ?? null;
         const nextInviteToken =
@@ -4070,7 +4070,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             const nextKind = String(data?.type || prev.kind || "group").toLowerCase();
             const nextName = data?.name || prev.name || prev.username || "Chat";
             const nextUsername = data?.username || prev.username || "";
-            const nextColor = data?.color || prev.color || "#10b981";
+            const nextColor = data?.color || prev.color || "#66308d";
             const nextAvatarUrl = data?.avatarUrl ?? prev.avatarUrl ?? null;
             const nextInviteToken = data?.inviteToken || prev.inviteToken || "";
             const nextMembersCount = Number(data?.membersCount || prev.membersCount || 0);
@@ -5929,7 +5929,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     setNewGroupForm({
       nickname: "",
       username: "",
-      groupColor: "#10b981",
+      groupColor: "#66308d",
       visibility: "public",
       allowMemberInvites: true,
       remoteChannelEnabled: false,
@@ -5960,7 +5960,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       username: user?.username || "",
       nickname: user?.nickname || "",
       avatar_url: user?.avatarUrl || "",
-      color: user?.color || "#10b981",
+      color: user?.color || "#66308d",
       status: user?.status || "online",
       role: user?.role || "user",
       verified: Boolean(user?.verified),
@@ -6009,7 +6009,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       username: msg.username || "",
       nickname: msg.nickname || "",
       avatar_url: msg.avatar_url || "",
-      color: msg.color || "#10b981",
+      color: msg.color || "#66308d",
       status: "online",
       role: msg.user_role || "user",
       verified: Boolean(msg.user_verified),
@@ -6149,7 +6149,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     setNewGroupForm({
       nickname: activeChat.name || "",
       username: activeChat.group_username || "",
-      groupColor: activeChat.group_color || "#10b981",
+      groupColor: activeChat.group_color || "#66308d",
       visibility: activeChat.group_visibility || "public",
       allowMemberInvites: Boolean(Number(activeChat.allow_member_invites || 0)),
       remoteChannelEnabled: false,
@@ -6392,7 +6392,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         creator: user.username,
         nickname,
         username,
-        groupColor: newGroupForm.groupColor || "#10b981",
+        groupColor: newGroupForm.groupColor || "#66308d",
         visibility: newGroupForm.visibility,
         allowMemberInvites:
           newGroupForm.visibility !== "private" ||
@@ -6891,7 +6891,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
   return (
     <MessagingContext.Provider value={messagingValue}>
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row md:gap-0"
+      className="ouj-desktop-shell flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row"
       style={{
         height: "100%",
         paddingTop: "max(0px, env(safe-area-inset-top))",
@@ -7336,15 +7336,15 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             onClose={closeNewGroupModal}
             title={
               editingGroup
-                ? `Edit ${groupModalType === "channel" ? "channel" : "group"}`
-                : `New ${groupModalType === "channel" ? "channel" : "group"}`
+                ? localize("Edit {value0}", { value0: groupModalType === "channel" ? "channel" : "group" })
+                : localize("New {value0}", { value0: groupModalType === "channel" ? "channel" : "group" })
             }
-            submitLabel={editingGroup ? "Save" : "Create"}
+            submitLabel={editingGroup ? localize("Save") : localize("Create")}
             avatarPreview={groupAvatarPreview}
             avatarColor={
               editingGroup
-                ? activeChat?.group_color || "#10b981"
-                : newGroupForm.groupColor || "#10b981"
+                ? activeChat?.group_color || "#66308d"
+                : newGroupForm.groupColor || "#66308d"
             }
             avatarName={
               newGroupForm.nickname ||

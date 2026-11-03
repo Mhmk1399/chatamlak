@@ -12,11 +12,11 @@ export function NotificationsSettingsPanel({
 }) {
   useAppLocale();
   const buttonBase =
-    "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition";
+    "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-start text-sm font-semibold transition";
   const buttonHover =
-    "hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_18px_rgba(16,185,129,0.18)] dark:hover:bg-emerald-500/10";
+    "hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_18px_rgba(102,48,141,0.18)] dark:hover:bg-brand-500/10";
   const buttonTheme =
-    "border-emerald-200/70 bg-white/90 text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200";
+    "border-brand-200/70 bg-white/90 text-brand-700 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200";
   const disabledTheme =
     "cursor-not-allowed opacity-60 hover:bg-transparent hover:shadow-none";
   const showDebug =
@@ -46,7 +46,7 @@ export function NotificationsSettingsPanel({
         <span
           className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition ${
             notificationsActive
-              ? "bg-emerald-500 justify-end"
+              ? "bg-brand-600 justify-end"
               : "bg-slate-300 dark:bg-slate-700 justify-start"
           }`}
         >
@@ -83,7 +83,7 @@ export function NotificationsSettingsPanel({
         <span
           className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition ${
             messagePreviewEnabled
-              ? "bg-emerald-500 justify-end"
+              ? "bg-brand-600 justify-end"
               : "bg-slate-300 dark:bg-slate-700 justify-start"
           }`}
         >

@@ -117,10 +117,10 @@ describe("OfflineMediaPlaceholder & History Banner", () => {
     const chip = banner.element().querySelector("div");
     expect(chip).not.toBeNull();
     expect(chip.className).toContain("rounded-full");
-    expect(chip.className).toContain("border-emerald-200/60");
-    expect(chip.className).toContain("text-emerald-700");
-    expect(chip.className).toContain("dark:text-emerald-200");
-    expect(chip.className).toContain("dark:border-emerald-500/30");
+    expect(chip.className).toContain("border-brand-200/60");
+    expect(chip.className).toContain("text-brand-700");
+    expect(chip.className).toContain("dark:text-brand-200");
+    expect(chip.className).toContain("dark:border-brand-500/30");
     expect(chip.className).toContain("dark:bg-slate-950");
   });
 

@@ -51,27 +51,28 @@ function MobileMenuRow({
   role,
   ariaChecked,
 }) {
+  useAppLocale();
   return (
     <button
       type="button"
       onClick={onClick}
       role={role}
       aria-checked={ariaChecked}
-      className={`flex min-h-14 w-full items-center gap-3 px-4 text-left transition active:bg-emerald-50 dark:active:bg-emerald-500/10 ${
+      className={`flex min-h-14 w-full items-center gap-3 px-4 text-start transition active:bg-brand-50 dark:active:bg-brand-500/10 ${
         danger
           ? "text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
-          : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+          : "text-slate-700 hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
       }`}
     >
       <span
         className={`inline-flex shrink-0 ${
-          danger ? "text-rose-500 dark:text-rose-300" : "text-emerald-500"
+          danger ? "text-rose-500 dark:text-rose-300" : "text-brand-500"
         }`}
       >
         {icon}
       </span>
       <span className="min-w-0 flex-1 truncate text-base font-semibold">
-        {label}
+        {localize(label)}
       </span>
       {trailing}
       {showArrow ? (
@@ -85,6 +86,7 @@ function MobileMenuRow({
 }
 
 function MobileMenuCard({ children, className = "" }) {
+  useAppLocale();
   return (
     <div
       className={`divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:divide-white/5 dark:border-white/5 dark:bg-slate-950/60 ${className}`}
@@ -148,7 +150,7 @@ export function MobileSettingsPanel({
     () => setSettingsPanel(null),
     [setSettingsPanel],
   );
-  const resolvedUserColor = userColor || "#10b981";
+  const resolvedUserColor = userColor || "#66308d";
   const displayInitials = getAvatarInitials(displayName);
   const profileIdentity = profileForm.nickname || profileForm.username || "S";
   const profileInitials = getAvatarInitials(profileIdentity);
@@ -241,9 +243,9 @@ export function MobileSettingsPanel({
                 profilePhotoInputRef.current?.click();
               }}
               disabled={!fileUploadEnabled}
-              className={`group relative h-12 w-12 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-emerald-300/70 ${
+              className={`group relative h-12 w-12 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-brand-300/70 ${
                 fileUploadEnabled
-                  ? "cursor-pointer border-emerald-200 hover:border-emerald-300 hover:shadow-lg dark:border-emerald-500/30 dark:hover:border-emerald-400/60"
+                  ? "cursor-pointer border-brand-200 hover:border-brand-300 hover:shadow-lg dark:border-brand-500/30 dark:hover:border-brand-400/60"
                   : "cursor-not-allowed border-slate-300 opacity-70 dark:border-slate-700"
               }`}
               aria-label={localize("Change profile photo")}
@@ -304,8 +306,8 @@ export function MobileSettingsPanel({
             maxLength={NICKNAME_MAX}
             lang={nicknameHasPersian ? "fa" : "en"}
             dir={nicknameHasPersian ? "rtl" : "ltr"}
-            className={`w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-              nicknameHasPersian ? "font-fa text-right" : "text-left"
+            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+              nicknameHasPersian ? "font-fa text-end" : "text-start"
             }`}
             style={{ unicodeBidi: "plaintext" }}
           />
@@ -331,8 +333,8 @@ export function MobileSettingsPanel({
             autoCapitalize="none"
             lang={usernameHasPersian ? "fa" : "en"}
             dir={usernameHasPersian ? "rtl" : "ltr"}
-            className={`w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-              usernameHasPersian ? "font-fa text-right" : "text-left"
+            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+              usernameHasPersian ? "font-fa text-end" : "text-start"
             }`}
             style={{ unicodeBidi: "plaintext" }}
           />
@@ -351,13 +353,13 @@ export function MobileSettingsPanel({
               onClick={() => setStatusSelection(value)}
               className={`flex items-center gap-1 rounded-xl border-2 px-2 py-1 text-xs font-medium transition duration-200 ${
                 statusSelection === value
-                  ? "border-emerald-500 bg-emerald-100/50 text-emerald-700 shadow-md dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-200"
-                  : "border-emerald-100/70 bg-white/80 text-slate-700 hover:bg-emerald-50/30 dark:border-emerald-500/30 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-900/50"
+                  ? "border-brand-500 bg-brand-100/50 text-brand-700 shadow-md dark:border-brand-400 dark:bg-brand-500/20 dark:text-brand-200"
+                  : "border-brand-100/70 bg-white/80 text-slate-700 hover:bg-brand-50/30 dark:border-brand-500/30 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-900/50"
               }`}
             >
               <span
                 className={`h-2 w-2 rounded-full ${
-                  value === "online" ? "bg-emerald-400" : "bg-slate-400"
+                  value === "online" ? "bg-brand-400" : "bg-slate-400"
                 }`}
               />
               <span>{value.charAt(0).toUpperCase() + value.slice(1)}</span>
@@ -376,7 +378,7 @@ export function MobileSettingsPanel({
       ) : null}
       <button
         type="submit"
-        className="w-full rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+        className="w-full rounded-xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)]"
       >{localize("Save profile")}</button>
       <InlineError message={profileError} />
     </form>
@@ -397,14 +399,14 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showCurrentPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"
             onClick={() => setShowCurrentPassword((prev) => !prev)}
-            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
             aria-label={
-              showCurrentPassword ? "Hide current password" : "Show current password"
+              showCurrentPassword ? localize("Hide current password") : localize("Show current password")
             }
           >
             {showCurrentPassword ? (
@@ -428,13 +430,13 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showNewPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"
             onClick={() => setShowNewPassword((prev) => !prev)}
-            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
-            aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
+            aria-label={showNewPassword ? localize("Hide new password") : localize("Show new password")}
           >
             {showNewPassword ? (
               <EyeOff size={16} className="icon-anim-peek" />
@@ -457,14 +459,14 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showConfirmPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword((prev) => !prev)}
-            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
             aria-label={
-              showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+              showConfirmPassword ? localize("Hide confirm password") : localize("Show confirm password")
             }
           >
             {showConfirmPassword ? (
@@ -477,7 +479,7 @@ export function MobileSettingsPanel({
       </label>
       <button
         type="submit"
-        className="w-full rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+        className="w-full rounded-xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)]"
       >{localize("Update password")}</button>
       <InlineError message={passwordError} />
     </form>
@@ -515,7 +517,7 @@ export function MobileSettingsPanel({
             <button
               type="button"
               onClick={handleClosePanel}
-              className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400"
+              className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500"
             >{localize("Done")}</button>
           </div>
         </>
@@ -543,7 +545,7 @@ export function MobileSettingsPanel({
             settingsPanel ? "-translate-x-full" : "translate-x-0"
           }`}
         >
-          <div className="grid w-full h-[72px] shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-slate-300/80 bg-white px-4 py-4 dark:border-emerald-500/20 dark:bg-slate-900">
+          <div className="grid w-full h-[72px] shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-slate-300/80 bg-white px-4 py-4 dark:border-brand-500/20 dark:bg-slate-900">
             <div className="flex items-center gap-2">
               <div className="hidden md:inline-flex">
                 <UserMenuButton
@@ -573,7 +575,7 @@ export function MobileSettingsPanel({
                   <button
                     type="button"
                     onClick={onOpenOwnProfile}
-                    className="group flex min-w-0 flex-1 items-center gap-3 text-left"
+                    className="group flex min-w-0 flex-1 items-center gap-3 text-start"
                   >
                     <Avatar
                       src={user.avatarUrl}
@@ -581,13 +583,13 @@ export function MobileSettingsPanel({
                       name={displayName}
                       color={resolvedUserColor}
                       initials={displayInitials}
-                      className="h-10 w-10 transition group-hover:ring-2 group-hover:ring-emerald-300"
+                      className="h-10 w-10 transition group-hover:ring-2 group-hover:ring-brand-300"
                     />
                     <span className="min-w-0 flex-1">
                       <Tooltip label={displayName} asChild>
                         <span className="flex items-center gap-0.5" dir="ltr">
                           <span
-                            className={`truncate text-sm font-semibold text-emerald-700 dark:text-emerald-200 ${
+                            className={`truncate text-sm font-semibold text-brand-700 dark:text-brand-200 ${
                               hasPersian(displayName) ? "font-fa" : ""
                             }`}
                             dir="auto"
@@ -599,7 +601,7 @@ export function MobileSettingsPanel({
                         </span>
                       </Tooltip>
                       <span className="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        <span className={statusTextClass}>{statusValue}</span>
+                        <span className={statusTextClass}>{localize(statusValue)}</span>
                       </span>
                     </span>
                   </button>
@@ -656,7 +658,7 @@ export function MobileSettingsPanel({
                   onClick={openNotificationsPanel}
                 />
                 <MobileMenuRow
-                  label={isDark ? "Light mode" : "Dark mode"}
+                  label={isDark ? localize("Light mode") : localize("Dark mode")}
                   icon={
                     isDark ? (
                       <Sun size={22} className="icon-anim-spin-dir" />
@@ -706,12 +708,12 @@ export function MobileSettingsPanel({
           onTouchMove={handleDetailTouchMove}
           onTouchEnd={handleDetailTouchEnd}
         >
-          <div className="relative flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-emerald-500/20 dark:bg-slate-900">
+          <div className="relative flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-brand-500/20 dark:bg-slate-900">
             <button
               type="button"
               onClick={goBackToMenu}
               aria-label={localize("Back to settings")}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition hover:border-emerald-300 hover:shadow-md dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
             >
               <ArrowLeft size={18} />
             </button>
@@ -732,9 +734,9 @@ export function MobileSettingsPanel({
       <ConfirmPasswordModal
         open={deleteModalOpen}
         title={localize("Delete account")}
-        description="This permanently deletes your account, removes your messages, and transfers or deletes any groups/channels you own."
-        confirmLabel="Continue"
-        deleteLabel="Delete"
+        description={localize("This permanently deletes your account, removes your messages, and transfers or deletes any groups/channels you own.")}
+        confirmLabel={localize("Continue")}
+        deleteLabel={localize("Delete")}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={async (password) => {
           await onDeleteAccount?.(password);

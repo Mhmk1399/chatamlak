@@ -215,7 +215,7 @@ export default function ChatsListPanel({
           Array.isArray(discoverUsers) &&
           discoverUsers.length > 0 ? (
             <div className="space-y-0">
-              <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Users")}</p>
+              <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">{localize("Users")}</p>
               {discoverUsers.map((member, userIndex) => {
                 const label = member.nickname || member.username;
                 const initials = getAvatarInitials(label);
@@ -252,30 +252,30 @@ export default function ChatsListPanel({
                             },
                           }),
                       }}
-                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-start transition ${
                         isActive
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                          ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                          : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 focus-visible:bg-brand-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200 dark:focus-visible:bg-brand-500/10"
                       }`}
                     >
                       <div className="shrink-0">
                         <Avatar
                           src={member.avatar_url}
-                          alt={label}
+                          alt={localize(label)}
                           name={label}
-                          color={member.color || "#10b981"}
+                          color={member.color || "#66308d"}
                           initials={initials}
                           showOnlineBadge={showOnlineBadge}
                           className="h-12 w-12 text-lg font-semibold"
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Tooltip label={label} asChild>
+                        <Tooltip label={localize(label)} asChild>
                           <p
                             className="flex items-center gap-0.5 truncate text-base font-semibold"
                             dir="ltr"
                           >
-                            <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                            <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                             {Boolean(member.verified) && <VerifiedBadge size={16} />}
                             <UserRoleBadge role={member.role} size={16} />
                           </p>
@@ -302,7 +302,7 @@ export default function ChatsListPanel({
           Array.isArray(discoverGroups) &&
           discoverGroups.length > 0 ? (
             <div className="space-y-0">
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Groups")}</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">{localize("Groups")}</p>
               {discoverGroups.map((group, groupIndex) => {
                 const label = group.name || "Group";
                 const initials = getAvatarInitials(label);
@@ -317,23 +317,23 @@ export default function ChatsListPanel({
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onOpenDiscoveredGroup?.(group)}
-                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-start transition ${
                         isActive
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                          ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                          : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 focus-visible:bg-brand-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200 dark:focus-visible:bg-brand-500/10"
                       }`}
                     >
                       <div className="shrink-0">
                         {group.avatarUrl ? (
                           <img
                             src={group.avatarUrl}
-                            alt={label}
+                            alt={localize(label)}
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
                           <div
                             className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${hasPersian(initials) ? "font-fa" : ""}`}
-                            style={getAvatarStyle(group.color || "#10b981")}
+                            style={getAvatarStyle(group.color || "#66308d")}
                           >
                             {initials}
                           </div>
@@ -341,12 +341,12 @@ export default function ChatsListPanel({
                       </div>
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <Tooltip label={label} asChild>
+                          <Tooltip label={localize(label)} asChild>
                             <p
                               className="flex items-center gap-0.5 truncate text-base font-semibold"
                               dir="ltr"
                             >
-                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                               {Boolean(group.verified) && <VerifiedBadge size={16} />}
                             </p>
                           </Tooltip>
@@ -360,7 +360,7 @@ export default function ChatsListPanel({
                             )}{" "}{localize("members")}</p>
                         </div>
                         {group.isMember ? (
-                          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">{localize("Joined")}</span>
+                          <span className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-950/40 dark:text-brand-200">{localize("Joined")}</span>
                         ) : null}
                       </div>
                     </button>
@@ -376,7 +376,7 @@ export default function ChatsListPanel({
           Array.isArray(discoverChannels) &&
           discoverChannels.length > 0 ? (
             <div className="space-y-0">
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Channels")}</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">{localize("Channels")}</p>
               {discoverChannels.map((channel, channelIndex) => {
                 const label = channel.name || "Channel";
                 const initials = getAvatarInitials(label);
@@ -391,23 +391,23 @@ export default function ChatsListPanel({
                       type="button"
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => onOpenDiscoveredGroup?.(channel)}
-                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                      className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-start transition ${
                         isActive
-                          ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                          : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                          ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                          : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 focus-visible:bg-brand-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200 dark:focus-visible:bg-brand-500/10"
                       }`}
                     >
                       <div className="shrink-0">
                         {channel.avatarUrl ? (
                           <img
                             src={channel.avatarUrl}
-                            alt={label}
+                            alt={localize(label)}
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
                           <div
                             className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${hasPersian(initials) ? "font-fa" : ""}`}
-                            style={getAvatarStyle(channel.color || "#10b981")}
+                            style={getAvatarStyle(channel.color || "#66308d")}
                           >
                             {initials}
                           </div>
@@ -415,12 +415,12 @@ export default function ChatsListPanel({
                       </div>
                       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <Tooltip label={label} asChild>
+                          <Tooltip label={localize(label)} asChild>
                             <p
                               className="flex items-center gap-0.5 truncate text-base font-semibold"
                               dir="ltr"
                             >
-                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                               {Boolean(channel.verified) && <VerifiedBadge size={16} />}
                             </p>
                           </Tooltip>
@@ -434,7 +434,7 @@ export default function ChatsListPanel({
                             )}{" "}{localize("subscribers")}</p>
                         </div>
                         {channel.isMember ? (
-                          <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">{localize("Joined")}</span>
+                          <span className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-950/40 dark:text-brand-200">{localize("Joined")}</span>
                         ) : null}
                       </div>
                     </button>
@@ -448,7 +448,7 @@ export default function ChatsListPanel({
           ) : null}
           {!showSearchEmptyState && discoverSaved ? (
             <div className="space-y-0">
-              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">{localize("Saved Messages")}</p>
+              <p className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">{localize("Saved Messages")}</p>
               <div className="relative flex w-full flex-col px-2">
                 <ContextMenuSurface
                   type="button"
@@ -458,16 +458,16 @@ export default function ChatsListPanel({
                   contextMenu={{
                     disabled: true,
                   }}
-                  className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition ${
+                  className={`group flex min-h-[72px] w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-start transition ${
                     isSavedChatActive
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                      : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 focus-visible:bg-emerald-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200 dark:focus-visible:bg-emerald-500/10"
+                      ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                      : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 focus-visible:bg-brand-50 focus-visible:outline-hidden dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200 dark:focus-visible:bg-brand-500/10"
                   }`}
                 >
                   <div className="shrink-0">
                     <div
                       className="flex h-12 w-12 items-center justify-center rounded-full"
-                      style={getAvatarStyle("#10b981")}
+                      style={getAvatarStyle("#66308d")}
                     >
                       <Bookmark size={22} className="text-white" />
                     </div>
@@ -496,11 +496,11 @@ export default function ChatsListPanel({
           >
             <div className="flex min-h-[72px] w-full animate-pulse items-center gap-3 rounded-xl px-3 py-2.5">
               <div className="shrink-0">
-                <div className="h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40" />
+                <div className="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/40" />
               </div>
               <div className="flex-1 space-y-2">
-                <div className="h-3 w-1/2 rounded-sm bg-emerald-100 dark:bg-emerald-900/40" />
-                <div className="h-2 w-3/4 rounded-sm bg-emerald-100/80 dark:bg-emerald-900/30" />
+                <div className="h-3 w-1/2 rounded-sm bg-brand-100 dark:bg-brand-900/40" />
+                <div className="h-2 w-3/4 rounded-sm bg-brand-100/80 dark:bg-brand-900/30" />
               </div>
             </div>
             {index < 5 ? (
@@ -544,12 +544,12 @@ export default function ChatsListPanel({
                 : conv.name || "Chat";
           const avatarColor =
             isGroup || isChannel
-              ? conv.group_color || "#10b981"
+              ? conv.group_color || "#66308d"
               : isSaved
-                ? "#10b981"
+                ? "#66308d"
                 : isDeletedDm
                   ? "#94a3b8"
-                  : other?.color || "#10b981";
+                  : other?.color || "#66308d";
           const avatarInitials = getAvatarInitials(name);
           const wiggleStyle = editMode
             ? {
@@ -614,10 +614,10 @@ export default function ChatsListPanel({
                     {isChannel ? (
                       <Megaphone
                         size={16}
-                        className="shrink-0 text-emerald-500"
+                        className="shrink-0 text-brand-500"
                       />
                     ) : isGroup ? (
-                      <Users size={16} className="shrink-0 text-emerald-500" />
+                      <Users size={16} className="shrink-0 text-brand-500" />
                     ) : null}
                     <Tooltip label={name} asChild>
                       <span
@@ -795,7 +795,7 @@ export default function ChatsListPanel({
                         <span
                           className={`inline-flex items-center ${
                             isOwnLastMessagePending
-                              ? "text-emerald-900/80 dark:text-emerald-50/80"
+                              ? "text-brand-900/80 dark:text-brand-50/80"
                               : isOwnLastMessageSeen
                                 ? "text-sky-400"
                                 : "text-slate-500 dark:text-slate-400"
@@ -834,7 +834,7 @@ export default function ChatsListPanel({
                       className={`inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold text-white ${
                         conv._muted
                           ? "bg-slate-400 dark:bg-slate-500"
-                          : "bg-emerald-500"
+                          : "bg-brand-600"
                       }`}
                     >
                       {unreadCount}
@@ -853,8 +853,8 @@ export default function ChatsListPanel({
               <div
                 className={`group flex min-h-[72px] w-full items-center rounded-xl border transition ${
                   isActive
-                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                    ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                    : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                 } ${editMode ? "animate-chat-wiggle-ios" : ""}`}
                 style={wiggleStyle}
               >
@@ -908,7 +908,7 @@ export default function ChatsListPanel({
                         data: { chat: conv },
                       }),
                   }}
-                  className={`flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 text-left ${
+                  className={`flex min-h-[72px] min-w-0 flex-1 items-center gap-3 py-2.5 text-start ${
                     editMode
                       ? "pointer-events-none pl-2 pr-3"
                       : "cursor-pointer px-3 focus-visible:outline-hidden"
@@ -925,8 +925,8 @@ export default function ChatsListPanel({
                     }}
                     className={`mr-2.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${
                       selectedChats.includes(conv.id)
-                        ? "border-emerald-500 bg-emerald-500 text-white"
-                        : "border-emerald-200 text-emerald-600 dark:border-emerald-500/30 dark:text-emerald-200"
+                        ? "border-brand-500 bg-brand-600 text-white"
+                        : "border-brand-200 text-brand-600 dark:border-brand-500/30 dark:text-brand-200"
                     }`}
                     aria-label={localize("Select chat")}
                   >

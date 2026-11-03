@@ -12,16 +12,16 @@ export default function AuthHeader({
   useAppLocale();
   return (
     <div className="relative text-center">
-      <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300 sm:text-sm">
-        {subtitle || (isLogin ? localize("Sign in") : "Create account")}
+      <p className="text-xs font-medium text-accent-700 dark:text-accent-300">
+        {localize(subtitle || "Ouj Real Estate team workspace")}
       </p>
       <h1 className="mt-2 text-2xl font-bold sm:mt-3 sm:text-3xl">
-        {title || (isLogin ? "Welcome" : "Join the flock")}
+        {localize(title || (isLogin ? "Welcome to Ouj" : "Join the Ouj team"))}
       </h1>
       <button
         type="button"
         onClick={onToggleTheme}
-        className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 sm:h-10 sm:w-10"
+        className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 sm:h-10 sm:w-10"
         aria-label={localize("Toggle dark mode")}
       >
         {isDark ? (

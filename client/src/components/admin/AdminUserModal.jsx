@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -36,13 +37,14 @@ async function deleteUserAvatar(userId) {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const INPUT    = "w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100";
-const PW_INPUT = "w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100";
-const EYE_BTN  = "absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-500/10";
+const INPUT    = "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
+const PW_INPUT = "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
+const EYE_BTN  = "absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 dark:text-brand-200 dark:hover:bg-brand-500/10";
 
 // ─── Password visibility toggle ───────────────────────────────────────────────
 
 function PwToggle({ show, onToggle }) {
+  useAppLocale();
   return (
     <button type="button" onClick={onToggle} className={EYE_BTN}>
       {show ? <EyeOff size={16} className="icon-anim-peek" /> : <Eye size={16} className="icon-anim-peek" />}
@@ -61,7 +63,7 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
   // Profile fields
   const [nick, setNick]             = useState(user?.nickname || "");
   const [uname, setUname]           = useState(user?.username || "");
-  const [color, setColor]           = useState(creating ? getRandomAvatarColor() : (user?.color || "#10b981"));
+  const [color, setColor]           = useState(creating ? getRandomAvatarColor() : (user?.color || "#66308d"));
   const [verified, setVerified]     = useState(Boolean(user?.verified));
   const [profileErr, setProfileErr] = useState("");
   const [profileBusy, setProfileBusy] = useState(false);
@@ -191,12 +193,12 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
   return createPortal(
     <>
       <div className="fixed inset-0 z-140 flex items-center justify-center bg-black/40 px-6">
-        <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-xl dark:border-emerald-500/30 dark:bg-slate-950">
+        <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-100/70 bg-white shadow-xl dark:border-brand-500/30 dark:bg-slate-950">
 
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-emerald-100/70 px-6 py-5 dark:border-emerald-500/20">
-            <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-200">
-              {creating ? localize("New user") : `Edit @${user.username}`}
+          <div className="flex items-center justify-between border-b border-brand-100/70 px-6 py-5 dark:border-brand-500/20">
+            <h3 className="text-lg font-semibold text-brand-700 dark:text-brand-200">
+              {creating ? localize("New user") : localize("Edit @{value0}", { value0: user.username })}
             </h3>
             <button type="button" onClick={onClose}
               className="flex items-center justify-center rounded-full border border-rose-200 p-2 text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 hover:shadow-[0_0_16px_rgba(244,63,94,0.2)] dark:border-rose-500/30 dark:text-rose-200 dark:hover:bg-rose-500/10">
@@ -218,9 +220,9 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
                     <button type="button"
                       onClick={() => { if (fileUploadEnabled) fileInputRef.current?.click(); }}
                       disabled={!fileUploadEnabled}
-                      className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-emerald-300/70 ${fileUploadEnabled ? "cursor-pointer border-emerald-200 hover:border-emerald-300 hover:shadow-lg dark:border-emerald-500/30 dark:hover:border-emerald-400/60" : "cursor-not-allowed border-slate-300 opacity-70 dark:border-slate-700"}`}
+                      className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-brand-300/70 ${fileUploadEnabled ? "cursor-pointer border-brand-200 hover:border-brand-300 hover:shadow-lg dark:border-brand-500/30 dark:hover:border-brand-400/60" : "cursor-not-allowed border-slate-300 opacity-70 dark:border-slate-700"}`}
                       aria-label={localize("Change profile photo")}>
-                      <Avatar src={avatarPreview} name={profileIdentity} color={color || "#10b981"}
+                      <Avatar src={avatarPreview} name={profileIdentity} color={color || "#66308d"}
                         initials={getAvatarInitials(profileIdentity)} className="h-full w-full text-lg font-bold" />
                       {fileUploadEnabled ? (
                         <span className="absolute inset-0 flex items-center justify-center bg-slate-950/45 text-white opacity-0 transition group-hover:opacity-100">
@@ -248,7 +250,7 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
               <div className="relative mt-2">
                 <input value={nick} onChange={(e) => setNick(e.target.value)} maxLength={NICKNAME_MAX}
                   lang={nickHasPersian ? "fa" : "en"} dir={nickHasPersian ? "rtl" : "ltr"}
-                  className={`${INPUT} ${nickHasPersian ? "font-fa text-right" : "text-left"}`}
+                  className={`${INPUT} ${nickHasPersian ? "font-fa text-end" : "text-start"}`}
                   style={{ unicodeBidi: "plaintext" }} />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 dark:text-slate-500">{nick.length}/{NICKNAME_MAX}</span>
               </div>
@@ -261,34 +263,34 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
                 <input value={uname} onChange={(e) => setUname(e.target.value.toLowerCase())} maxLength={USERNAME_MAX}
                   pattern={USERNAME_INPUT_PATTERN} autoCapitalize="none"
                   lang={unameHasPersian ? "fa" : "en"} dir={unameHasPersian ? "rtl" : "ltr"}
-                  className={`${INPUT} ${unameHasPersian ? "font-fa text-right" : "text-left"}`}
+                  className={`${INPUT} ${unameHasPersian ? "font-fa text-end" : "text-start"}`}
                   style={{ unicodeBidi: "plaintext" }} />
                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 dark:text-slate-500">{uname.length}/{USERNAME_MAX}</span>
               </div>
             </label>
 
             {/* Color */}
-            <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+            <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Color")}</p>
               <div className="mt-2 flex items-center gap-2">
                 <div className="relative flex-1">
-                  <input className={inputCls + " w-full pr-12"} value={color} onChange={(e) => setColor(e.target.value)} placeholder="#10b981" />
-                  <Tooltip label="Reroll" className="absolute right-1 top-1/2 -translate-y-1/2">
+                  <input className={inputCls + " w-full pr-12"} value={color} onChange={(e) => setColor(e.target.value)} placeholder={localize("#66308d")} />
+                  <Tooltip label={localize("Reroll")} className="absolute right-1 top-1/2 -translate-y-1/2">
                     <button
                       type="button"
                       onClick={handleColorRefresh}
                       disabled={colorRefreshState === "done"}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-transparent text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-default disabled:text-emerald-600 dark:text-slate-400 dark:hover:border-emerald-500/30 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300 dark:disabled:text-emerald-400"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-transparent text-slate-500 transition hover:border-brand-300 hover:bg-brand-100 hover:text-brand-700 disabled:cursor-default disabled:text-brand-600 dark:text-slate-400 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-300 dark:disabled:text-brand-400"
                       aria-label={localize("Choose a random color")}
                     >
                       {colorRefreshState === "done"
-                        ? <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
+                        ? <Check size={16} className="text-brand-600 dark:text-brand-400" />
                         : <Refresh size={16} className="icon-anim-spin-full" />}
                     </button>
                   </Tooltip>
                 </div>
-                <input type="color" value={color || "#10b981"} onChange={(e) => setColor(e.target.value)}
-                  className="color-swatch h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-emerald-200/70 dark:border-emerald-500/30" />
+                <input type="color" value={color || "#66308d"} onChange={(e) => setColor(e.target.value)}
+                  className="color-swatch h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-brand-200/70 dark:border-brand-500/30" />
               </div>
             </div>
 
@@ -298,13 +300,13 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
               role="switch"
               aria-checked={verified}
               onClick={() => setVerified((v) => !v)}
-              className="flex w-full items-center justify-between rounded-2xl border border-emerald-200 px-4 py-3 text-left text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              className="flex w-full items-center justify-between rounded-2xl border border-brand-200 px-4 py-3 text-start text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:text-brand-200 dark:hover:bg-brand-500/10"
             >
               <span className="inline-flex items-center gap-2">
                 <BadgeCheck size={18} className="shrink-0 icon-anim-pop" aria-hidden="true" />{localize("Verify")}</span>
               <span
                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
-                  verified ? "justify-end bg-emerald-500" : "justify-start bg-slate-300 dark:bg-slate-700"
+                  verified ? "justify-end bg-brand-600" : "justify-start bg-slate-300 dark:bg-slate-700"
                 }`}
               >
                 <span className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition" />
@@ -312,7 +314,7 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
             </button>
 
             {/* Password section — "Set password" for create, "Reset password" for edit */}
-            <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+            <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 {creating ? localize("Password") : localize("Reset password")}
               </p>
@@ -324,7 +326,7 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
                 <div className="relative flex-1">
                   <input type={showPw ? "text" : "password"} value={pw}
                     onChange={(e) => setPw(e.target.value)}
-                    placeholder={creating ? "Min 6 characters" : localize("New password")}
+                    placeholder={creating ? localize("Min 6 characters") : localize("New password")}
                     className={PW_INPUT} />
                   <PwToggle show={showPw} onToggle={() => setShowPw((p) => !p)} />
                 </div>
@@ -343,16 +345,16 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
                     className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:bg-rose-100 disabled:opacity-50 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20">{localize("Reset")}</button>
                 )}
               </div>
-              {pwErr && <p className="mt-2 text-xs text-rose-500">{pwErr}</p>}
+              {pwErr && <p className="mt-2 text-xs text-rose-500">{localizeError(pwErr)}</p>}
             </div>
 
             {/* Profile error */}
-            {profileErr && <p className="text-xs text-rose-500">{profileErr}</p>}
+            {profileErr && <p className="text-xs text-rose-500">{localizeError(profileErr)}</p>}
 
             {/* Submit */}
             <button type="submit" disabled={profileBusy}
-              className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:opacity-70">
-              {profileBusy ? (creating ? "Creating…" : "Saving…") : (creating ? "Create user" : localize("Save profile"))}
+              className="w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)] disabled:opacity-70">
+              {profileBusy ? (creating ? localize("Creating…") : localize("Saving…")) : (creating ? localize("Create user") : localize("Save profile"))}
             </button>
 
           </form>
@@ -365,7 +367,7 @@ export default function AdminUserModal({ mode = "edit", user = null, onClose, on
           open={pwConfirmOpen}
           title={localize("Reset password")}
           message={`Reset the password for @${user.username}? They will be signed out of all sessions.`}
-          confirmLabel={pwBusy ? "Resetting…" : "Reset"}
+          confirmLabel={pwBusy ? localize("Resetting…") : localize("Reset")}
           busy={pwBusy}
           onConfirm={doPasswordReset}
           onClose={() => setPwConfirmOpen(false)}

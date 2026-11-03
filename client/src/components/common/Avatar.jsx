@@ -9,7 +9,7 @@ export default function Avatar({
   src,
   alt,
   name,
-  color = "#10b981",
+  color = "#66308d",
   initials = null,
   placeholderContent = null,
   showOnlineBadge = false,
@@ -60,7 +60,7 @@ export default function Avatar({
         <img
           ref={imageRef}
           src={avatarSrc}
-          alt={alt || name || "Avatar"}
+          alt={alt || name || localize("Avatar")}
           className={`absolute inset-0 h-full w-full rounded-full object-cover transition-opacity duration-200 ${
             isLoaded ? "opacity-100" : "opacity-0"
           } ${imgClassName}`}
@@ -73,7 +73,7 @@ export default function Avatar({
           <span
             role="img"
             aria-label={localize("online")}
-            className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900 ${onlineBadgeClassName}`}
+            className={`h-3.5 w-3.5 rounded-full border-2 border-white bg-accent-500 dark:border-slate-900 ${onlineBadgeClassName}`}
           />
         </Tooltip>
       ) : null}

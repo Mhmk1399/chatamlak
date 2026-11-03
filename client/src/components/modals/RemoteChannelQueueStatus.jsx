@@ -64,7 +64,7 @@ export default function RemoteChannelQueueStatus({
       label: localize("Done"),
       count: done,
       icon: Check,
-      color: "text-emerald-600 dark:text-emerald-400",
+      color: "text-brand-600 dark:text-brand-400",
       show: done > 0,
     },
     {
@@ -97,7 +97,7 @@ export default function RemoteChannelQueueStatus({
     if (testConnectionResult === "success") {
       return {
         label: "Connected",
-        className: "text-emerald-600 dark:text-emerald-400",
+        className: "text-brand-600 dark:text-brand-400",
         icon: <Check size={11} />,
       };
     }
@@ -120,7 +120,7 @@ export default function RemoteChannelQueueStatus({
   const isDisconnected = testConnectionResult === "error" && active === 0;
   const boxClass = isDisconnected
     ? "rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 dark:border-rose-500/30 dark:bg-rose-900/30"
-    : "rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 dark:border-emerald-500/30 dark:bg-emerald-500/10";
+    : "rounded-xl border border-brand-200 bg-brand-50/70 px-3 py-2.5 dark:border-brand-500/30 dark:bg-brand-500/10";
 
   const canTest = Boolean(onTestConnection) && !testConnectionLoading && !actionLoading;
   const actionsBlocked = actionLoading || testConnectionLoading || isDisconnected;
@@ -128,16 +128,16 @@ export default function RemoteChannelQueueStatus({
   return (
     <div className="space-y-2">
       {/* Queue Stats — clickable to test connection */}
-      <Tooltip label={canTest ? "Click to test connection" : ""} className="w-full">
+      <Tooltip label={canTest ? localize("Click to test connection") : ""} className="w-full">
       <button
         type="button"
         onClick={canTest ? onTestConnection : undefined}
         disabled={!canTest}
-        className={`w-full text-left transition ${boxClass} ${
+        className={`w-full text-start transition ${boxClass} ${
           canTest
             ? isDisconnected
               ? "cursor-pointer hover:border-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/45"
-              : "cursor-pointer hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/15"
+              : "cursor-pointer hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/15"
             : "cursor-default"
         }`}
       >
@@ -145,13 +145,13 @@ export default function RemoteChannelQueueStatus({
           <p className={`text-xs font-semibold ${isDisconnected ? "text-rose-600 dark:text-rose-200" : "text-slate-700 dark:text-slate-200"}`}>{localize("Queue Status")}</p>
           <span className={`inline-flex items-center gap-1 text-[10px] font-medium ${connectionBadge.className}`}>
             {connectionBadge.icon ?? null}
-            {connectionBadge.label}
+            {localize(connectionBadge.label)}
           </span>
         </div>
 
         {total === 0 ? (
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {sourceEnabled ? "Queue is empty" : "Remote channel is disabled"}
+            {sourceEnabled ? localize("Queue is empty") : localize("Remote channel is disabled")}
           </p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -168,7 +168,7 @@ export default function RemoteChannelQueueStatus({
                     {item.count}
                   </span>
                   <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
-                    {item.label}
+                    {localize(item.label)}
                   </span>
                 </div>
               );
@@ -181,7 +181,7 @@ export default function RemoteChannelQueueStatus({
       {/* Action Buttons */}
       {!readOnly && sourceEnabled ? (
         <div className="flex flex-wrap gap-2">
-          <Tooltip label={onResume ? "Resume queue" : "Pause queue"}>
+          <Tooltip label={onResume ? localize("Resume queue") : localize("Pause queue")}>
             <button
               type="button"
               onClick={onResume || onPause}
@@ -195,11 +195,11 @@ export default function RemoteChannelQueueStatus({
               ) : (
                 <Pause size={13} />
               )}
-              {onResume ? "Resume" : "Pause"}
+              {onResume ? localize("Resume") : localize("Pause")}
             </button>
           </Tooltip>
 
-          <Tooltip label="Skip current item">
+          <Tooltip label={localize("Skip current item")}>
             <button
               type="button"
               onClick={onSkip}
@@ -213,7 +213,7 @@ export default function RemoteChannelQueueStatus({
               )}{localize("Skip")}</button>
           </Tooltip>
 
-          <Tooltip label="Skip all queued items">
+          <Tooltip label={localize("Skip all queued items")}>
             <button
               type="button"
               onClick={onSkipAll}

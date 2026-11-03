@@ -1,3 +1,4 @@
+import { t as localize, useLocale as useAppLocale } from "../../../i18n/locale.js";
 export default function CategoryButton({
   label,
   icon,
@@ -11,6 +12,7 @@ export default function CategoryButton({
   disabledTheme,
   sizeText,
 }) {
+  useAppLocale();
   const isInteractive = Boolean(onClick) && !disabled;
   return (
     <div
@@ -25,7 +27,7 @@ export default function CategoryButton({
     >
       <span className="flex items-center gap-3">
         {icon}
-        {label}
+        {localize(label)}
       </span>
       {typeof sizeLabel === "string" && sizeLabel.trim() ? (
         <span

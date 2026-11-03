@@ -15,7 +15,7 @@ export function useNewGroupModal({
   const [newGroupForm, setNewGroupForm] = useState({
     nickname: "",
     username: "",
-    groupColor: "#10b981",
+    groupColor: "#66308d",
     visibility: "public",
     allowMemberInvites: true,
     remoteChannelEnabled: false,

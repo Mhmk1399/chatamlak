@@ -238,13 +238,12 @@ export default function WhatsNewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-modal-title"
-        className="flex h-[min(68vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-4xl border border-emerald-100/70 bg-white shadow-2xl outline-hidden dark:border-emerald-500/30 dark:bg-slate-950"
+        className="flex h-[min(68vh,44rem)] w-full max-w-2xl flex-col overflow-hidden rounded-4xl border border-brand-100/70 bg-white shadow-2xl outline-hidden dark:border-brand-500/30 dark:bg-slate-950"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-emerald-100/70 px-6 py-5 dark:border-emerald-500/20">
+        <div className="flex items-start justify-between gap-4 border-b border-brand-100/70 px-6 py-5 dark:border-brand-500/20">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-emerald-500/80">{localize("What's New")}</p>
-            <h3 id="whats-new-modal-title" className="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-200">
-              Songbird {activeSection?.heading || version || ""}
+            <p className="text-[10px] uppercase tracking-[0.28em] text-brand-500/80">{localize("What's New")}</p>
+            <h3 id="whats-new-modal-title" className="mt-2 text-2xl font-bold text-brand-700 dark:text-brand-200">{localize("Songbird ")}{activeSection?.heading || version || ""}
             </h3>
           </div>
           <button
@@ -263,7 +262,7 @@ export default function WhatsNewModal({
         >
           {activeSection?.body ? (
             <div
-              className="sb-markdown wrap-break-word text-left text-sm text-slate-700 wrap-anywhere dark:text-slate-100"
+              className="sb-markdown wrap-break-word text-start text-sm text-slate-700 wrap-anywhere dark:text-slate-100"
               dangerouslySetInnerHTML={{ __html: String(markdownHtml || "") }}
             />
           ) : (
@@ -271,14 +270,14 @@ export default function WhatsNewModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-t border-emerald-100/70 px-6 py-4 dark:border-emerald-500/20">
+        <div className="flex items-center justify-between gap-4 border-t border-brand-100/70 px-6 py-4 dark:border-brand-500/20">
           {sections.length > 1 ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPageIndex((current) => Math.max(0, current - 1))}
                 disabled={pageIndex === 0}
-                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-brand-200 bg-white text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 dark:hover:bg-brand-500/10"
                 aria-label={localize("Show previous changelog version")}
               >
                 <ArrowLeft size={18} />
@@ -294,7 +293,7 @@ export default function WhatsNewModal({
                   )
                 }
                 disabled={pageIndex >= sections.length - 1}
-                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-brand-200 bg-white text-brand-700 transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 dark:hover:bg-brand-500/10"
                 aria-label={localize("Show next changelog version")}
               >
                 <ArrowRight size={18} />
@@ -306,7 +305,7 @@ export default function WhatsNewModal({
           <button
             type="button"
             onClick={() => onClose?.()}
-            className="rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400"
+            className="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-500"
           >{localize("Got it!")}</button>
         </div>
       </div>

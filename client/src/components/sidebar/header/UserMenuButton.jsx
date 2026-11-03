@@ -16,7 +16,7 @@ export default function UserMenuButton({
   user = {},
   displayName = "",
   displayInitials = null,
-  userColor = "#10b981",
+  userColor = "#66308d",
   statusValue = "online",
   statusTextClass = "",
   mobileTab = "chats",
@@ -38,7 +38,7 @@ export default function UserMenuButton({
   const resolvedStatusClass =
     statusTextClass ||
     (resolvedStatus === "online"
-      ? "font-semibold text-emerald-500 dark:text-emerald-300"
+      ? "font-semibold text-brand-500 dark:text-brand-300"
       : "text-slate-500 dark:text-slate-400");
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function UserMenuButton({
   }, [isOpen]);
 
   const buttonBaseCls =
-    "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200";
+    "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-slate-700 transition hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200";
   const divider = <div className="my-1 h-px bg-slate-100 dark:bg-white/5" />;
 
   return (
@@ -76,7 +76,7 @@ export default function UserMenuButton({
         aria-label={localize("User menu")}
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        className="group relative inline-flex items-center justify-center rounded-full transition hover:ring-2 hover:ring-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+        className="group relative inline-flex items-center justify-center rounded-full transition hover:ring-2 hover:ring-brand-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Avatar
           src={user?.avatarUrl}
@@ -84,7 +84,7 @@ export default function UserMenuButton({
           name={resolvedName}
           color={userColor}
           initials={displayInitials}
-          className="h-9 w-9 shrink-0 transition group-hover:ring-1 group-hover:ring-emerald-300"
+          className="h-9 w-9 shrink-0 transition group-hover:ring-1 group-hover:ring-brand-300"
         />
       </button>
 
@@ -92,7 +92,7 @@ export default function UserMenuButton({
         <div
           role="menu"
           aria-label={localize("User menu options")}
-          className="absolute top-full left-0 mt-3 z-30 w-72 max-w-[90vw] overflow-hidden rounded-2xl border border-emerald-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-emerald-950/10 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+          className="absolute top-full start-0 mt-3 z-30 w-72 max-w-[90vw] overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
         >
           {/* User header: avatar + nickname + status */}
           <button
@@ -101,7 +101,7 @@ export default function UserMenuButton({
               setIsOpen(false);
               onOpenOwnProfile?.();
             }}
-            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 dark:hover:bg-brand-500/10"
           >
             <Avatar
               src={user?.avatarUrl}
@@ -109,11 +109,11 @@ export default function UserMenuButton({
               name={resolvedName}
               color={userColor}
               initials={displayInitials}
-              className="h-10 w-10 shrink-0 transition group-hover:ring-2 group-hover:ring-emerald-300"
+              className="h-10 w-10 shrink-0 transition group-hover:ring-2 group-hover:ring-brand-300"
             />
             <div className="min-w-0 flex-1">
               <p
-                className="flex items-center gap-0.5 truncate text-sm font-semibold text-emerald-700 transition group-hover:text-emerald-600 dark:text-emerald-200 dark:group-hover:text-emerald-300"
+                className="flex items-center gap-0.5 truncate text-sm font-semibold text-brand-700 transition group-hover:text-brand-600 dark:text-brand-200 dark:group-hover:text-brand-300"
                 dir="ltr"
               >
                 <span
@@ -146,7 +146,7 @@ export default function UserMenuButton({
             >
               <Chat
                 size={18}
-                className="shrink-0 text-emerald-500 icon-anim-drop"
+                className="shrink-0 text-brand-500 icon-anim-drop"
               />{localize("Chats")}</button>
           ) : (
             <button
@@ -160,7 +160,7 @@ export default function UserMenuButton({
             >
               <Settings
                 size={18}
-                className="shrink-0 text-emerald-500 icon-anim-spin-dir"
+                className="shrink-0 text-brand-500 icon-anim-spin-dir"
               />{localize("Settings")}</button>
           )}
 
@@ -177,7 +177,7 @@ export default function UserMenuButton({
             >
               <Chat
                 size={18}
-                className="shrink-0 text-emerald-500 icon-anim-drop"
+                className="shrink-0 text-brand-500 icon-anim-drop"
               />{localize("Chats")}</button>
           ) : (
             <button
@@ -191,7 +191,7 @@ export default function UserMenuButton({
             >
               <Phone
                 size={18}
-                className="shrink-0 text-emerald-500 icon-anim-bob"
+                className="shrink-0 text-brand-500 icon-anim-bob"
               />{localize("Calls")}</button>
           )}
 
@@ -213,7 +213,7 @@ export default function UserMenuButton({
             >
               <Pencil
                 size={18}
-                className="shrink-0 text-emerald-500 icon-anim-sway"
+                className="shrink-0 text-brand-500 icon-anim-sway"
               />{localize("Edit")}</button>
           ) : null}
 
@@ -227,7 +227,7 @@ export default function UserMenuButton({
               setIsOpen(false);
               handleLogout?.();
             }}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
           >
             <LogOut
               size={18}

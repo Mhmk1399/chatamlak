@@ -306,10 +306,10 @@ export default function ChatProfileModal({
         : targetUser?.avatar_url || null;
   const profileColor =
     isGroup || isChannel
-      ? chat?.group_color || "#10b981"
+      ? chat?.group_color || "#66308d"
       : isSaved
-        ? "#10b981"
-        : targetUser?.color || "#10b981";
+        ? "#66308d"
+        : targetUser?.color || "#66308d";
   const initials = getAvatarInitials(profileName);
   const isDeletedTarget = Boolean(targetUser?.isDeleted || !targetUser?.username);
   const callSupported = isCallSupported();
@@ -377,14 +377,14 @@ export default function ChatProfileModal({
         role="dialog"
         aria-modal="true"
         aria-label={profileName}
-        className="app-scroll max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-emerald-100/70 bg-white p-5 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950"
+        className="app-scroll max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl border border-brand-100/70 bg-white p-5 shadow-xl dark:border-brand-500/30 dark:bg-slate-950"
       >        <div className="mb-3 flex items-center justify-between">
           {!isReadOnly && (isGroup || isChannel) && isOwner && onEditGroup ? (
             <button
               type="button"
               onClick={onEditGroup}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
-              aria-label={isChannel ? "Edit channel" : "Edit group"}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
+              aria-label={isChannel ? localize("Edit channel") : localize("Edit group")}
             >
               <Pencil size={16} className="icon-anim-sway" />
             </button>
@@ -392,7 +392,7 @@ export default function ChatProfileModal({
             <button
               type="button"
               onClick={onEditSelfProfile}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-200 bg-white text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
               aria-label={localize("Edit profile")}
             >
               <Pencil size={16} className="icon-anim-sway" />
@@ -472,7 +472,7 @@ export default function ChatProfileModal({
             <button
               type="button"
               onClick={onJoinChat}
-              className="group col-start-2 rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              className="group col-start-2 rounded-2xl border border-brand-200 bg-white px-2 py-3 text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
             >
               <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full">
                 <LogIn size={24} className="icon-anim-bob" />
@@ -493,7 +493,7 @@ export default function ChatProfileModal({
             <button
               type="button"
               onClick={onOpenChat}
-              className="group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10 cursor-pointer"
+              className="group rounded-2xl border border-brand-200 bg-white px-2 py-3 text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10 cursor-pointer"
             >
               <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full">
                 <Chat size={24} className="icon-anim-bob" />
@@ -506,13 +506,13 @@ export default function ChatProfileModal({
                 disabled={isVoiceCallDisabled}
                 title={
                   callsDisabled
-                    ? "Calls are disabled by the server"
+                    ? localize("Calls are disabled by the server")
                     : isDeletedTarget
-                      ? "Calls unavailable for deleted account"
+                      ? localize("Calls unavailable for deleted account")
                       : !callSupported
-                        ? "Calls require a secure connection"
+                        ? localize("Calls require a secure connection")
                         : isInCall
-                          ? "Already in a call"
+                          ? localize("Already in a call")
                           : undefined
                 }
                 onClick={
@@ -523,10 +523,10 @@ export default function ChatProfileModal({
                         onStartVoiceCall(targetUser);
                       }
                 }
-                className={`group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 ${
+                className={`group rounded-2xl border border-brand-200 bg-white px-2 py-3 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 ${
                   isVoiceCallDisabled
                     ? "opacity-40 cursor-not-allowed"
-                    : "hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 cursor-pointer"
+                    : "hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10 cursor-pointer"
                 }`}
                 aria-label={localize("Voice call")}
               >
@@ -542,13 +542,13 @@ export default function ChatProfileModal({
                 disabled={isVideoCallDisabled}
                 title={
                   videoCallsDisabled
-                    ? "Video calls are disabled by the server"
+                    ? localize("Video calls are disabled by the server")
                     : isDeletedTarget
-                      ? "Calls unavailable for deleted account"
+                      ? localize("Calls unavailable for deleted account")
                       : !callSupported
-                        ? "Calls require a secure connection"
+                        ? localize("Calls require a secure connection")
                         : isInCall
-                          ? "Already in a call"
+                          ? localize("Already in a call")
                           : undefined
                 }
                 onClick={
@@ -559,10 +559,10 @@ export default function ChatProfileModal({
                         onStartVideoCall(targetUser);
                       }
                 }
-                className={`group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 ${
+                className={`group rounded-2xl border border-brand-200 bg-white px-2 py-3 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 ${
                   isVideoCallDisabled
                     ? "opacity-40 cursor-not-allowed"
-                    : "hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 cursor-pointer"
+                    : "hover:border-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10 cursor-pointer"
                 }`}
                 aria-label={localize("Video call")}
               >
@@ -575,7 +575,7 @@ export default function ChatProfileModal({
             <button
               type="button"
               onClick={onToggleMute}
-              className="group rounded-2xl border border-emerald-200 bg-white px-2 py-3 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10 cursor-pointer"
+              className="group rounded-2xl border border-brand-200 bg-white px-2 py-3 text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10 cursor-pointer"
             >
               <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-full">
                 {muted ? (
@@ -604,25 +604,25 @@ export default function ChatProfileModal({
         ) : null}
 
         {!isReadOnly && (isGroup || isChannel) && canViewInvite ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+          <div className="mt-4 rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Invite link")}</p>
             <button
               type="button"
               onClick={handleCopyInviteLink}
               disabled={!inviteLink || inviteLinkLoading}
-              className="mt-2 flex w-full items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-left text-xs text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-hidden focus:ring-2 focus:ring-emerald-300/60 disabled:cursor-default disabled:opacity-70 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+              className="mt-2 flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/70 p-3 text-start text-xs text-brand-800 transition hover:border-brand-300 hover:bg-brand-50 focus:outline-hidden focus:ring-2 focus:ring-brand-300/60 disabled:cursor-default disabled:opacity-70 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200 dark:hover:bg-brand-500/15"
               aria-label={localize("Copy invite link")}
             >
               <span className="min-w-0 flex-1 break-all">
                 {inviteLinkLoading ? (
                   <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-                    <LoaderCircle size={13} className="animate-spin text-emerald-500" />{localize("Loading...")}</span>
+                    <LoaderCircle size={13} className="animate-spin text-brand-500" />{localize("Loading...")}</span>
                 ) : (
-                  inviteLink || "No invite link available."
+                  inviteLink || localize("No invite link available.")
                 )}
               </span>
               {inviteLink && !inviteLinkLoading ? (
-                <span className="ml-1 shrink-0 text-emerald-600 dark:text-emerald-400">
+                <span className="ml-1 shrink-0 text-brand-600 dark:text-brand-400">
                   {inviteCopied ? <Check size={14} /> : <Copy size={14} />}
                 </span>
               ) : null}
@@ -631,18 +631,18 @@ export default function ChatProfileModal({
         ) : null}
 
         {isChannel && remoteChannelAvailable && Boolean(Number(chat?.remote_channel_enabled || 0)) ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+          <div className="mt-4 rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Connection")}</p>
               {remoteChannelStatus === null ? (
                 <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                  <LoaderCircle size={14} className="animate-spin text-emerald-500" />{localize("Loading...")}</span>
+                  <LoaderCircle size={14} className="animate-spin text-brand-500" />{localize("Loading...")}</span>
               ) : null}
             </div>
             {remoteChannelStatus !== null && remoteChannelStatus?.source?.enabled ? (
               <>
                 <div className="mt-3">
-                  <div className="flex w-full items-center justify-between rounded-2xl border border-emerald-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-emerald-200">
+                  <div className="flex w-full items-center justify-between rounded-2xl border border-brand-200/70 bg-white/90 px-4 py-3 text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-brand-200">
                     <span className="flex items-center gap-3">
                       <SatelliteDish size={18} />{localize("Remote Channel")}</span>
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
@@ -682,7 +682,7 @@ export default function ChatProfileModal({
         ) : null}
 
         {canSeeMembers ? (
-          <div className="mt-4 rounded-2xl border border-emerald-200/80 p-3 dark:border-emerald-500/30">
+          <div className="mt-4 rounded-2xl border border-brand-200/80 p-3 dark:border-brand-500/30">
             <p className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Members")}</p>
             <div className="relative">
               <input
@@ -694,8 +694,8 @@ export default function ChatProfileModal({
                 placeholder={localize("Search members")}
                 lang={memberQueryHasPersian ? "fa" : "en"}
                 dir={memberQueryHasPersian ? "rtl" : "ltr"}
-                className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-2.5 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                  memberQueryHasPersian ? "font-fa text-right" : "text-left"
+                className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-2.5 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  memberQueryHasPersian ? "font-fa text-end" : "text-start"
                 }`}
                 style={{ unicodeBidi: "plaintext" }}
               />
@@ -725,7 +725,7 @@ export default function ChatProfileModal({
                   <ContextMenuSurface
                     as="div"
                     key={`member-row-${member.id}`}
-                    className="flex items-center gap-2 rounded-xl border border-emerald-100/80 bg-white/80 px-2 py-2 transition hover:border-emerald-300 hover:shadow-[0_0_20px_rgba(16,185,129,0.18)] dark:border-emerald-500/20 dark:bg-slate-900/70 dark:hover:border-emerald-500/35 dark:hover:shadow-[0_0_18px_rgba(16,185,129,0.12)]"
+                    className="flex items-center gap-2 rounded-xl border border-brand-100/80 bg-white/80 px-2 py-2 transition hover:border-brand-300 hover:shadow-[0_0_20px_rgba(102,48,141,0.18)] dark:border-brand-500/20 dark:bg-slate-900/70 dark:hover:border-brand-500/35 dark:hover:shadow-[0_0_18px_rgba(102,48,141,0.12)]"
                     contextMenu={{
                       isMobile:
                         typeof window !== "undefined" &&
@@ -748,23 +748,23 @@ export default function ChatProfileModal({
                     <button
                       type="button"
                       onClick={() => onOpenMember?.(member)}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-start"
                     >
                       <Avatar
                         src={member.avatar_url}
-                        alt={label}
+                        alt={localize(label)}
                         name={label}
-                        color={member.color || "#10b981"}
+                        color={member.color || "#66308d"}
                         initials={memberInitials}
                         className="h-8 w-8 text-xs"
                       />
                       <div className="min-w-0">
-                        <Tooltip label={label} asChild>
+                        <Tooltip label={localize(label)} asChild>
                           <p
                             className="flex items-center gap-0.5 truncate text-sm font-semibold"
                             dir="ltr"
                           >
-                            <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                            <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                             {Boolean(member.user_verified) && <VerifiedBadge size={14} />}
                             <UserRoleBadge role={member.user_role} size={14} />
                           </p>
@@ -772,16 +772,16 @@ export default function ChatProfileModal({
                         <p
                           className={`truncate text-xs ${
                             memberIsOnline
-                              ? "font-semibold text-emerald-500 dark:text-emerald-300"
+                              ? "font-semibold text-brand-500 dark:text-brand-300"
                               : "text-slate-500 dark:text-slate-400"
                           }`}
                         >
-                          {memberIsOnline ? localize("online") : "last seen recently"}
+                          {memberIsOnline ? localize("online") : localize("last seen recently")}
                         </p>
                       </div>
                     </button>
                     {memberIsOwner ? (
-                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">{localize("Owner")}</span>
+                      <span className="rounded-full border border-brand-200 bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200">{localize("Owner")}</span>
                     ) : null}
                     {isOwner && !memberIsOwner ? (
                       <button

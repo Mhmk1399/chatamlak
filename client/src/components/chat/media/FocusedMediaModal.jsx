@@ -375,7 +375,7 @@ export function FocusedMediaModal({
           <button
             type="button"
             onClick={handleMobileSave}
-            className="pointer-events-auto relative z-50 group inline-flex h-9 items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_22px_rgba(16,185,129,0.45)]"
+            className="pointer-events-auto relative z-50 group inline-flex h-9 items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_22px_rgba(102,48,141,0.45)]"
           >
             <Download size={15} className="icon-anim-drop" />{localize("Save")}</button>
         </div>
@@ -415,7 +415,7 @@ export function FocusedMediaModal({
                   focusedMedia.name || "media",
                 );
               }}
-              className="pointer-events-auto relative z-50 group inline-flex h-9 items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_22px_rgba(16,185,129,0.45)]"
+              className="pointer-events-auto relative z-50 group inline-flex h-9 items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_22px_rgba(102,48,141,0.45)]"
             >
               <Download size={15} className="icon-anim-drop" />{localize("Save")}</a>
           </div>
@@ -545,7 +545,7 @@ export function FocusedMediaModal({
               >
                 <img
                   src={focusedMedia.url}
-                  alt={focusedMedia.name || "media"}
+                  alt={focusedMedia.name || localize("media")}
                   referrerPolicy="no-referrer"
                   onLoad={onFocusedImageLoad}
                   className={`mx-auto max-h-[78vh] w-auto max-w-full rounded-2xl object-contain transition-opacity duration-150 ${
@@ -601,7 +601,7 @@ export function FocusedMediaModal({
                   Boolean(focusedMedia.processing) || !focusedMediaLoaded
                 }
                 className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/10"
-                aria-label={focusedVideoPlaying ? "Pause" : "Play"}
+                aria-label={focusedVideoPlaying ? localize("Pause") : localize("Play")}
               >
                 {focusedVideoPlaying ? <Pause size={15} /> : <Play size={15} />}
               </button>
@@ -630,10 +630,10 @@ export function FocusedMediaModal({
                 disabled={
                   Boolean(focusedMedia.processing) || !focusedMediaLoaded
                 }
-                className="h-1.5 flex-1 accent-emerald-400"
+                className="h-1.5 flex-1 accent-brand-400"
                 aria-label={localize("Seek video")}
               />
-              <span className="w-20 text-right text-[11px]">
+              <span className="w-20 text-end text-[11px]">
                 {formatSeconds(focusedVideoTime)} /{" "}
                 {formatSeconds(focusedVideoDuration)}
               </span>
@@ -659,7 +659,7 @@ export function FocusedMediaModal({
               }`}
             >
               <ClockFading className="h-[13px] w-[13px] shrink-0" />
-              <span className="leading-none">{focusExpiryWarning.label}</span>
+              <span className="leading-none">{localize(focusExpiryWarning.label)}</span>
             </div>
           </Tooltip>
         </div>

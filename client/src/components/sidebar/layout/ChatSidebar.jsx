@@ -202,12 +202,14 @@ export default function ChatSidebar({
   return (
     <aside
       className={
-        "relative flex h-full min-h-0 w-full flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-lg shadow-emerald-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:w-[35%] md:shadow-xl md:shadow-emerald-500/15 " +
+        "relative flex h-full min-h-0 w-full flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-lg shadow-brand-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:w-[35%] md:shadow-xl md:shadow-brand-500/15 " +
         (mobileTab === "chat" ? "hidden md:block" : "block")
       }
     >
       <div className={mobileTab === "settings" ? "hidden" : ""}>
         <SidebarHeader
+        isDark={isDark}
+        toggleTheme={toggleTheme}
           mobileTab={mobileTab}
           editMode={mobileTab === "calls" ? callsEditMode : editMode}
           onExitEdit={

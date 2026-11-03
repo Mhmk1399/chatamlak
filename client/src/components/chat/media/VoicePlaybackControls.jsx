@@ -33,7 +33,7 @@ export default function VoicePlaybackControls({ audioRef, duration, progress, di
           value={Math.min(duration || 1, Math.max(0, progress * duration))}
           disabled={disabled || !(duration > 0)}
           aria-label={t("Voice message playback position")}
-          aria-valuetext={`${Math.floor(progress * duration)} / ${Math.floor(duration)} seconds`}
+          aria-valuetext={t("{position} of {duration} seconds", { position: Math.floor(progress * duration), duration: Math.floor(duration) })}
           onPointerDown={(event) => event.stopPropagation()}
           onTouchStart={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
@@ -50,7 +50,7 @@ export default function VoicePlaybackControls({ audioRef, duration, progress, di
             if (audioRef.current) audioRef.current.playbackRate = value;
             writeVoiceSpeed(value);
           }}
-          className="min-h-9 min-w-10 rounded-full px-1 text-[11px] font-semibold tabular-nums transition hover:bg-emerald-100 focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-50 dark:hover:bg-emerald-500/20">
+          className="min-h-9 min-w-10 rounded-full px-1 text-[11px] font-semibold tabular-nums transition hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-brand-500 disabled:opacity-50 dark:hover:bg-brand-500/20">
         {speed}×
       </button>
     </div>

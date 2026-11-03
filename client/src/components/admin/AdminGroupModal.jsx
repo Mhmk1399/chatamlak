@@ -65,12 +65,12 @@ function OwnerPicker({ value, onChange }) {
   if (value) {
     const label = value.nickname || value.username;
     return (
-      <div className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-left dark:border-white/10 dark:bg-slate-950">
-        <Avatar src={value.avatar_url} alt={label} name={label} color={value.color || "#10b981"} className="h-8 w-8 text-xs font-bold text-white" />
+      <div className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-3 py-3 text-start dark:border-white/10 dark:bg-slate-950">
+        <Avatar src={value.avatar_url} alt={localize(label)} name={label} color={value.color || "#66308d"} className="h-8 w-8 text-xs font-bold text-white" />
         <div className="min-w-0 flex-1">
-          <Tooltip label={label} asChild>
+          <Tooltip label={localize(label)} asChild>
             <p className="flex items-center gap-0.5 truncate text-sm font-semibold text-slate-700 dark:text-slate-200" dir="ltr">
-              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+              <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
               {Boolean(value.verified) && <VerifiedBadge size={14} />}
               <UserRoleBadge role={value.role} size={14} />
             </p>
@@ -99,7 +99,7 @@ function OwnerPicker({ value, onChange }) {
           placeholder={localize("username")}
           lang={queryHasPersian ? "fa" : "en"}
           dir={queryHasPersian ? "rtl" : "ltr"}
-          className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${queryHasPersian ? "font-fa text-right" : "text-left"}`}
+          className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${queryHasPersian ? "font-fa text-end" : "text-start"}`}
           style={{ unicodeBidi: "plaintext" }}
         />
         {query.trim() ? (
@@ -118,12 +118,12 @@ function OwnerPicker({ value, onChange }) {
               return (
                 <button key={u.id} type="button"
                   onClick={() => { onChange(u); setQuery(""); }}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-emerald-100/70 bg-white/80 px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50">
-                  <Avatar src={u.avatar_url} alt={label} name={label} color={u.color || "#10b981"} className="h-8 w-8 text-xs font-bold text-white" />
+                  className="flex w-full items-center gap-3 rounded-2xl border border-brand-100/70 bg-white/80 px-3 py-3 text-start text-sm font-medium text-slate-700 transition hover:border-brand-300 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50">
+                  <Avatar src={u.avatar_url} alt={localize(label)} name={label} color={u.color || "#66308d"} className="h-8 w-8 text-xs font-bold text-white" />
                   <div className="min-w-0">
-                    <Tooltip label={label} asChild>
+                    <Tooltip label={localize(label)} asChild>
                       <p className={`flex items-center gap-0.5 truncate font-semibold ${hasPersian(label) ? "font-fa" : ""}`} dir="ltr">
-                        <span className="truncate" dir="auto">{label}</span>
+                        <span className="truncate" dir="auto">{localize(label)}</span>
                         {Boolean(u.verified) && <VerifiedBadge size={14} />}
                         <UserRoleBadge role={u.role} size={14} />
                       </p>
@@ -159,7 +159,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         ...emptyFormFor(chat?.type || "group"),
         nickname: chat?.name || "",
         username: chat?.group_username || "",
-        groupColor: chat?.group_color || "#10b981",
+        groupColor: chat?.group_color || "#66308d",
         visibility: chat?.group_visibility || "public",
       };
     }
@@ -472,33 +472,33 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
 
   const extraFields = (
     <div className="space-y-3">
-      <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+      <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Owner")}</p>
         <div className="mt-2">
           <OwnerPicker value={owner} onChange={handleOwnerChange} />
         </div>
       </div>
-      <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+      <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{localize("Color")}</p>
         <div className="mt-2 flex items-center gap-2">
           <div className="relative flex-1">
-            <input className={inputCls + " w-full pr-12"} value={form.groupColor} onChange={(e) => setForm((f) => ({ ...f, groupColor: e.target.value }))} placeholder="#10b981" />
-            <Tooltip label="Reroll" className="absolute right-1 top-1/2 -translate-y-1/2">
+            <input className={inputCls + " w-full pr-12"} value={form.groupColor} onChange={(e) => setForm((f) => ({ ...f, groupColor: e.target.value }))} placeholder={localize("#66308d")} />
+            <Tooltip label={localize("Reroll")} className="absolute right-1 top-1/2 -translate-y-1/2">
               <button
                 type="button"
                 onClick={handleColorRefresh}
                 disabled={colorRefreshState === "done"}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-transparent text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-100 hover:text-emerald-700 disabled:cursor-default disabled:text-emerald-600 dark:text-slate-400 dark:hover:border-emerald-500/30 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300 dark:disabled:text-emerald-400"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-transparent text-slate-500 transition hover:border-brand-300 hover:bg-brand-100 hover:text-brand-700 disabled:cursor-default disabled:text-brand-600 dark:text-slate-400 dark:hover:border-brand-500/30 dark:hover:bg-brand-500/10 dark:hover:text-brand-300 dark:disabled:text-brand-400"
                 aria-label={localize("Choose a random color")}
               >
                 {colorRefreshState === "done"
-                  ? <Check size={16} className="text-emerald-600 dark:text-emerald-400" />
+                  ? <Check size={16} className="text-brand-600 dark:text-brand-400" />
                   : <Refresh size={16} className="icon-anim-spin-full" />}
               </button>
             </Tooltip>
           </div>
-          <input type="color" value={form.groupColor || "#10b981"} onChange={(e) => setForm((f) => ({ ...f, groupColor: e.target.value }))}
-            className="color-swatch h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-emerald-200/70 dark:border-emerald-500/30" />
+          <input type="color" value={form.groupColor || "#66308d"} onChange={(e) => setForm((f) => ({ ...f, groupColor: e.target.value }))}
+            className="color-swatch h-11 w-11 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-brand-200/70 dark:border-brand-500/30" />
         </div>
       </div>
       <button
@@ -506,13 +506,13 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         role="switch"
         aria-checked={verified}
         onClick={() => setVerified((v) => !v)}
-        className="flex w-full items-center justify-between rounded-2xl border border-emerald-200 px-4 py-3 text-left text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+        className="flex w-full items-center justify-between rounded-2xl border border-brand-200 px-4 py-3 text-start text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 dark:border-brand-500/30 dark:text-brand-200 dark:hover:bg-brand-500/10"
       >
         <span className="inline-flex items-center gap-2">
           <BadgeCheck size={18} className="shrink-0 icon-anim-pop" aria-hidden="true" />{localize("Verify")}</span>
         <span
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
-            verified ? "justify-end bg-emerald-500" : "justify-start bg-slate-300 dark:bg-slate-700"
+            verified ? "justify-end bg-brand-600" : "justify-start bg-slate-300 dark:bg-slate-700"
           }`}
         >
           <span className="inline-block h-5 w-5 rounded-full bg-white shadow-sm transition" />
@@ -531,14 +531,14 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         if (form.visibility !== "public") return;
         setAutoAddNewUsers((prev) => !prev);
       }}
-      className="flex w-full items-center justify-between rounded-2xl border border-emerald-200 px-4 py-3 text-left text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10 dark:disabled:border-slate-700 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-500"
+      className="flex w-full items-center justify-between rounded-2xl border border-brand-200 px-4 py-3 text-start text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-brand-500/30 dark:text-brand-200 dark:hover:bg-brand-500/10 dark:disabled:border-slate-700 dark:disabled:bg-slate-900/60 dark:disabled:text-slate-500"
     >
       <span className="inline-flex items-center gap-2">
         <UserPlus size={18} className="shrink-0 icon-anim-pop" aria-hidden="true" />{localize("Auto-add new users")}</span>
       <span
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${
           autoAddNewUsers && form.visibility === "public"
-            ? "justify-end bg-emerald-500"
+            ? "justify-end bg-brand-600"
             : "justify-start bg-slate-300 dark:bg-slate-700"
         }`}
       >
@@ -593,7 +593,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
 
   const remoteSource = form.remoteChannelStatus?.source || null;
   const remoteQueueSlot = editing && isChannel && remoteSource?.id && Boolean(form.remoteChannelEnabled) ? (
-    <div className="rounded-2xl border border-emerald-200 p-3 dark:border-emerald-500/30">
+    <div className="rounded-2xl border border-brand-200 p-3 dark:border-brand-500/30">
       <RemoteChannelQueueStatus
         queue={remoteSource?.queue || {}}
         sourceEnabled={Boolean(remoteSource?.enabled)}
@@ -626,8 +626,8 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         creatingGroup={busy}
         onCreate={submit}
         onClose={onClose}
-        title={editing ? `Edit ${entityLabel.toLowerCase()}` : `New ${entityLabel.toLowerCase()}`}
-        submitLabel={editing ? "Save" : "Create"}
+        title={editing ? localize("Edit {value0}", { value0: entityLabel.toLowerCase() }) : localize("New {value0}", { value0: entityLabel.toLowerCase() })}
+        submitLabel={editing ? localize("Save") : localize("Create")}
         entityLabel={entityLabel}
         extraFields={extraFields}
         autoAddToggleSlot={autoAddToggleSlot}
@@ -636,7 +636,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         onToggleAddAllMembers={toggleAddAllEligibleMembers}
         showAvatarField={fileUploadEnabled}
         avatarPreview={avatarPreview}
-        avatarColor={form.groupColor || "#10b981"}
+        avatarColor={form.groupColor || "#66308d"}
         avatarName={form.nickname || form.username || entityLabel}
         onAvatarChange={handleAvatarChange}
         onAvatarRemove={handleAvatarRemove}

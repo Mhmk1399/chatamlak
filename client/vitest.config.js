@@ -69,6 +69,7 @@ export default defineConfig({
         // Pure utility tests — no DOM needed, runs in Node
         test: {
           name: "unit",
+          setupFiles: ["test/setup-locale.js"],
           include: [
             "test/utils/**/*.{test,spec}.{js,jsx}",
             "test/hooks/**/*.{test,spec}.{js,jsx}",
@@ -83,6 +84,7 @@ export default defineConfig({
         },
         test: {
           name: "browser",
+          setupFiles: ["test/setup-locale.js"],
           include: ["test/components/**/*.{test,spec}.{js,jsx}"],
           exclude: ["test/bench/**"],
           // Fail individual tests quickly rather than hanging the whole CI job

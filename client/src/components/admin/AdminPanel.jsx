@@ -1,3 +1,5 @@
+import LanguageSwitcher from "../common/LanguageSwitcher.jsx";
+import ThemeSwitcher from "../common/ThemeSwitcher.jsx";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useCallback, useEffect, useRef, useState, Activity } from "react";
 import {
@@ -52,7 +54,7 @@ function getInitialSidebarOpen() {
 // Tabs that manage their own paginated data and expose a `refresh()` via ref.
 const SELF_PAGINATED_TABS = ["users", "chats", "logs"];
 
-export default function AdminPanel({ user, onBack }) {
+export default function AdminPanel({ user, onBack, isDark, onToggleTheme }) {
   useAppLocale();
   const [tab, setTab]                 = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(getInitialSidebarOpen);
@@ -220,7 +222,7 @@ export default function AdminPanel({ user, onBack }) {
       {/* Desktop sidebar */}
       <nav className={`
         relative z-auto hidden shrink-0 flex-col
-        border-r border-slate-200/80 bg-white/95 backdrop-blur-xs
+        border-e border-slate-200/80 bg-white/95 backdrop-blur-xs
         transition-all duration-200
         dark:border-white/5 dark:bg-slate-900/95
         md:flex
@@ -229,13 +231,13 @@ export default function AdminPanel({ user, onBack }) {
         <div className={`flex h-12 shrink-0 items-center border-b border-slate-100 dark:border-white/5 ${showLabels ? "justify-between px-3" : "justify-center"}`}>
           {showLabels && (
             <label className="flex cursor-default items-center gap-2 overflow-hidden">
-              <LayoutDashboardIcon size={14} className="shrink-0 text-emerald-500" />
+              <LayoutDashboardIcon size={14} className="shrink-0 text-brand-500" />
               <span className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">{localize("Admin Panel")}</span>
             </label>
           )}
-          <Tooltip label={sidebarOpen ? "Collapse" : "Expand"} className="shrink-0">
+          <Tooltip label={sidebarOpen ? localize("Collapse") : localize("Expand")} className="shrink-0">
             <button type="button" onClick={toggleSidebar}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-transparent text-slate-400 transition hover:border-emerald-200/60 hover:bg-emerald-50/50 hover:text-emerald-600 dark:text-slate-500 dark:hover:border-emerald-500/20 dark:hover:bg-emerald-500/5 dark:hover:text-emerald-400">
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-transparent text-slate-400 transition hover:border-brand-200/60 hover:bg-brand-50/50 hover:text-brand-600 dark:text-slate-500 dark:hover:border-brand-500/20 dark:hover:bg-brand-500/5 dark:hover:text-brand-400">
               {sidebarOpen ? <ArrowLeftFromLine size={15} className="icon-anim-nudge" /> : <ArrowRightFromLine size={15} className="icon-anim-nudge" />}
             </button>
           </Tooltip>
@@ -249,11 +251,11 @@ export default function AdminPanel({ user, onBack }) {
                 className={`flex h-9 w-full items-center rounded-xl border transition
                   ${showLabels ? "gap-2.5 px-3 text-sm font-semibold" : "justify-center"}
                   ${tab === id
-                    ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-400/60 dark:bg-emerald-500/10 dark:text-emerald-300"
-                    : "border-transparent text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-100 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-200"
+                    ? "border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/60 dark:bg-brand-500/10 dark:text-brand-300"
+                    : "border-transparent text-slate-700 hover:bg-brand-50 hover:text-brand-700 dark:text-slate-100 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                   }`}>
-                <Icon size={15} className={`shrink-0 text-emerald-500 ${anim}`} />
-                {showLabels && <span className="truncate">{label}</span>}
+                <Icon size={15} className={`shrink-0 text-brand-500 ${anim}`} />
+                {showLabels && <span className="truncate">{localize(label)}</span>}
               </button>
             </Tooltip>
           ))}
@@ -280,7 +282,7 @@ export default function AdminPanel({ user, onBack }) {
         md:hidden
         ${mobileView === "menu" ? "translate-x-0" : "-translate-x-full"}
       `}>
-        <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-emerald-500/20 dark:bg-slate-900">
+        <div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-brand-500/20 dark:bg-slate-900">
           <button type="button" onClick={onBack} aria-label={localize("Exit admin panel")}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white/80 text-rose-600 transition hover:border-rose-300 hover:shadow-md dark:border-rose-500/30 dark:bg-slate-950 dark:text-rose-200">
             <ArrowLeft size={18} />
@@ -288,7 +290,7 @@ export default function AdminPanel({ user, onBack }) {
           <span className="flex min-w-0 flex-1 items-center justify-center gap-2">
             <span className="truncate text-base font-semibold text-slate-700 dark:text-slate-200">{localize("Admin Panel")}</span>
           </span>
-          <span className="h-9 w-9 shrink-0" aria-hidden="true" />
+          <LanguageSwitcher compact />
         </div>
 
         <div className="app-scroll min-h-0 flex-1 overflow-y-auto p-4 pb-[calc(104px+env(safe-area-inset-bottom)+var(--vv-bottom-offset,0px))] md:pb-5">
@@ -296,10 +298,10 @@ export default function AdminPanel({ user, onBack }) {
             {TABS.map(({ id, label, icon: Icon, anim }, index) => (
               <button key={id} type="button"
                 onClick={() => selectTab(id)}
-                className={`flex h-14 w-full items-center gap-3 px-4 text-left transition active:bg-emerald-50 dark:active:bg-emerald-500/10
+                className={`flex h-14 w-full items-center gap-3 px-4 text-start transition active:bg-brand-50 dark:active:bg-brand-500/10
                   ${index > 0 ? "border-t border-slate-100 dark:border-white/5" : ""}`}>
-                <Icon size={22} className={`shrink-0 text-emerald-500 ${anim}`} />
-                <span className="flex-1 truncate text-base font-semibold text-slate-700 dark:text-slate-100">{label}</span>
+                <Icon size={22} className={`shrink-0 text-brand-500 ${anim}`} />
+                <span className="flex-1 truncate text-base font-semibold text-slate-700 dark:text-slate-100">{localize(label)}</span>
                 <ArrowRight size={16} className="shrink-0 text-slate-300 dark:text-slate-600" />
               </button>
             ))}
@@ -320,13 +322,14 @@ export default function AdminPanel({ user, onBack }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="relative flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-emerald-500/20 dark:bg-slate-900 md:h-12 md:gap-2 md:border-slate-200/80 md:bg-white/80 md:px-3 md:py-0 md:backdrop-blur-xs md:dark:border-white/5 md:dark:bg-slate-900/80">
+        <div className="ouj-glass relative flex h-[72px] shrink-0 items-center gap-3 border-b border-slate-300/80 bg-white px-4 py-4 dark:border-brand-500/20 dark:bg-slate-900 md:h-12 md:gap-2 md:border-slate-200/80 md:bg-white/80 md:px-3 md:py-0 md:backdrop-blur-xs md:dark:border-white/5 md:dark:bg-slate-900/80">
+          <div className="relative z-10 ms-auto flex items-center gap-2"><ThemeSwitcher isDark={isDark} onToggle={onToggleTheme} /><LanguageSwitcher compact /></div>
           <button type="button" onClick={() => setMobileView("menu")} aria-label={localize("Back to menu")}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition hover:border-emerald-300 hover:shadow-md dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 md:hidden">
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 md:hidden">
             <ArrowLeft size={18} />
           </button>
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 px-16 md:px-14">
-            <h1 className="truncate text-base font-semibold text-slate-700 dark:text-slate-200 md:text-sm">{activeTab?.label}</h1>
+            <h1 className="truncate text-base font-semibold text-slate-700 dark:text-slate-200 md:text-sm">{localize(activeTab?.label)}</h1>
           </span>
         </div>
 

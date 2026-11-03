@@ -1,14 +1,16 @@
-# Design Language & Style Guide: Songbird
+# Design Language & Style Guide: Ouj Chat
 
-This document defines the design language, UI patterns, color system, typography, and component conventions for **Songbird**. Any AI model or human contributor working on the frontend **must** strictly adhere to these rules to maintain visual consistency, accessibility, and architectural integrity.
+This document defines the design language, UI patterns, color system, typography, and component conventions for **Ouj Chat / گفتگوی اوج**, the dedicated messenger for **املاک اوج** at `oujamlak.ir`. The product is a branded distribution of the open-source Songbird project. Preserve the upstream license, copyright notices and attribution while adapting product-facing names and visuals.
+
+The approved identity is a quiet neutral chat surface with restrained purple and teal accents. Long conversations, property-related communication and routine account tasks must remain easy to read in both light and dark themes. Do not introduce property-listing, payment or transaction workflows merely because the brand belongs to a real-estate business.
 
 ---
 
 ## 1. Core Principles
 
-1. **Clean & Purposeful**: Modern, un-cluttered chat user interface focused on readability, speed, and real-time communication.
+1. **Calm & Purposeful**: A quiet, uncluttered conversation interface for Ouj real-estate communication, focused on readability, speed and real-time communication. Keep most of each screen neutral; use brand color to establish hierarchy and selected state.
 2. **Lightweight & Fast**: Zero unnecessary heavy UI component libraries. Built with native Tailwind CSS 4 utilities and clean React 19 functional components.
-3. **Seamless Dual-Language (Bilingual & RTL)**: Native support for English and Persian/Farsi with dynamic script detection and font switching (`DM Sans` for Latin, `Vazirmatn` for Persian).
+3. **Persian First, Fully Bilingual**: Persian is the default when no language preference has been saved. English remains selectable through one global language control on authentication, invitation, chat and administration screens. Application-owned copy and errors follow the selected language; user messages and technical values retain their original content.
 4. **Adaptive Dark Mode**: Full dark mode support using Tailwind's `.dark` class targeting slate and dark neutral tones.
 5. **Mobile-First & Touch Ready**: Responsive across viewports with notch safe-area handling, iOS input zoom mitigation, and PWA integration.
 
@@ -19,6 +21,7 @@ This document defines the design language, UI patterns, color system, typography
 - **Framework**: React 19 SPA (JSX, Vite).
 - **Routing**: Lightweight custom routing in `client/src/App.jsx` using native `window.history` and `getRoute`.
 - **Styling**: Tailwind CSS 4 with custom `@theme` variables and custom utilities in `client/src/index.css`.
+- **Runtime Token Owner**: `client/src/brand.css`, imported by `client/src/index.css`, owns the `brand-*` purple palette, `accent-*` teal palette, neutral surface/text tokens and the shared `ouj-glass` surface. `index.css` remains the owner of global typography, shared application styles and scrollbar behavior. `DESIGN.md` owns their product meaning and the two exact brand anchors below. Components consume these tokens; do not create parallel local palettes or silently redefine the standard emerald palette as a brand alias.
 - **Icons**: Centralized re-exports from Lucide Icons in `client/src/icons/lucide.js` and brand SVGs in `client/src/icons/BrandIcons.jsx`. *Always import icons from `client/src/icons/lucide.js` or `BrandIcons.jsx`, never directly from `lucide-react`*.
 - **API Boundary**: All HTTP requests **must** use `apiFetch` in `client/src/api/chatApi.js` (`credentials: "include"`). *Do not call native `fetch` directly inside components*.
 
@@ -32,6 +35,10 @@ This document defines the design language, UI patterns, color system, typography
 - **Persian / Arabic Font**: `'Vazirmatn', 'DM Sans', system-ui, sans-serif` (`--font-fa`).
 
 ### Text & Language Rules
+- With no stored preference, render Persian application chrome with `lang="fa"`, `dir="rtl"` and the Persian font. Restore an explicitly saved English preference before first paint where possible.
+- Keep one shared language control available outside authenticated chat too. Its name and accessible label must make the available language choice clear in both modes.
+- All application-owned headings, actions, tooltips, placeholders, validation, loading/empty/error text, confirmations, document titles and accessibility labels follow the current locale. Translate human-readable explanations, including server-error presentation, through the shared locale owner.
+- Never translate or rewrite user messages, nicknames, usernames, code snippets, URLs, identifiers, environment-variable keys or secret values. Message direction follows the content independently of application layout.
 - Use `hasPersian()` from `client/src/utils/fontUtils.js` to dynamically apply the `.font-fa` utility when user-generated content (messages, user names, avatar initials) contains Persian characters.
 - Global CSS applies `:lang(fa)` and `[lang="fa"]` rules automatically to enforce Vazirmatn.
 - Standard form inputs (`input`, `textarea`, `select`) must enforce `font-size: 16px !important;` to prevent unwanted iOS Safari auto-zooming on focus.
@@ -41,28 +48,45 @@ This document defines the design language, UI patterns, color system, typography
 ## 4. Color Palette & Dark Mode
 
 ### Primary & Accent Colors
-- **Primary / Active Accent**: `emerald` (`emerald-500`, `emerald-600`, `emerald-700`, dark: `emerald-200`/`emerald-400`).
-  - Brand identity, active connections, selection highlights, message sent states, online status indicators.
+- **Primary / Brand**: Purple anchored at **`#66308d`** (`--color-brand-600`, with `--ouj-primary` as the application semantic alias), exposed through the `brand-*` token family.
+  - Ouj identity, the main submit/send action, selected navigation, focus treatment and small selection highlights. Use light brand tints for selected surfaces and sent-message treatment; avoid large saturated purple panels.
+- **Secondary / Accent**: Teal anchored at **`#01ae9b`** (`--color-accent-500`, with `--ouj-secondary` as the application semantic alias), exposed through the `accent-*` token family.
+  - Online presence, positive status and restrained secondary emphasis. Use a contrast-safe darker tone for text or small controls on light surfaces and an appropriate lighter tone on dark surfaces. The exact anchor is not a requirement to put white small text on that background.
 - **Destructive / Alert Accent**: `rose` (`rose-500`, `rose-600`, dark: `rose-300`/`rose-400`).
   - Warnings, delete message scopes, leave group confirmation, destructive buttons, error badges.
-- **Secondary Highlights / Badges**: `amber` (`amber-500`), `sky` (`sky-500`), `indigo` (`indigo-500`).
+- **Other Semantic Highlights**: Keep amber warnings and neutral information tones only when they convey a real state. Do not add unrelated decorative accent colors.
 
 ### Neutral Backgrounds & Text
+
+The runtime mapping in `brand.css` supplies both themes through the same semantic variables:
+
+| Role | Runtime owner | Light | Dark |
+|---|---|---|---|
+| Application canvas | `--ouj-canvas` | `#f8f8fb` | `#110f18` |
+| Opaque surface / glass fallback | `--ouj-surface` | `#ffffff` | `#1b1823` |
+| Conversation canvas | `--ouj-chat-canvas` | `#f6f5f9` | `#15121c` |
+| Glass fill | `--ouj-glass` | White at 85% opacity | `#1b1823` at 88% opacity |
+| Selection tint | `--ouj-selection` | Brand purple at 18% opacity | Light brand purple at 30% opacity |
+
+Use `slate-*` runtime neutral tokens for surrounding text/borders and semantic surface variables for shared canvas/glass roles. Keep the palette values in `brand.css` and the role mapping here synchronized when they change.
 - **Light Theme**:
-  - Background: White `#ffffff` or `slate-50` / `slate-100`.
-  - Borders: `slate-200` / `emerald-200`.
+  - Background: White and quiet near-white neutral surfaces.
+  - Borders: Low-contrast neutral boundaries; use a brand tint only for selected or focused elements.
   - Text Primary: `slate-900` / `slate-800`.
   - Text Secondary: `slate-600` / `slate-500`.
 - **Dark Theme** (`.dark` on `html`):
-  - Background: Slate `#020617` (`slate-950`) or `slate-900`.
-  - Borders: `slate-800` / `rose-500/30` / `emerald-500/30`.
+  - Background: Quiet dark neutral surfaces with enough separation between shell, list, message area and overlays.
+  - Borders: Subtle neutral boundaries; limited brand, accent or danger tint for the state that requires it.
   - Text Primary: `slate-100` / `slate-200`.
   - Text Secondary: `slate-400` / `slate-300`.
 
-### Selection & Glows
-- Selection highlight: `bg-emerald-500/35` in light mode, `bg-emerald-500/45` in dark mode.
-- Glow utility: `--shadow-glow` (`0 20px 60px -30px rgba(16, 185, 129, 0.8)`).
-- Pill button hover glows: `hover:shadow-[0_0_14px_rgba(16,185,129,0.2)]` for emerald, `hover:shadow-[0_0_14px_rgba(244,63,94,0.2)]` for rose.
+### Selection, Surfaces & Motion
+- Selection and focus use a small, legible brand-purple treatment. Maintain sufficient text contrast and communicate state with labels/icons as well as color.
+- Prefer a subtle boundary or short elevation change on hover. Avoid persistent neon glows, saturated full-screen gradients and animated decorative backgrounds.
+- `ouj-glass` is the shared, restrained glass surface for selected shell/header/overlay surfaces. Keep its neutral fill sufficiently opaque for readable text and use a modest backdrop blur. Do not apply blur to message text, every card, every bubble or every scrolling row.
+- Unsupported backdrop filtering and `prefers-reduced-transparency: reduce` use an opaque neutral surface with the same geometry and readable boundary. In forced-colors mode, preserve visible system-compatible edges and controls.
+- `prefers-reduced-motion: reduce` removes decorative transitions, pulsing, floating and entry effects. Preserve useful state feedback and direct user control of media; reduce motion without hiding controls or changing layout.
+- Light/dark theme, transparency and motion preferences must not change focus order, control dimensions, scroll ownership or the meaning of status colors.
 
 ---
 
@@ -73,7 +97,7 @@ This document defines the design language, UI patterns, color system, typography
 2. **Focus Management**: Wrap modal root refs with `useFocusTrap(dialogRef, open)` for keyboard accessibility.
 3. **Semantics**: Root element must have `role="dialog"` and `aria-modal="true"`.
 4. **Overlay**: Backdrop must use `fixed inset-0 z-320 flex items-center justify-center bg-black/40 px-6`.
-5. **Card Container**: `w-full max-w-sm rounded-2xl border border-slate-100 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-950`.
+5. **Card Container**: Keep the established rounded neutral card and width/spacing conventions. A documented `ouj-glass` variant may be used on the modal surface while preserving an opaque fallback, content contrast and focus visibility.
 
 ### Buttons & Interactive Controls
 - **Shape**: Prefer rounded pill shapes (`rounded-full`) for dialog action buttons and chip elements; `rounded-xl` / `rounded-lg` for form inputs and panel controls.
@@ -86,7 +110,7 @@ This document defines the design language, UI patterns, color system, typography
 ### Avatars & Status Indicators
 - Use `Avatar` from `client/src/components/common/Avatar.jsx`.
 - Dynamic color background is computed via `getAvatarStyle(color)`.
-- Online indicator dot: `h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 dark:border-slate-900`.
+- Online indicators use the `accent-*` teal family with a neutral boundary that remains visible in both themes. Keep an accessible textual status; color alone does not establish presence.
 - Badges: Use shared components (`VerifiedBadge.jsx`, `UserRoleBadge.jsx`).
 
 ### Selection & Text Interaction

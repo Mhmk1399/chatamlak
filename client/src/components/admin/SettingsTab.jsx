@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
@@ -216,6 +217,7 @@ function EnvLockBadge({ envVar }) {
 }
 
 function Toggle({ checked, onChange, disabled = false }) {
+  useAppLocale();
   return (
     <button
       type="button"
@@ -227,7 +229,7 @@ function Toggle({ checked, onChange, disabled = false }) {
         disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"
       } ${
         checked
-          ? "justify-end bg-emerald-500"
+          ? "justify-end bg-brand-600"
           : "justify-start bg-slate-300 dark:bg-slate-700"
       }`}
     >
@@ -262,7 +264,7 @@ function NumberInput({ value, onChange, min, max, disabled = false }) {
       className={`inline-flex shrink-0 items-center overflow-hidden rounded-xl border transition ${
         disabled
           ? "border-slate-200 bg-slate-100 opacity-40 dark:border-slate-700 dark:bg-slate-900/40"
-          : "border-emerald-200 bg-white dark:border-emerald-500/30 dark:bg-slate-900/50"
+          : "border-brand-200 bg-white dark:border-brand-500/30 dark:bg-slate-900/50"
       }`}
       style={{ width: "clamp(3.25rem, 20vw + 0.5rem, 9rem)" }}
     >
@@ -270,7 +272,7 @@ function NumberInput({ value, onChange, min, max, disabled = false }) {
         type="button"
         disabled={disabled || (min !== undefined && num <= min)}
         onClick={() => step(-1)}
-        className="flex h-8 w-4 shrink-0 items-center justify-center text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-500 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 sm:w-7"
+        className="flex h-8 w-4 shrink-0 items-center justify-center text-slate-400 transition hover:bg-brand-50 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-500 dark:hover:bg-brand-500/10 dark:hover:text-brand-400 sm:w-7"
         aria-label={localize("Decrease")}
       >
         <span className="select-none text-sm font-bold leading-none">−</span>
@@ -290,7 +292,7 @@ function NumberInput({ value, onChange, min, max, disabled = false }) {
         type="button"
         disabled={disabled || (max !== undefined && num >= max)}
         onClick={() => step(1)}
-        className="flex h-8 w-4 shrink-0 items-center justify-center text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-500 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 sm:w-7"
+        className="flex h-8 w-4 shrink-0 items-center justify-center text-slate-400 transition hover:bg-brand-50 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-500 dark:hover:bg-brand-500/10 dark:hover:text-brand-400 sm:w-7"
         aria-label={localize("Increase")}
       >
         <span className="select-none text-sm font-bold leading-none">+</span>
@@ -303,6 +305,7 @@ function NumberInput({ value, onChange, min, max, disabled = false }) {
 // Used for child settings rendered inside the master's card.
 
 function SubRow({ def, localVal, onChange, masterDisabled = false }) {
+  useAppLocale();
   const Icon = SETTING_ICONS[def.key] ?? Info;
   const iconAnim = SETTING_ICON_ANIM[def.key] ?? "icon-anim-sway";
   const envLocked = Boolean(def.envLocked);
@@ -311,7 +314,7 @@ function SubRow({ def, localVal, onChange, masterDisabled = false }) {
   const isDisabled = masterDisabled || envLocked;
 
   return (
-    <div className={`settings-row flex items-center gap-3 border-t px-4 py-3 border-emerald-100 dark:border-emerald-500/20 transition-opacity ${
+    <div className={`settings-row flex items-center gap-3 border-t px-4 py-3 border-brand-100 dark:border-brand-500/20 transition-opacity ${
       masterDisabled ? "opacity-40" : ""
     }`}>
       <div className="flex h-9 w-9 shrink-0 items-center justify-center text-slate-400 dark:text-slate-500">
@@ -320,13 +323,13 @@ function SubRow({ def, localVal, onChange, masterDisabled = false }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-            {def.label}
+            {localize(def.label)}
           </p>
           {envLocked && <EnvLockBadge envVar={def.key} />}
         </div>
         {def.description && (
-          <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            {def.description}
+          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+            {localize(def.description)}
           </p>
         )}
       </div>
@@ -413,20 +416,20 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
     }`}>
       {/* ── Main row ──────────────────────────────────────────────────────── */}
       <div className="settings-row flex items-center gap-3 p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-brand-600 dark:text-brand-400">
           <Icon size={22} className={iconAnim} />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              {def.label}
+              {localize(def.label)}
             </p>
             {envLocked && <EnvLockBadge envVar={def.key} />}
           </div>
           {def.description && (
-            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-              {def.description}
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+              {localize(def.description)}
             </p>
           )}
         </div>
@@ -457,14 +460,14 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
         <div
           className={`settings-row flex items-center gap-3 border-t px-4 py-3 ${
             isEnabled ? "" : "opacity-40"
-          } border-emerald-100 dark:border-emerald-500/20`}
+          } border-brand-100 dark:border-brand-500/20`}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center text-slate-400 dark:text-slate-500">
             <Clock12 size={20} className="icon-anim-sway" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{localize("Retention period")}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{localize("How many days to keep before auto-deletion.")}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{localize("How many days to keep before auto-deletion.")}</p>
           </div>
           <div className="shrink-0">
             <NumberInput
@@ -483,19 +486,19 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
         <div
           className={`settings-row flex items-start gap-3 border-t px-4 py-3 ${
             isEnabled ? "" : "opacity-40"
-          } border-emerald-100 dark:border-emerald-500/20`}
+          } border-brand-100 dark:border-brand-500/20`}
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center text-slate-400 dark:text-slate-500">
             <Link size={20} className="icon-anim-swing" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-              {def.key.includes("WORKER") ? "Worker URL" : def.key.includes("PROXY") ? "Proxy URL" : "URL"}
+              {def.key.includes("WORKER") ? localize("Worker URL") : def.key.includes("PROXY") ? localize("Proxy URL") : "URL"}
             </p>
-            <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+            <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
               {def.key.includes("WORKER")
-                ? "Base URL of the external media worker."
-                : "HTTPS, SOCKS4, or SOCKS5 proxy address."}
+                ? localize("Base URL of the external media worker.")
+                : localize("HTTPS, SOCKS4, or SOCKS5 proxy address.")}
             </p>
             <input
               type="text"
@@ -503,7 +506,7 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
               disabled={!isEnabled || controlDisabled}
               onChange={(e) => onChange(e.target.value)}
               placeholder={def.key.includes("WORKER") ? "https://worker.example.com" : "https://proxy.example.com:8080"}
-              className="mt-2 w-full rounded-xl border border-emerald-200/70 bg-white/90 px-3 py-2 text-sm text-slate-700 outline-hidden transition placeholder:text-slate-300 hover:border-emerald-300 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/40 disabled:cursor-not-allowed dark:border-emerald-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-600"
+              className="mt-2 w-full rounded-xl border border-brand-200/70 bg-white/90 px-3 py-2 text-sm text-slate-700 outline-hidden transition placeholder:text-slate-300 hover:border-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-300/40 disabled:cursor-not-allowed dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-600"
             />
           </div>
         </div>
@@ -526,6 +529,7 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
 // ─── Group section ────────────────────────────────────────────────────────────
 
 function SettingGroup({ groupKey, defs, effectiveVals, onChange }) {
+  useAppLocale();
   const meta       = GROUP_META[groupKey] ?? { label: groupKey };
   const masterKey  = GROUP_MASTER[groupKey];
   const childKeys  = new Set(GROUP_CHILDREN[groupKey] ?? []);
@@ -551,7 +555,7 @@ function SettingGroup({ groupKey, defs, effectiveVals, onChange }) {
 
   return (
     <div>
-      <SectionHeading>{meta.label}</SectionHeading>
+      <SectionHeading>{localize(meta.label)}</SectionHeading>
       <div className="space-y-2">
         {standaloneDefs.map((def) => {
           const isMaster = def.key === masterKey;
@@ -625,15 +629,15 @@ function SecretCard({ row, value, visible, onToggle }) {
   return (
     <div className={cardCls}>
       <div className="settings-row flex items-center gap-3 p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-brand-600 dark:text-brand-400">
           <Icon size={22} className={row.iconAnim} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            {row.label}
+            {localize(row.label)}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            {row.description}
+          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+            {localize(row.description)}
           </p>
           <div className="relative mt-2">
             <input
@@ -654,9 +658,9 @@ function SecretCard({ row, value, visible, onToggle }) {
               type="button"
               onClick={handleCopy}
               disabled={!value}
-              aria-label={copied ? `${row.label} copied` : `Copy ${row.label}`}
+              aria-label={copied ? localize("{value0} copied", { value0: row.label }) : localize("Copy {value0}", { value0: row.label })}
               title={copied ? localize("Copied") : localize("Copy")}
-              className="absolute right-11 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              className="absolute right-11 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-brand-200 dark:hover:bg-brand-500/10"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
             </button>
@@ -664,8 +668,8 @@ function SecretCard({ row, value, visible, onToggle }) {
               type="button"
               onClick={onToggle}
               disabled={!value}
-              aria-label={visible ? `Hide ${row.label}` : `Show ${row.label}`}
-              className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              aria-label={visible ? localize("Hide {value0}", { value0: row.label }) : localize("Show {value0}", { value0: row.label })}
+              className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-brand-200 dark:hover:bg-brand-500/10"
             >
               {visible ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -934,7 +938,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
     return (
       <div className="flex flex-col items-center gap-3 py-16 text-slate-400 dark:text-slate-500">
         <AlertCircle size={20} className="text-rose-400" />
-        <span className="text-sm">{error}</span>
+        <span className="text-sm">{localizeError(error)}</span>
         <button type="button" onClick={fetchSettings} className={btnSecondary}>
           <Refresh size={13} />{localize("Retry")}</button>
       </div>
@@ -951,7 +955,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium ${
                 toast.type === "error"
                   ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
-                  : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+                  : "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
               }`}
             >
               {toast.type === "error" ? (
@@ -959,7 +963,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
               ) : (
                 <Check size={12} />
               )}
-              {toast.msg}
+              {toast.type === "error" ? localizeError(toast.msg) : localize(toast.msg)}
             </div>
           )}
           {!toast.msg && hasDirty && (
@@ -1007,7 +1011,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
       {/* ── Secrets (owner-only) ──────────────────────────────────────────── */}
       {iAmOwner && (
         <div>
-          <SectionHeading>{localize("Secrets")}<Tooltip label="Only the server owner can see this section.">
+          <SectionHeading>{localize("Secrets")}<Tooltip label={localize("Only the server owner can see this section.")}>
               <span
                 tabIndex={0}
                 className="ml-2 inline-flex cursor-help items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-slate-500 dark:bg-white/10 dark:text-slate-400"
@@ -1017,7 +1021,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
           </SectionHeading>
           {secretsError && (
             <p className="mb-2 text-[11px] text-rose-600 dark:text-rose-300">
-              {secretsError}
+              {localizeError(secretsError)}
             </p>
           )}
           <div className="space-y-2">
@@ -1039,7 +1043,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
         open={resetOpen}
         title={localize("Restore defaults")}
         message="This will reset all customised settings back to their default values. Settings controlled by .env are not affected."
-        confirmLabel={resetting ? "Restoring…" : "Restore defaults"}
+        confirmLabel={resetting ? localize("Restoring…") : localize("Restore defaults")}
         busy={resetting}
         onConfirm={handleResetAll}
         onClose={() => {
@@ -1052,7 +1056,7 @@ const SettingsTab = forwardRef(function SettingsTab({ cachedData, isLoading: cac
         open={restartOpen}
         title={localize("Restart required")}
         message="Settings saved. One or more changes require a service restart to take effect. Restart now?"
-        confirmLabel={restarting ? "Restarting…" : "Restart now"}
+        confirmLabel={restarting ? localize("Restarting…") : localize("Restart now")}
         busy={restarting}
         onConfirm={handleRestart}
         onClose={() => {

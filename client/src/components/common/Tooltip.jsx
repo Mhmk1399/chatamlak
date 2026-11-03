@@ -1,3 +1,4 @@
+import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import {
   cloneElement,
   isValidElement,
@@ -59,7 +60,7 @@ const LABELLABLE_TAGS = new Set([
 ]);
 
 const TOOLTIP_CLS =
-  "pointer-events-none fixed z-[100000] max-w-[min(18rem,calc(100vw-1rem))] break-words rounded-md bg-emerald-400 px-2 py-1 text-[10px] font-semibold leading-snug text-white shadow-lg";
+  "pointer-events-none fixed z-[100000] max-w-[min(18rem,calc(100vw-1rem))] break-words rounded-md bg-brand-400 px-2 py-1 text-[10px] font-semibold leading-snug text-white shadow-lg";
 
 // True when a node tree renders literal text somewhere inside it. Used to skip
 // the automatic `aria-label` on controls that already have a visible text name,
@@ -96,6 +97,7 @@ export default function Tooltip({
   whenTruncated = asChild,
   children,
 }) {
+  useAppLocale();
   const reactId = useId();
   const tooltipId = `tooltip-${reactId}`;
   const anchorRef = useRef(null);
@@ -175,7 +177,7 @@ export default function Tooltip({
               visibility: coords ? "visible" : "hidden",
             }}
           >
-            {label}
+            {localize(label)}
           </span>,
           document.body,
         )

@@ -1,0 +1,30 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+
+# Local credentials and runtime data
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local
+/data/
+/server/data/
+/worker/data/
+
+# Test runner artifacts (Vitest 5 writes long screenshot paths here)
+.vitest/
+.vitest-attachments/
+playwright-report/
+test-results/
+
+# Generated documentation and graph caches
+/docs/.vitepress/.temp/
+/docs/.vitepress/cache/
+/graphify-out/cache/
+
+# Runtime logs
+logs/
+*.log

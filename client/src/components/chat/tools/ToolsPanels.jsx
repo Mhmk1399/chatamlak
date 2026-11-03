@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../../i18n/locale.js";
 import { useToolData } from "../../../hooks/chat/useToolData.js";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { messagingRequest } from "../../../api/messagingApi.js";
@@ -49,7 +50,7 @@ export function OutboxPanel() {
             </p>
             {message._lastError && (
               <p className="text-xs text-rose-600 dark:text-rose-300">
-                {message._lastError}
+                {localizeError(message._lastError)}
               </p>
             )}
             <div className="flex gap-2">
@@ -78,6 +79,7 @@ export function OutboxPanel() {
 }
 
 export function Field({ label, children }) {
+  useLocale();
   return (
     <label className="block space-y-1 text-xs font-medium text-slate-700 dark:text-slate-200">
       <span>{t(label)}</span>
@@ -86,6 +88,7 @@ export function Field({ label, children }) {
   );
 }
 export function RemoteStatus({ loading, error, empty }) {
+  useLocale();
   return (
     <>
       {loading && (
@@ -226,7 +229,7 @@ export function SearchPanel() {
           <li key={message.id}>
             <button
               type="button"
-              className="w-full rounded-xl border border-slate-200 p-3 text-start transition hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:border-slate-800 dark:hover:bg-emerald-500/10"
+              className="w-full rounded-xl border border-slate-200 p-3 text-start transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-500 dark:border-slate-800 dark:hover:bg-brand-500/10"
               onClick={() => context.openResult(message)}
             >
               <span className="flex justify-between gap-2 text-xs text-slate-500">
@@ -325,13 +328,13 @@ export function MediaPanel() {
               href={file.url}
               target="_blank"
               rel="noreferrer"
-              className="block break-words text-sm text-emerald-700 underline dark:text-emerald-200"
+              className="block break-words text-sm text-brand-700 underline dark:text-brand-200"
               dir="auto"
             >
               {file.original_name}
             </a>
             <p className="mt-1 text-xs text-slate-500">
-              {Math.ceil(file.size_bytes / 1024)} KB ·{" "}
+              {Math.ceil(file.size_bytes / 1024)}{t(" KB ·")}{" "}
               {formatLocalDate(file.created_at)}
             </p>
           </li>
@@ -373,7 +376,7 @@ export function DevicesPanel() {
         aria-label={t("Sign out device")}
         className="space-y-3"
       >
-        <p className="text-sm">{selected.label}</p>
+        <p className="text-sm">{t(selected.label)}</p>
         <p className="text-sm text-slate-500">
           {t("This session will be signed out.")}
         </p>
@@ -409,7 +412,7 @@ export function DevicesPanel() {
         </div>
         {context.error && (
           <p role="alert" className="text-sm text-rose-600">
-            {context.error}
+            {localizeError(context.error)}
           </p>
         )}
       </div>
@@ -426,7 +429,7 @@ export function DevicesPanel() {
             key={device.id}
             className="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-800"
           >
-            <p className="break-words text-sm">{device.label}</p>
+            <p className="break-words text-sm">{t(device.label)}</p>
             <p className="text-xs text-slate-500">
               {device.last_seen && formatLocalDate(device.last_seen)}{" "}
               {device.current && `· ${t("Current device")}`}
@@ -514,7 +517,7 @@ export function SchedulePanel() {
               {formatLocalDate(message.due_at)}
             </p>
             {message.error && (
-              <p className="text-xs text-rose-600">{message.error}</p>
+              <p className="text-xs text-rose-600">{localizeError(message.error)}</p>
             )}
             <button
               type="button"
@@ -644,7 +647,7 @@ export function TopicsPanel() {
                 context.setPanel(null);
               }}
             >
-              {topic.title}
+              {t(topic.title)}
             </button>
             {manager && (
               <button

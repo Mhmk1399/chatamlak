@@ -9,7 +9,7 @@ export function OfflineHistoryBanner({ isOffline, hasOlderMessages, loadingOlder
       className="flex justify-center px-3 pb-3 pt-1 text-center md:px-0"
       data-testid="offline-history-banner"
     >
-      <div className="inline-flex w-max items-center justify-center rounded-full border border-emerald-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-emerald-700 shadow-xs dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200">
+      <div className="inline-flex w-max items-center justify-center rounded-full border border-brand-200/60 bg-white/90 px-3 py-1 text-[11px] font-semibold text-brand-700 shadow-xs dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200">
         <span className="leading-none">{localize("Reached top of cached history — connect to load older messages")}</span>
       </div>
     </div>

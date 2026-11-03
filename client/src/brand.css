@@ -1,0 +1,105 @@
+/* Ouj's colors are accents on quiet, readable surfaces. */
+@theme {
+  --color-brand-50: #f8f4fb;
+  --color-brand-100: #efe6f5;
+  --color-brand-200: #dfccec;
+  --color-brand-300: #c8a6dc;
+  --color-brand-400: #af80c9;
+  --color-brand-500: #8143a7;
+  --color-brand-600: #66308d;
+  --color-brand-700: #552675;
+  --color-brand-800: #45245d;
+  --color-brand-900: #35203f;
+  --color-brand-950: #22162d;
+  --color-accent-50: #effbf8;
+  --color-accent-100: #d8f4ee;
+  --color-accent-200: #afe7dd;
+  --color-accent-300: #75d5c8;
+  --color-accent-400: #38c2b1;
+  --color-accent-500: #01ae9b;
+  --color-accent-600: #008578;
+  --color-accent-700: #00695f;
+  --color-accent-800: #07544e;
+  --color-accent-900: #104640;
+  --color-accent-950: #062c29;
+  --color-slate-50: #f8f8fb;
+  --color-slate-100: #f0eff5;
+  --color-slate-200: #e4e1eb;
+  --color-slate-300: #ccc7d7;
+  --color-slate-400: #9c95ab;
+  --color-slate-500: #766e84;
+  --color-slate-600: #5e566d;
+  --color-slate-700: #474052;
+  --color-slate-800: #2b2635;
+  --color-slate-900: #1b1823;
+  --color-slate-950: #110f18;
+}
+
+:root {
+  --ouj-primary: #66308d;
+  --ouj-secondary: #01ae9b;
+  --ouj-canvas: #f8f8fb;
+  --ouj-surface: #ffffff;
+  --ouj-glass: rgb(255 255 255 / 85%);
+  --ouj-glass-border: rgb(102 48 141 / 10%);
+  --ouj-shadow: 0 12px 44px -24px rgb(45 27 66 / 24%);
+  --ouj-chat-canvas: #f6f5f9;
+  --ouj-selection: rgb(102 48 141 / 18%);
+}
+.dark {
+  --ouj-canvas: #110f18;
+  --ouj-surface: #1b1823;
+  --ouj-glass: rgb(27 24 35 / 88%);
+  --ouj-glass-border: rgb(212 185 231 / 12%);
+  --ouj-shadow: 0 16px 48px -28px rgb(0 0 0 / 60%);
+  --ouj-chat-canvas: #15121c;
+  --ouj-selection: rgb(175 128 201 / 30%);
+}
+
+@utility ouj-glass {
+  background-color: var(--ouj-glass);
+  border-color: var(--ouj-glass-border);
+  box-shadow: var(--ouj-shadow), inset 0 1px 0 rgb(255 255 255 / 9%);
+  -webkit-backdrop-filter: blur(20px) saturate(125%);
+  backdrop-filter: blur(20px) saturate(125%);
+}
+
+.ouj-shell { background: var(--ouj-canvas); }
+.ouj-auth-shell {
+  background: radial-gradient(ellipse at 85% 15%, rgb(102 48 141 / 7%), transparent 48%),
+    radial-gradient(ellipse at 10% 90%, rgb(1 174 155 / 6%), transparent 42%), var(--ouj-canvas);
+}
+.ouj-auth-layout { display: grid; width: 100%; max-width: 1040px; align-items: center; gap: 4rem; }
+.ouj-auth-story { position: relative; padding: 2rem 0; }
+.ouj-auth-story::before {
+  content: ''; position: absolute; inset: -4rem -2rem; z-index: -1;
+  background-image: linear-gradient(rgb(102 48 141 / 4%) 1px, transparent 1px), linear-gradient(90deg, rgb(102 48 141 / 4%) 1px, transparent 1px);
+  background-size: 40px 40px; mask-image: radial-gradient(ellipse, black 10%, transparent 70%);
+}
+.ouj-auth-card { border-radius: 28px; }
+.ouj-auth-story h2 { font-size: clamp(1.8rem, 3vw, 2.65rem); line-height: 1.75; letter-spacing: -.035em; }
+.ouj-chat-wallpaper { background-color: var(--ouj-chat-canvas); }
+.ouj-brand-logo { width: 52px; height: 42px; object-fit: contain; }
+.dark .ouj-brand-logo { filter: brightness(1.4); }
+html[dir='rtl'] .ouj-directional { transform: scaleX(-1); }
+html[dir='rtl'] :is(.lucide-arrow-left, .lucide-arrow-right, .lucide-arrow-left-from-line, .lucide-arrow-right-from-line, .lucide-chevron-left, .lucide-chevron-right) { scale: -1 1; }
+html[dir='rtl'] .tracking-wide, html[dir='rtl'] .tracking-widest { letter-spacing: 0; }
+
+@media (min-width: 1024px) {
+  .ouj-auth-layout { grid-template-columns: 1.1fr 1fr; }
+  .ouj-desktop-shell { padding: 16px; gap: 12px; }
+  .ouj-desktop-shell > aside, .ouj-desktop-shell > section { border-radius: 24px; }
+}
+@media (max-width: 1023px) { .ouj-auth-layout { max-width: 440px; } }
+@supports not (backdrop-filter: blur(1px)) {
+  .ouj-glass { background-color: var(--ouj-surface); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ouj-glass { background-color: var(--ouj-surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .ouj-glass { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

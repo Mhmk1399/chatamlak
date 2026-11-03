@@ -1,10 +1,17 @@
-const CACHE_VERSION = "0.13.2";
+const CACHE_VERSION = "0.13.2-ouj.1";
 const CACHE_NAME = `songbird-${CACHE_VERSION}`;
+const PREFERENCES_CACHE = "ouj-preferences-v1";
 const APP_SHELL = [
   "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
+  "/manifest.en.webmanifest",
+  "/ouj-logo.png",
+  "/ouj-icons/icon-192.png",
+  "/ouj-icons/icon-512.png",
 ];
+async function notificationLocale() {
+  try { const response = await (await caches.open(PREFERENCES_CACHE)).match("/__ouj_locale"); return await response?.text() === "en" ? "en" : "fa"; }
+  catch { return "fa"; }
+}
 
 const isCacheableAssetPath = (pathname) => {
   if (pathname.startsWith("/assets/")) return true;
@@ -30,6 +37,9 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event?.data?.type === "OUJ_LOCALE" && ["fa", "en"].includes(event.data.locale)) {
+    event.waitUntil(caches.open(PREFERENCES_CACHE).then((cache) => cache.put("/__ouj_locale", new Response(event.data.locale))).catch(() => {}));
+  }
   if (event?.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
@@ -107,7 +117,7 @@ self.addEventListener("push", (event) => {
   try {
     payload = event.data ? event.data.json() : {};
   } catch {
-    payload = { title: "Songbird", body: event.data?.text?.() || "" };
+    payload = { body: event.data?.text?.() || "" };
   }
   const data = payload.data || {};
 
@@ -143,31 +153,31 @@ self.addEventListener("push", (event) => {
           // A focused Songbird window rings in-app via realtime.
           return;
         }
-        await self.registration.showNotification(payload.title || "Songbird", {
-          body: payload.body || "",
+        const locale = await notificationLocale();
+        const caller = payload.title?.match(/^Incoming (?:voice|video) call from (.+)$/)?.[1];
+        const title = locale === "fa" && caller ? `تماس ${data.callType === "video" ? "تصویری" : "صوتی"} از ${caller}` : payload.title || (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat");
+        await self.registration.showNotification(title, {
+          body: locale === "fa" ? "برای پاسخ بزنید" : payload.body || "Tap to answer",
           data,
           tag: callTag,
           renotify: true,
           requireInteraction: true,
-          badge: "/icons/icon-192.png",
-          icon: "/icons/icon-192.png",
+          badge: "/ouj-icons/icon-192.png",
+          icon: "/ouj-icons/icon-192.png",
         });
       })(),
     );
     return;
   }
 
-  const title = payload.title || "Songbird";
-  const body = payload.body || "New message";
   const badgeCount = Number(payload.badge || 0);
   const tag = data.chatId ? `chat-${data.chatId}` : "songbird";
   const options = {
-    body,
     data,
     tag,
     renotify: true,
-    badge: "/icons/icon-192.png",
-    icon: "/icons/icon-192.png",
+    badge: "/ouj-icons/icon-192.png",
+    icon: "/ouj-icons/icon-192.png",
   };
   event.waitUntil(
     (async () => {
@@ -191,6 +201,10 @@ self.addEventListener("push", (event) => {
       } catch {
         // ignore badge errors; must not affect notification delivery
       }
+      const locale = await notificationLocale();
+      const title = payload.title || (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat");
+      // Notification bodies containing user-written messages stay unchanged.
+      options.body = payload.body || (locale === "fa" ? "پیام جدید" : "New message");
       await self.registration.showNotification(title, options);
     })(),
   );

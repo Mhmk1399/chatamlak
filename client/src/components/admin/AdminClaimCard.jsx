@@ -35,7 +35,7 @@ export default function AdminClaimCard({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 sm:px-4 sm:py-3 sm:text-sm"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 sm:px-4 sm:py-3 sm:text-sm"
           >{localize("Back to Chat")}</button>
         </div>
       </AuthPage>
@@ -81,13 +81,13 @@ export default function AdminClaimCard({
               placeholder={localize("Enter ADMIN_API_TOKEN")}
               autoComplete="off"
               required
-              className="w-full rounded-2xl border border-emerald-200 bg-white py-2 pl-3 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:pl-4 sm:pr-16 sm:text-sm"
+              className="w-full rounded-2xl border border-brand-200 bg-white py-2 pl-3 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:pl-4 sm:pr-16 sm:text-sm"
             />
             <button
               type="button"
               onClick={() => setShowToken((prev) => !prev)}
-              className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-200 dark:hover:bg-emerald-500/10 sm:h-9 sm:w-9"
-              aria-label={showToken ? "Hide token" : "Show token"}
+              className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 dark:text-brand-200 dark:hover:bg-brand-500/10 sm:h-9 sm:w-9"
+              aria-label={showToken ? localize("Hide token") : localize("Show token")}
             >
               {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -97,9 +97,9 @@ export default function AdminClaimCard({
         <button
           type="submit"
           disabled={loading || !token.trim()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:py-3 sm:text-sm"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:py-3 sm:text-sm"
         >
-          <span>{loading ? "Verifying..." : "Claim Privileges"}</span>
+          <span>{loading ? localize("Verifying...") : localize("Claim Privileges")}</span>
         </button>
       </form>
     </AuthPage>

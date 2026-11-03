@@ -33,11 +33,12 @@ function formatDuration(seconds) {
 const SIGNAL_LEVELS = {
   1: { Icon: SignalZero, color: "text-red-400", name: "Bad" },
   2: { Icon: SignalLow, color: "text-yellow-400", name: "Medium" },
-  3: { Icon: SignalMedium, color: "text-emerald-400", name: "Good" },
-  4: { Icon: SignalHigh, color: "text-emerald-300", name: "Excellent" },
+  3: { Icon: SignalMedium, color: "text-brand-400", name: "Good" },
+  4: { Icon: SignalHigh, color: "text-brand-300", name: "Excellent" },
 };
 
 function SignalIndicator({ quality }) {
+  useAppLocale();
   const level = quality?.level ?? 0;
   const entry = SIGNAL_LEVELS[level];
   const parts = [];
@@ -48,11 +49,11 @@ function SignalIndicator({ quality }) {
     ? `Connection ${entry.name.toLowerCase()}${parts.length ? ` — ${parts.join(", ")}` : ""}`
     : "Measuring connection…";
   return (
-    <Tooltip label={label}>
+    <Tooltip label={localize(label)}>
       <span
         className="relative inline-flex -translate-y-[2px]"
         role="img"
-        aria-label={entry ? `Connection: ${entry.name}` : "Connection: measuring"}
+        aria-label={entry ? localize("Connection: {value0}", { value0: entry.name }) : localize("Connection: measuring")}
       >
         <SignalHigh size={22} className="text-white/20" />
         {entry ? (
@@ -127,7 +128,7 @@ export const CallScreen = memo(function CallScreen({
       : "w-[28%] max-w-32 md:w-52 md:max-w-52";
   const peerName = callPeer?.nickname || callPeer?.username || "Unknown";
   const peerInitials = getAvatarInitials(peerName);
-  const peerColor = callPeer?.color || "#10b981";
+  const peerColor = callPeer?.color || "#66308d";
   const peerVerified = Boolean(callPeer?.verified ?? callPeer?.user_verified);
   const peerRole = callPeer?.role || callPeer?.user_role || null;
 
@@ -392,7 +393,7 @@ export const CallScreen = memo(function CallScreen({
         : callState === "connected"
           ? formatDuration(callDuration)
           : "";
-  const stateLabelColor = isEnding ? "text-red-400" : "text-emerald-400";
+  const stateLabelColor = isEnding ? "text-red-400" : "text-brand-400";
   // Controls stay mounted while the end notice shows, but are inert.
   const controlState = isEnding
     ? "opacity-40 cursor-not-allowed"
@@ -420,7 +421,7 @@ export const CallScreen = memo(function CallScreen({
             ? "bg-white/10 text-white hover:bg-white/20"
             : "bg-white text-gray-500 hover:bg-white/90"
         }`}
-        aria-label={isSpeakerOn ? "Turn speaker off" : "Turn speaker on"}
+        aria-label={isSpeakerOn ? localize("Turn speaker off") : localize("Turn speaker on")}
       >
         {isSpeakerOn ? <Volume2 size={26} /> : <VolumeX size={26} />}
       </button>
@@ -435,7 +436,7 @@ export const CallScreen = memo(function CallScreen({
             : "bg-white/10 text-white hover:bg-white/20"
         } ${cameraUnavailable ? "opacity-40 cursor-not-allowed" : ""}`}
         aria-disabled={cameraUnavailable || undefined}
-        aria-label={isCameraOff ? "Turn camera on" : "Turn camera off"}
+        aria-label={isCameraOff ? localize("Turn camera on") : localize("Turn camera off")}
       >
         {isCameraOff ? <VideoOff size={26} /> : <Video size={26} />}
       </button>
@@ -542,8 +543,8 @@ export const CallScreen = memo(function CallScreen({
 
         {/* Secure badge - very top */}
         <div className="absolute inset-x-0 top-0 z-30 flex justify-center pt-4">
-          <Tooltip label="Peer-to-peer encrypted">
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400">
+          <Tooltip label={localize("Peer-to-peer encrypted")}>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-400">
               <Lock size={12} />{localize("Secure")}</span>
           </Tooltip>
         </div>
@@ -676,7 +677,7 @@ export const CallScreen = memo(function CallScreen({
               type="button"
               onClick={onAccept}
               disabled={isEnding}
-              className={`flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 ${controlState}`}
+              className={`flex h-16 w-16 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 ${controlState}`}
               aria-label={localize("Accept call")}
             >
               <Phone size={26} />

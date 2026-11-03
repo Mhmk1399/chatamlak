@@ -41,7 +41,7 @@ export default function AuthFormFields({
               name="nickname"
               type="text"
               required
-              placeholder="Songbird Sage"
+              placeholder={localize("Your full name")}
               maxLength={NICKNAME_MAX}
               onInput={(event) => {
                 const value = String(event.currentTarget.value || "");
@@ -50,12 +50,12 @@ export default function AuthFormFields({
               }}
               lang={nicknameHasPersian ? "fa" : "en"}
               dir={nicknameHasPersian ? "rtl" : "ltr"}
-              className={`w-full rounded-2xl border border-emerald-200 bg-white py-2 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:text-sm ${
+              className={`w-full rounded-2xl border border-brand-200 bg-white py-2 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:text-sm ${
                 nicknameHasPersian
                   ? "pl-3 pr-14 sm:pl-4 sm:pr-16"
                   : "pl-3 pr-14 sm:pl-4 sm:pr-16"
               } ${
-                nicknameHasPersian ? "font-fa text-right" : "text-left"
+                nicknameHasPersian ? "font-fa text-end" : "text-start"
               }`}
               style={{ unicodeBidi: "plaintext" }}
             />
@@ -78,7 +78,7 @@ export default function AuthFormFields({
             pattern={USERNAME_INPUT_PATTERN}
             title={localize("Use english letters, numbers, dot (.), and underscore (_).")}
             autoCapitalize="none"
-            placeholder="songbird.sage"
+            placeholder={"ali.ahmadi"}
             maxLength={USERNAME_MAX}
             onInput={(event) => {
               const value = String(event.currentTarget.value || "");
@@ -87,12 +87,12 @@ export default function AuthFormFields({
             }}
             lang={usernameHasPersian ? "fa" : "en"}
             dir={usernameHasPersian ? "rtl" : "ltr"}
-            className={`w-full rounded-2xl border border-emerald-200 bg-white py-2 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:text-sm ${
+            className={`w-full rounded-2xl border border-brand-200 bg-white py-2 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:text-sm ${
               usernameHasPersian
                 ? "pl-3 pr-14 sm:pl-4 sm:pr-16"
                 : "pl-3 pr-14 sm:pl-4 sm:pr-16"
             } ${
-              usernameHasPersian ? "font-fa text-right" : "text-left"
+              usernameHasPersian ? "font-fa text-end" : "text-start"
             }`}
             style={{ unicodeBidi: "plaintext" }}
           />
@@ -115,13 +115,13 @@ export default function AuthFormFields({
             required
             minLength={isLogin ? undefined : 6}
             placeholder={showPassword ? "12345678" : "********"}
-            className="w-full rounded-2xl border border-emerald-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-100 sm:px-4 sm:py-3 sm:pr-20 sm:text-sm"
+            className="w-full rounded-2xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:px-4 sm:py-3 sm:pr-20 sm:text-sm"
           />
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10 sm:h-9 sm:w-9"
-            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10 sm:h-9 sm:w-9"
+            aria-label={showPassword ? localize("Hide password") : localize("Show password")}
           >
             {showPassword ? (
               <EyeOff size={16} className="icon-anim-peek" />
@@ -142,16 +142,16 @@ export default function AuthFormFields({
               required
               minLength={6}
               placeholder={showConfirmPassword ? "12345678" : "********"}
-              className="w-full rounded-2xl border border-emerald-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-100 sm:px-4 sm:py-3 sm:pr-20 sm:text-sm"
+              className="w-full rounded-2xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:px-4 sm:py-3 sm:pr-20 sm:text-sm"
             />
             <button
               type="button"
               onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10 sm:h-9 sm:w-9"
+              className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10 sm:h-9 sm:w-9"
               aria-label={
                 showConfirmPassword
-                  ? "Hide confirm password"
-                  : "Show confirm password"
+                  ? localize("Hide confirm password")
+                  : localize("Show confirm password")
               }
             >
               {showConfirmPassword ? (
@@ -167,10 +167,10 @@ export default function AuthFormFields({
       <button
         type="submit"
         disabled={loading}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:py-3 sm:text-sm"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)] disabled:cursor-not-allowed disabled:opacity-70 sm:px-4 sm:py-3 sm:text-sm"
       >
         {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-        {isLogin ? localize("Sign in") : "Create account"}
+        {isLogin ? localize("Sign in") : localize("Create account")}
       </button>
     </form>
   );

@@ -1,3 +1,4 @@
+import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { Check, Bookmark, Megaphone, Users } from "../../icons/lucide.js";
 import { getAvatarInitials } from "../../utils/avatarInitials.js";
 import { hasPersian } from "../../utils/fontUtils.js";
@@ -7,16 +8,18 @@ import UserRoleBadge from "../common/UserRoleBadge.jsx";
 import Tooltip from "../common/Tooltip.jsx";
 
 function ForwardChatGlyph({ kind }) {
+  useAppLocale();
   if (kind === "saved") return <Bookmark size={18} className="text-white" />;
   return null;
 }
 
 function ForwardChatKindIcon({ kind }) {
+  useAppLocale();
   if (kind === "channel") {
-    return <Megaphone size={13} className="shrink-0 text-emerald-500" />;
+    return <Megaphone size={13} className="shrink-0 text-brand-500" />;
   }
   if (kind === "group") {
-    return <Users size={13} className="shrink-0 text-emerald-500" />;
+    return <Users size={13} className="shrink-0 text-brand-500" />;
   }
   return null;
 }
@@ -33,6 +36,7 @@ export default function ForwardChatGridItem({
   selected,
   onClick,
 }) {
+  useAppLocale();
   const initials = getAvatarInitials(initialsSource || title);
   const titleHasPersian = hasPersian(title);
 
@@ -45,7 +49,7 @@ export default function ForwardChatGridItem({
       <span
         className={`relative flex h-[4.15rem] w-[4.15rem] items-center justify-center rounded-full border-4 transition ${
           selected
-            ? "border-emerald-500 bg-emerald-500/8"
+            ? "border-brand-500 bg-brand-500/8"
             : "border-transparent bg-transparent p-0"
         }`}
       >
@@ -54,9 +58,9 @@ export default function ForwardChatGridItem({
         >
           <Avatar
             src={avatarUrl}
-            alt={title}
+            alt={localize(title)}
             name={title}
-            color={color || "#10b981"}
+            color={color || "#66308d"}
             initials={initials}
             placeholderContent={
               kind === "saved" ? <ForwardChatGlyph kind={kind} /> : initials
@@ -68,7 +72,7 @@ export default function ForwardChatGridItem({
           />
         </span>
         {selected ? (
-          <span className="absolute bottom-0 right-0 inline-flex h-[1.2rem] w-[1.2rem] items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+          <span className="absolute bottom-0 right-0 inline-flex h-[1.2rem] w-[1.2rem] items-center justify-center rounded-full bg-brand-600 text-white shadow-lg shadow-brand-500/30">
             <Check size={11} strokeWidth={3.25} />
           </span>
         ) : null}
@@ -76,7 +80,7 @@ export default function ForwardChatGridItem({
       <span className="flex min-w-0 max-w-full items-center gap-1">
         <ForwardChatKindIcon kind={kind} />
         <span className="inline-flex min-w-0 items-center gap-0.5">
-          <Tooltip label={title} asChild>
+          <Tooltip label={localize(title)} asChild>
             <span
               className={`block min-w-0 max-w-full truncate text-[11px] font-semibold text-slate-700 dark:text-slate-200 ${
                 titleHasPersian ? "font-fa" : ""
@@ -84,7 +88,7 @@ export default function ForwardChatGridItem({
               dir="auto"
               style={{ unicodeBidi: "plaintext" }}
             >
-              {title}
+              {localize(title)}
             </span>
           </Tooltip>
           {Boolean(verified) && <VerifiedBadge size={13} />}

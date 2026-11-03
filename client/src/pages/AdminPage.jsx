@@ -14,5 +14,5 @@ export default function AdminPage({ user, setUser, isDark, onToggleTheme, onBack
     );
   }
 
-  return <AdminPanel user={user} onBack={onBack} />;
+  return <AdminPanel user={user} onBack={onBack} isDark={isDark} onToggleTheme={onToggleTheme} />;
 }

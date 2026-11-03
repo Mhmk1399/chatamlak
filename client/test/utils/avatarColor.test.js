@@ -17,8 +17,8 @@ describe("getAvatarTextColor", () => {
     expect(getAvatarTextColor("#000000")).toBe("#ffffff");
   });
 
-  test("returns light text for a medium-dark green", () => {
-    expect(getAvatarTextColor("#10b981")).toBe("#ffffff");
+  test("uses dark text on Ouj teal so initials stay readable", () => {
+    expect(getAvatarTextColor("#01ae9b")).toBe("#0f172a");
   });
 
   test("returns white for an invalid color", () => {
@@ -45,9 +45,9 @@ describe("getAvatarStyle", () => {
     expect(style.backgroundColor).toBe("#ef4444");
   });
 
-  test("defaults to #10b981 fallback when no fallback is given", () => {
+  test("defaults to the Ouj primary color when no fallback is given", () => {
     const style = getAvatarStyle(undefined);
-    expect(style.backgroundColor).toBe("#10b981");
+    expect(style.backgroundColor).toBe("#66308d");
   });
 
   test("uses provided backgroundColor over fallback", () => {

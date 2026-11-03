@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -51,7 +52,7 @@ export default function ConfirmPasswordModal({
       >
         <div className="flex items-center justify-between">
           <h3 id="confirm-password-modal-title" className="text-lg font-semibold text-rose-600 dark:text-rose-300">
-            {title}
+            {localize(title)}
           </h3>
           <button
             type="button"
@@ -65,7 +66,7 @@ export default function ConfirmPasswordModal({
         </div>
 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          {description}
+          {localize(description)}
         </p>
 
         {step === "confirm" ? (
@@ -73,14 +74,14 @@ export default function ConfirmPasswordModal({
             <button
               type="button"
               onClick={() => onClose?.()}
-              className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+              className="rounded-full border border-brand-200 bg-white px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
             >{localize("Cancel")}</button>
             <button
               type="button"
               onClick={() => setStep("password")}
               className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:shadow-[0_0_14px_rgba(244,63,94,0.2)] dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200"
             >
-              {confirmLabel}
+              {localize(confirmLabel)}
             </button>
           </div>
         ) : null}
@@ -96,13 +97,13 @@ export default function ConfirmPasswordModal({
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder={showPassword ? "12345678" : "********"}
                   autoComplete="current-password"
-                  className="w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
+                  aria-label={showPassword ? localize("Hide password") : localize("Show password")}
                 >
                   {showPassword ? (
                     <EyeOff size={16} className="icon-anim-peek" />
@@ -115,7 +116,7 @@ export default function ConfirmPasswordModal({
 
             {error ? (
               <p className="text-xs text-rose-600 dark:text-rose-200">
-                {error}
+                {localizeError(error)}
               </p>
             ) : null}
 
@@ -123,7 +124,7 @@ export default function ConfirmPasswordModal({
               <button
                 type="button"
                 onClick={() => onClose?.()}
-                className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200"
+                className="rounded-full border border-brand-200 bg-white px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
                 disabled={loading}
               >{localize("Cancel")}</button>
               <button
@@ -145,7 +146,7 @@ export default function ConfirmPasswordModal({
                 disabled={!canSubmit}
                 className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:shadow-[0_0_14px_rgba(244,63,94,0.2)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200"
               >
-                {loading ? "Deleting..." : deleteLabel}
+                {loading ? localize("Deleting...") : deleteLabel}
               </button>
             </div>
           </div>

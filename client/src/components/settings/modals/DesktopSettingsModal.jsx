@@ -50,7 +50,7 @@ export function DesktopSettingsModal({
   );
   if (!settingsPanel) return null;
   if (typeof document === "undefined") return null;
-  const resolvedUserColor = userColor || "#10b981";
+  const resolvedUserColor = userColor || "#66308d";
   const profileIdentity = profileForm.nickname || profileForm.username || "S";
   const profileInitials = getAvatarInitials(profileIdentity);
   const nicknameHasPersian = hasPersian(profileForm.nickname || "");
@@ -60,9 +60,9 @@ export function DesktopSettingsModal({
 
   return createPortal(
     <div className="fixed inset-0 z-140 flex items-center justify-center bg-black/40 px-6">
-      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-emerald-100/70 bg-white shadow-xl dark:border-emerald-500/30 dark:bg-slate-950">
-        <div className="flex items-center justify-between border-b border-emerald-100/70 px-6 py-5 dark:border-emerald-500/20">
-          <h3 className="text-lg font-semibold text-emerald-700 dark:text-emerald-200">
+      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-100/70 bg-white shadow-xl dark:border-brand-500/30 dark:bg-slate-950">
+        <div className="flex items-center justify-between border-b border-brand-100/70 px-6 py-5 dark:border-brand-500/20">
+          <h3 className="text-lg font-semibold text-brand-700 dark:text-brand-200">
             {settingsPanel === "profile"
               ? localize("Edit profile")
               : settingsPanel === "security"
@@ -96,9 +96,9 @@ export function DesktopSettingsModal({
                       profilePhotoInputRef.current?.click();
                     }}
                     disabled={!fileUploadEnabled}
-                    className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-emerald-300/70 ${
+                    className={`group relative h-14 w-14 overflow-hidden rounded-full border-2 transition focus:outline-hidden focus:ring-2 focus:ring-brand-300/70 ${
                       fileUploadEnabled
-                        ? "cursor-pointer border-emerald-200 hover:border-emerald-300 hover:shadow-lg dark:border-emerald-500/30 dark:hover:border-emerald-400/60"
+                        ? "cursor-pointer border-brand-200 hover:border-brand-300 hover:shadow-lg dark:border-brand-500/30 dark:hover:border-brand-400/60"
                         : "cursor-not-allowed border-slate-300 opacity-70 dark:border-slate-700"
                     }`}
                     aria-label={localize("Change profile photo")}
@@ -158,8 +158,8 @@ export function DesktopSettingsModal({
                   maxLength={NICKNAME_MAX}
                   lang={nicknameHasPersian ? "fa" : "en"}
                   dir={nicknameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                    nicknameHasPersian ? "font-fa text-right" : "text-left"
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    nicknameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
                 />
@@ -185,8 +185,8 @@ export function DesktopSettingsModal({
                   autoCapitalize="none"
                   lang={usernameHasPersian ? "fa" : "en"}
                   dir={usernameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                    usernameHasPersian ? "font-fa text-right" : "text-left"
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                    usernameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
                 />
@@ -205,12 +205,12 @@ export function DesktopSettingsModal({
                     onClick={() => setStatusSelection(value)}
                     className={`flex items-center gap-2 rounded-2xl border border-2 px-3 py-2 text-xs font-medium transition duration-200 ${
                       statusSelection === value
-                        ? "border-emerald-500 bg-emerald-100/50 text-emerald-700 shadow-md dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-200"
-                        : "border-emerald-100/70 bg-white/80 text-slate-700 hover:bg-emerald-50/30 dark:border-emerald-500/30 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-900/50"
+                        ? "border-brand-500 bg-brand-100/50 text-brand-700 shadow-md dark:border-brand-400 dark:bg-brand-500/20 dark:text-brand-200"
+                        : "border-brand-100/70 bg-white/80 text-slate-700 hover:bg-brand-50/30 dark:border-brand-500/30 dark:bg-slate-950/50 dark:text-slate-100 dark:hover:bg-slate-900/50"
                     }`}
                   >
                     <span
-                      className={`h-3 w-3 rounded-full transition duration-200 ${value === "online" ? "bg-emerald-400" : "bg-slate-400"}`}
+                      className={`h-3 w-3 rounded-full transition duration-200 ${value === "online" ? "bg-brand-400" : "bg-slate-400"}`}
                     />
                     <span>
                       {value.charAt(0).toUpperCase() + value.slice(1)}
@@ -230,7 +230,7 @@ export function DesktopSettingsModal({
             ) : null}
             <button
               type="submit"
-              className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+              className="w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)]"
             >{localize("Save profile")}</button>
             <InlineError message={profileError} />
           </form>
@@ -254,16 +254,16 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showCurrentPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword((prev) => !prev)}
-                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
                   aria-label={
                     showCurrentPassword
-                      ? "Hide current password"
-                      : "Show current password"
+                      ? localize("Hide current password")
+                      : localize("Show current password")
                   }
                 >
                   {showCurrentPassword ? (
@@ -287,14 +287,14 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showNewPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword((prev) => !prev)}
-                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
                   aria-label={
-                    showNewPassword ? "Hide new password" : "Show new password"
+                    showNewPassword ? localize("Hide new password") : localize("Show new password")
                   }
                 >
                   {showNewPassword ? (
@@ -318,16 +318,16 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showConfirmPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword((prev) => !prev)}
-                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-emerald-700 transition hover:bg-emerald-100 hover:shadow-[0_0_18px_rgba(16,185,129,0.22)] dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                  className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 hover:shadow-[0_0_18px_rgba(102,48,141,0.22)] dark:text-brand-200 dark:hover:bg-brand-500/10"
                   aria-label={
                     showConfirmPassword
-                      ? "Hide confirm password"
-                      : "Show confirm password"
+                      ? localize("Hide confirm password")
+                      : localize("Show confirm password")
                   }
                 >
                   {showConfirmPassword ? (
@@ -340,7 +340,7 @@ export function DesktopSettingsModal({
             </label>
             <button
               type="submit"
-              className="w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+              className="w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)]"
             >{localize("Update password")}</button>
             <InlineError message={passwordError} />
           </form>
@@ -374,9 +374,9 @@ export function DesktopSettingsModal({
       <ConfirmPasswordModal
         open={deleteModalOpen}
         title={localize("Delete account")}
-        description="This permanently deletes your account, removes your messages, and transfers or deletes any groups/channels you own."
-        confirmLabel="Continue"
-        deleteLabel="Delete"
+        description={localize("This permanently deletes your account, removes your messages, and transfers or deletes any groups/channels you own.")}
+        confirmLabel={localize("Continue")}
+        deleteLabel={localize("Delete")}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={async (password) => {
           await onDeleteAccount?.(password);

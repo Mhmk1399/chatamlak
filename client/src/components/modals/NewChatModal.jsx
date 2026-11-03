@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { createPortal } from "react-dom";
 import { useRef } from "react";
@@ -49,10 +50,10 @@ export default function NewChatModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-chat-modal-title"
-        className="w-full max-w-sm rounded-2xl border border-emerald-100/70 bg-white p-6 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950"
+        className="w-full max-w-sm rounded-2xl border border-brand-100/70 bg-white p-6 shadow-xl dark:border-brand-500/30 dark:bg-slate-950"
       >
         <div className="flex items-center justify-between">
-          <h3 id="new-chat-modal-title" className="text-lg font-semibold text-emerald-700 dark:text-emerald-200">{localize("New DM")}</h3>
+          <h3 id="new-chat-modal-title" className="text-lg font-semibold text-brand-700 dark:text-brand-200">{localize("New DM")}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -74,8 +75,8 @@ export default function NewChatModal({
               placeholder={localize("username")}
               lang={dmSearchHasPersian ? "fa" : "en"}
               dir={dmSearchHasPersian ? "rtl" : "ltr"}
-              className={`w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-300/60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-slate-100 ${
-                dmSearchHasPersian ? "font-fa text-right" : "text-left"
+              className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                dmSearchHasPersian ? "font-fa text-end" : "text-start"
               }`}
               style={{ unicodeBidi: "plaintext" }}
             />
@@ -109,17 +110,17 @@ export default function NewChatModal({
                       setNewChatSelection(result);
                       setNewChatUsername(result.username);
                     }}
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-sm font-medium transition ${
+                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-start text-sm font-medium transition ${
                       newChatSelection?.username === result.username
-                        ? "border-emerald-500 border-2 bg-emerald-50 text-emerald-900 shadow-md dark:border-emerald-400 dark:bg-emerald-500/20 dark:text-emerald-100"
-                        : "border-emerald-100/70 bg-white/80 text-slate-700 hover:border-emerald-300 dark:border-emerald-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50"
+                        ? "border-brand-500 border-2 bg-brand-50 text-brand-900 shadow-md dark:border-brand-400 dark:bg-brand-500/20 dark:text-brand-100"
+                        : "border-brand-100/70 bg-white/80 text-slate-700 hover:border-brand-300 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900/50"
                     }`}
                   >
                     <Avatar
                       src={result.avatar_url}
                       alt={result.nickname || result.username}
                       name={label}
-                      color={result.color || "#10b981"}
+                      color={result.color || "#66308d"}
                       initials={avatarInitials}
                       showOnlineBadge={
                         String(result.status || "").toLowerCase() === "online"
@@ -127,12 +128,12 @@ export default function NewChatModal({
                       className="h-8 w-8"
                     />
                     <div className="min-w-0">
-                      <Tooltip label={label} asChild>
+                      <Tooltip label={localize(label)} asChild>
                         <p
                           className="flex items-center gap-0.5 truncate font-semibold"
                           dir="ltr"
                         >
-                          <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{label}</span>
+                          <span className={`truncate ${hasPersian(label) ? "font-fa" : ""}`} dir="auto">{localize(label)}</span>
                           {Boolean(result.verified) && <VerifiedBadge size={14} />}
                           <UserRoleBadge role={result.role} size={14} />
                         </p>
@@ -164,14 +165,14 @@ export default function NewChatModal({
         ) : null}
         {newChatError ? (
           <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200">
-            {newChatError}
+            {localizeError(newChatError)}
           </p>
         ) : null}
         <button
           type="button"
           onClick={startDirectMessage}
           disabled={!canStartChat}
-          className="mt-4 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-4 w-full rounded-2xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/30 transition hover:bg-brand-500 hover:shadow-[0_0_20px_rgba(102,48,141,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
         >{localize("Start chat")}</button>
       </div>
     </div>,

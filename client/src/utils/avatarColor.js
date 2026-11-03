@@ -1,14 +1,12 @@
 const USER_COLORS = [
-  "#10b981",
-  "#0ea5e9",
-  "#f97316",
-  "#8b5cf6",
-  "#ef4444",
-  "#14b8a6",
-  "#f59e0b",
-  "#3b82f6",
-  "#84cc16",
-  "#ec4899",
+  "#66308d",
+  "#007d71",
+  "#25766e",
+  "#4d5975",
+  "#7c4d96",
+  "#665478",
+  "#4e6978",
+  "#77634c",
 ];
 
 function hexToRgb(hex) {
@@ -34,10 +32,13 @@ export function getAvatarTextColor(backgroundColor) {
     0.2126 * toLinear(rgb.r) +
     0.7152 * toLinear(rgb.g) +
     0.0722 * toLinear(rgb.b);
-  return luminance > 0.56 ? "#0f172a" : "#ffffff";
+  if (1.05 / (luminance + 0.05) >= 4.5) return "#ffffff";
+  // Prefer the text neutral, falling back to black when a user-selected color
+  // falls into the small range where neither white nor navy meets 4.5:1.
+  return (luminance + 0.05) / 0.058815 >= 4.5 ? "#0f172a" : "#000000";
 }
 
-export function getAvatarStyle(backgroundColor, fallback = "#10b981") {
+export function getAvatarStyle(backgroundColor, fallback = "#66308d") {
   const color = backgroundColor || fallback;
   return {
     backgroundColor: color,

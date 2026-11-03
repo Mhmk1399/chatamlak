@@ -5,7 +5,7 @@ import AuthHeader from "../../../src/components/auth/AuthHeader.jsx";
 
 describe("AuthHeader", () => {
   describe("title text", () => {
-    test('shows "Sign in" label and "Welcome" heading when isLogin is true', async () => {
+    test('shows Ouj workspace branding and the login heading', async () => {
       render(
         <AuthHeader
           isLogin
@@ -14,11 +14,11 @@ describe("AuthHeader", () => {
           onToggleTheme={() => {}}
         />,
       );
-      await expect.element(page.getByText("Sign in")).toBeInTheDocument();
-      await expect.element(page.getByText("Welcome")).toBeInTheDocument();
+      await expect.element(page.getByText("Ouj Real Estate team workspace")).toBeInTheDocument();
+      await expect.element(page.getByRole("heading", { name: "Welcome to Ouj" })).toBeInTheDocument();
     });
 
-    test('shows "Create account" label and "Join the flock" heading when isLogin is false', async () => {
+    test('shows Ouj workspace branding and the registration heading', async () => {
       render(
         <AuthHeader
           isLogin={false}
@@ -28,10 +28,10 @@ describe("AuthHeader", () => {
         />,
       );
       await expect
-        .element(page.getByText("Create account"))
+        .element(page.getByText("Ouj Real Estate team workspace"))
         .toBeInTheDocument();
       await expect
-        .element(page.getByText("Join the flock"))
+        .element(page.getByRole("heading", { name: "Join the Ouj team" }))
         .toBeInTheDocument();
     });
   });

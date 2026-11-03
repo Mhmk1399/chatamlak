@@ -24,7 +24,7 @@ function StatusBadge({ status }) {
   // "env" mirrors the Settings tab EnvLockBadge for env-managed values.
   if (status.type === "env") {
     return (
-      <Tooltip label="Managed via environment variables">
+      <Tooltip label={localize("Managed via environment variables")}>
         <span
           tabIndex={0}
           className="inline-flex cursor-help items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-white/10 dark:text-slate-400"
@@ -37,7 +37,7 @@ function StatusBadge({ status }) {
   const cls =
     type === "error"
       ? "text-rose-600 dark:text-rose-300"
-      : "text-emerald-600 dark:text-emerald-300";
+      : "text-brand-600 dark:text-brand-300";
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${cls}`}>
       {type === "busy" ? (
@@ -47,7 +47,7 @@ function StatusBadge({ status }) {
       ) : (
         <Check size={13} />
       )}
-      {label}
+      {localize(label)}
     </span>
   );
 }
@@ -63,27 +63,28 @@ function ServiceRow({
   disabled = false,
   status = null,
 }) {
+  useAppLocale();
   const busy = status?.type === "busy";
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || busy}
-      className="flex h-full w-full flex-col items-start gap-2 rounded-2xl border border-emerald-200/70 bg-white/90 p-4 text-left transition hover:border-emerald-300 hover:bg-emerald-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-slate-950/50 dark:hover:bg-emerald-500/5"
+      className="flex h-full w-full flex-col items-start gap-2 rounded-2xl border border-brand-200/70 bg-white/90 p-4 text-start transition hover:border-brand-300 hover:bg-brand-50/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-slate-950/50 dark:hover:bg-brand-500/5"
     >
       <div className="flex w-full items-start justify-between gap-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center text-brand-600 dark:text-brand-400">
           <Icon size={22} className={iconAnim} />
         </div>
         {status && <div className="shrink-0 pt-1"><StatusBadge status={status} /></div>}
       </div>
       <div className="min-w-0">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {label}
+          {localize(label)}
         </p>
         {description && (
           <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
-            {description}
+            {localize(description)}
           </p>
         )}
       </div>
@@ -231,7 +232,7 @@ const ServicesTab = forwardRef(function ServicesTab(
           <ServiceRow
             icon={Clapper}
             iconAnim="icon-anim-beat"
-            label="Media worker"
+            label={localize("Media worker")}
             description={workerDescription}
             onClick={handleWorkerCheck}
             status={
@@ -266,7 +267,7 @@ const ServicesTab = forwardRef(function ServicesTab(
           <ServiceRow
             icon={PackageOpen}
             iconAnim="icon-anim-drop"
-            label="Storage"
+            label={localize("Storage")}
             description={storageDescription}
             onClick={handleStorageCheck}
             status={
@@ -283,7 +284,7 @@ const ServicesTab = forwardRef(function ServicesTab(
           <ServiceRow
             icon={Database}
             iconAnim="icon-anim-drop"
-            label="Database"
+            label={localize("Database")}
             description={databaseDescription}
             onClick={handleDatabaseCheck}
             disabled={!isDatabaseConfigured}
@@ -301,7 +302,7 @@ const ServicesTab = forwardRef(function ServicesTab(
           <ServiceRow
             icon={PhoneCall}
             iconAnim="icon-anim-sway"
-            label="TURN server"
+            label={localize("TURN server")}
             description={turnDescription}
             onClick={handleTurnCheck}
             disabled={!isTurnConfigured}

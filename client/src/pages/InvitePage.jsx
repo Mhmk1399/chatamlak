@@ -1,3 +1,4 @@
+import { tError as localizeError } from "../i18n/locale.js";
 import { t as localize, useLocale as useAppLocale } from "../i18n/locale.js";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LoaderCircle, Moon, Sun, Users, LogIn } from "../icons/lucide.js";
@@ -171,19 +172,19 @@ export default function InvitePage({
   return (
     <section
       ref={cardRef}
-      className={`relative w-full max-w-md rounded-3xl border border-emerald-200/70 bg-white/80 p-6 shadow-2xl shadow-emerald-500/10 backdrop-blur-sm dark:border-white/5 dark:bg-slate-900/80 sm:p-8 ${
+      className={`relative w-full max-w-md rounded-3xl border border-brand-200/70 bg-white/80 p-6 shadow-2xl shadow-brand-500/10 backdrop-blur-sm dark:border-white/5 dark:bg-slate-900/80 sm:p-8 ${
         fitsViewport ? "my-auto self-center" : "my-0 self-start"
       }`}
     >
       <div className="relative text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-300 sm:text-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-600 dark:text-brand-300 sm:text-sm">
           {localize(groupType)}{" "}{localize("Invite")}</p>
         <h1 className="mt-2 text-2xl font-bold sm:mt-3 sm:text-3xl">{localize("Join")}{" "}{localize(groupType)}
         </h1>
         <button
           type="button"
           onClick={onToggleTheme}
-          className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition dark:border-emerald-500/30 dark:bg-slate-950 dark:text-emerald-200 sm:h-10 sm:w-10"
+          className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 sm:h-10 sm:w-10"
           aria-label={localize("Toggle dark mode")}
         >
           {isDark ? (
@@ -197,21 +198,21 @@ export default function InvitePage({
       <div className="mt-4 sm:mt-6">
         {loading ? (
           <div className="flex items-center justify-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <LoaderCircle className="h-5 w-5 animate-spin text-emerald-500" />{localize("Checking invite link...")}</div>
+            <LoaderCircle className="h-5 w-5 animate-spin text-brand-500" />{localize("Checking invite link...")}</div>
         ) : error ? (
           <>
             <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-900/40 dark:text-rose-200">
-              {error}
+              {localizeError(error)}
             </p>
             <button
               type="button"
               onClick={onNavigateChat}
-              className="mt-4 w-full rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-[0_0_14px_rgba(16,185,129,0.2)] dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+              className="mt-4 w-full rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 transition hover:border-brand-300 hover:bg-brand-50 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200 dark:hover:bg-brand-500/10"
             >{localize("Back to chats")}</button>
           </>
         ) : (
           <>
-            <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/60 p-4 text-center dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div className="rounded-2xl border border-brand-200/80 bg-brand-50/60 p-4 text-center dark:border-brand-500/30 dark:bg-brand-500/10">
               {groupAvatarUrl ? (
                 <img
                   src={groupAvatarUrl}
@@ -221,7 +222,7 @@ export default function InvitePage({
               ) : (
                 <div
                   className={`mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold ${hasPersian(groupInitials) ? "font-fa" : ""}`}
-                  style={getAvatarStyle(group?.color || "#10b981")}
+                  style={getAvatarStyle(group?.color || "#66308d")}
                 >
                   {groupInitials}
                 </div>
@@ -230,8 +231,8 @@ export default function InvitePage({
                 <span className="mx-auto inline-flex max-w-full items-center gap-1">
                   <Tooltip label={groupName} asChild>
                     <span
-                      className={`min-w-0 truncate text-base font-semibold text-emerald-800 dark:text-emerald-200 ${
-                        groupNameHasPersian ? "font-fa text-right" : "text-center"
+                      className={`min-w-0 truncate text-base font-semibold text-brand-800 dark:text-brand-200 ${
+                        groupNameHasPersian ? "font-fa text-end" : "text-center"
                       }`}
                       dir="auto"
                       style={{ unicodeBidi: "plaintext" }}
@@ -242,15 +243,15 @@ export default function InvitePage({
                   {Boolean(group?.verified) && <VerifiedBadge size={15} />}
                 </span>
               </p>
-              <Tooltip label={group?.username || "group"} asChild>
+              <Tooltip label={group?.username || localize("group")} asChild>
                 <p
                   className={`mt-1 w-full truncate text-xs text-slate-600 dark:text-slate-300 ${
-                    hasPersian(group?.username || "") ? "font-fa text-right" : "text-center"
+                    hasPersian(group?.username || "") ? "font-fa text-end" : "text-center"
                   }`}
                   dir="auto"
                   style={{ unicodeBidi: "plaintext" }}
                 >
-                  @{group?.username || "group"}
+                  @{group?.username || localize("group")}
                 </p>
               </Tooltip>
               <p className="mt-1 inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
@@ -259,8 +260,8 @@ export default function InvitePage({
             </div>
             <p className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
               {alreadyMember
-                ? `You are already a member of this ${groupType.toLowerCase()}.`
-                : `You are about to join this ${groupType.toLowerCase()}. Do you want to continue?`}
+                ? localize("You are already a member of this {value0}.", { value0: groupType.toLowerCase() })
+                : localize("You are about to join this {value0}. Do you want to continue?", { value0: groupType.toLowerCase() })}
             </p>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
@@ -273,7 +274,7 @@ export default function InvitePage({
                   type="button"
                   onClick={handleJoin}
                   disabled={joining}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:opacity-70"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white transition hover:bg-brand-500 disabled:opacity-70"
                 >
                   {joining ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -287,7 +288,7 @@ export default function InvitePage({
                 <button
                   type="button"
                   onClick={handleOpenChats}
-                  className="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400"
+                  className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500"
                 >{localize("Open chats")}</button>
               )}
             </div>

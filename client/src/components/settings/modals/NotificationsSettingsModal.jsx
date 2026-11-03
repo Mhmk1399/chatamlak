@@ -18,9 +18,9 @@ export function NotificationsSettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
-      <div className="w-full max-w-sm rounded-3xl border border-emerald-100/70 bg-white p-6 shadow-xl dark:border-emerald-500/30 dark:bg-slate-950">
+      <div className="w-full max-w-sm rounded-3xl border border-brand-100/70 bg-white p-6 shadow-xl dark:border-brand-500/30 dark:bg-slate-950">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-200">{localize("Notifications")}</h3>
+          <h3 className="text-base font-semibold text-brand-800 dark:text-brand-200">{localize("Notifications")}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -47,7 +47,7 @@ export function NotificationsSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-400"
+            className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-500"
           >{localize("Done")}</button>
         </div>
       </div>

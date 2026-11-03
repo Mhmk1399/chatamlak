@@ -1,34 +1,24 @@
 {
-  "name": "Songbird",
-  "short_name": "Songbird",
-  "description": "Songbird chat",
+  "name": "گفتگوی اوج",
+  "short_name": "اوج",
+  "description": "فضای همکاری تیم املاک اوج",
+  "lang": "fa",
+  "dir": "rtl",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#10b981",
+  "background_color": "#f8f8fb",
+  "theme_color": "#66308d",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/ouj-icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/ouj-icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-192-maskable.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-512-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }

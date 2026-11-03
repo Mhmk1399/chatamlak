@@ -1,10 +1,22 @@
-# Chat Features
+# Ouj Chat Features
 
-Songbird includes conversation organization, message search, polls, topics, group controls, and group calls. Open **Chat tools** above the conversation to reach the available panels. Some panels appear only after selecting a conversation or when your role permits the action.
+**Ouj Chat / گفتگوی اوج** is the dedicated messenger for **املاک اوج** at `oujamlak.ir`. It includes conversation organization, message search, polls, topics, group controls, and group calls. Open **Chat tools** above the conversation to reach the available panels. Some panels appear only after selecting a conversation or when your role permits the action.
+
+Ouj Chat builds on the open-source Songbird project. The product branding preserves Songbird's upstream license, copyright notices and attribution.
+
+## Appearance and accessibility
+
+The Ouj identity uses primary purple **`#66308d`** for selected states and primary actions, with secondary teal **`#01ae9b`** for restrained accents and positive status. Most of the interface remains neutral in both light and dark themes so long conversations remain comfortable to read.
+
+Use the light/dark theme button beside the language control in the conversation header or Admin Panel header to change the appearance. Its accessible label names the mode the button will activate. The choice is remembered in this browser.
+
+Selected shell and overlay surfaces use a subtle shared glass treatment. If reduced transparency is requested or backdrop filtering is unavailable, those surfaces remain opaque and readable. Reduced-motion preferences suppress decorative effects while keeping controls and status feedback available. Theme and language changes do not modify the text of your messages.
+
+New default avatar colors use restrained tones that fit the Ouj palette. Existing saved user colors are preserved.
 
 ## Drafts
 
-Start typing in a conversation, then open another conversation or reload the page. Songbird restores the unfinished text when you return. If the draft includes a reply, its reply target is restored too.
+Start typing in a conversation, then open another conversation or reload the page. Ouj Chat restores the unfinished text when you return. If the draft includes a reply, its reply target is restored too.
 
 - Drafts are separate for each account and conversation. The stable account ID is used when available, with a username fallback.
 - A draft expires seven days after its latest saved change.
@@ -16,15 +28,15 @@ Selected attachments are not part of a text draft. They become part of the persi
 
 ## Persistent sending queue
 
-When you send a new text or attachment message, Songbird first saves it in the browser's IndexedDB storage. The composer is cleared only after that local save succeeds. The queue includes the message text, reply target, original request identity, and attachment bytes.
+When you send a new text or attachment message, Ouj Chat first saves it in the browser's IndexedDB storage. The composer is cleared only after that local save succeeds. The queue includes the message text, reply target, original request identity, and attachment bytes.
 
-If connectivity is interrupted, unsent messages can be restored after a page reload and sent using the same request identity, allowing the server to recognize repeated attempts. While Songbird is open, queued messages can also be sent in the background when you view another conversation.
+If connectivity is interrupted, unsent messages can be restored after a page reload and sent using the same request identity, allowing the server to recognize repeated attempts. While Ouj Chat is open, queued messages can also be sent in the background when you view another conversation.
 
 Transient failures use increasing retry delays. After at most five automatic attempts, the message remains failed rather than retrying indefinitely. Open **Chat tools → Outbox** to inspect queued work, retry a failed message, or remove a queued message. Removing an item from this queue is different from deleting a message that the server has already accepted.
 
 A locally queued message is not yet a server-confirmed message. Its sending state remains visible until delivery is confirmed or an error requires attention. If local storage is unavailable or full, the composer retains the input and shows an error.
 
-The queue is separate from the history cache. **Clear cache** in Songbird's data settings does not remove queued messages or text drafts. Clearing the site's data in browser settings, deleting the browser profile, or losing the device removes local drafts and queued work.
+The queue is separate from the history cache. **Clear cache** in Ouj Chat's data settings does not remove queued messages or text drafts. Clearing the site's data in browser settings, deleting the browser profile, or losing the device removes local drafts and queued work.
 
 :::info Device-local storage
 Drafts and the sending queue belong to this browser profile. They are not a backup of server history and are not transferred when you sign in on another device.
@@ -38,7 +50,7 @@ Use the speed button beside the voice waveform to cycle through:
 
 **1× → 1.25× → 1.5× → 1.75× → 2× → 1×**
 
-Songbird remembers the selected speed in the browser and applies it to other voice players. Changing the speed does not change the original recording.
+Ouj Chat remembers the selected speed in the browser and applies it to other voice players. Changing the speed does not change the original recording.
 
 ### Playback position
 
@@ -88,7 +100,7 @@ Open **Chat tools → Devices** to inspect your account's sessions, their browse
 
 Open **Chat tools → Schedule**, enter a text message and a future date/time, and choose **Schedule message**. The entered time uses your browser's local timezone and is sent to the server as an absolute time. Scheduling accepts times between ten seconds and one year ahead.
 
-Scheduled messages are saved on the server, so you can close the browser. **The Songbird server must be running to dispatch them.** If it is stopped at the due time, pending work is handled after it starts again. Sending rechecks membership, account state, and posting permissions. An item that fails those checks is shown with an error rather than bypassing the current rules.
+Scheduled messages are saved on the server, so you can close the browser. **The Ouj Chat server must be running to dispatch them.** If it is stopped at the due time, pending work is handled after it starts again. Sending rechecks membership, account state, and posting permissions. An item that fails those checks is shown with an error rather than bypassing the current rules.
 
 Use the schedule list to cancel an item that is still eligible for cancellation. This interface schedules text; it does not schedule attachments.
 
@@ -118,7 +130,15 @@ Use HTTPS outside localhost. Configure TURN for participants on restrictive or m
 
 ## Language and direction
 
-Use **فارسی / English** above the conversation to switch the chat interface and tools. The selection is remembered in the browser. Persian mode uses right-to-left application layout, localized labels and date/number formatting; user-written messages retain content-dependent direction.
+Persian is the default when this browser has no saved language preference. Use the global **فارسی / English** control to select either language on sign-in, invitation, chat and administration screens. The choice is remembered in this browser, including an explicitly selected English preference.
+
+Application-owned labels, dialogs, validation, status messages, human-readable errors and accessibility labels follow the selected language. Persian mode uses right-to-left application layout and localized date/number formatting. User-written messages, names, usernames, links, code snippets, identifiers and technical configuration keys retain their original content and direction where appropriate.
+
+## Installation and background notifications
+
+Where the browser offers installation, Ouj Chat uses Persian/RTL installation metadata for Persian and English/LTR metadata for English. Both manifests use square 192×192 and 512×512 icons derived from the original Ouj logo. Select your preferred language before opening the browser's install action; installed-app presentation is controlled by the browser and operating system.
+
+With notification permission enabled, the background worker keeps the selected language locally for application-owned notification wording, including generic message text and call prompts. Sender names and message-preview content are preserved as received, rather than translated. Notification delivery and installation remain subject to the browser, platform and permission settings.
 
 ## Long histories and performance
 

@@ -19,18 +19,18 @@ export default function MobileTabMenu({
           "max(0.5rem, calc(env(safe-area-inset-bottom) + var(--vv-bottom-offset, 0px) + 0.5rem))",
       }}
     >
-      <div className="mx-auto mb-2 flex max-w-sm items-center justify-between rounded-3xl border border-slate-300/90 bg-white/95 p-2 shadow-lg shadow-emerald-500/10 backdrop-blur-none dark:border-emerald-500/35 dark:bg-slate-900/95 md:backdrop-blur-sm">
+      <div className="ouj-glass mx-auto mb-2 flex max-w-sm items-center justify-between rounded-3xl border border-slate-300/90 bg-white/95 p-2 shadow-lg shadow-brand-500/10  dark:border-brand-500/35 dark:bg-slate-900/95 ">
         <button
           type="button"
           onClick={onCalls}
           className={`relative flex flex-1 flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-semibold transition ${
             mobileTab === "calls"
               ? "text-white"
-              : "text-emerald-700 dark:text-emerald-200"
+              : "text-brand-700 dark:text-brand-200"
           }`}
         >
           {mobileTab === "calls" ? (
-            <span className="absolute inset-0 rounded-2xl bg-emerald-500" />
+            <span className="absolute inset-0 rounded-2xl bg-brand-600" />
           ) : null}
           <span className="relative z-10">
             <Phone className="icon-anim-bob" />
@@ -43,11 +43,11 @@ export default function MobileTabMenu({
           className={`relative flex flex-1 flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-semibold transition ${
             mobileTab === "chats"
               ? "text-white"
-              : "text-emerald-700 dark:text-emerald-200"
+              : "text-brand-700 dark:text-brand-200"
           }`}
         >
           {mobileTab === "chats" ? (
-            <span className="absolute inset-0 rounded-2xl bg-emerald-500" />
+            <span className="absolute inset-0 rounded-2xl bg-brand-600" />
           ) : null}
           <span className="relative z-10">
             <Chat className="icon-anim-bob" />
@@ -60,11 +60,11 @@ export default function MobileTabMenu({
           className={`relative flex flex-1 flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-semibold transition ${
             mobileTab === "settings"
               ? "text-white"
-              : "text-emerald-700 dark:text-emerald-200"
+              : "text-brand-700 dark:text-brand-200"
           }`}
         >
           {mobileTab === "settings" ? (
-            <span className="absolute inset-0 rounded-2xl bg-emerald-500" />
+            <span className="absolute inset-0 rounded-2xl bg-brand-600" />
           ) : null}
           <span className="relative z-10">
             <Settings className="icon-anim-spin-dir" />

@@ -67,7 +67,7 @@ const LOG_ACTION_META = {
 };
 
 const LOG_COLORS = {
-  emerald: { icon: "text-emerald-600 dark:text-emerald-400" },
+  emerald: { icon: "text-brand-600 dark:text-brand-400" },
   rose:    { icon: "text-rose-500 dark:text-rose-400" },
   slate:   { icon: "text-slate-500 dark:text-slate-400" },
 };
@@ -160,7 +160,7 @@ const AdminLogView = forwardRef(function AdminLogView({ currentUser, active = tr
         open={confirmOpen}
         title={localize("Clear admin logs")}
         message="Clear all admin logs? This cannot be undone."
-        confirmLabel="Clear"
+        confirmLabel={localize("Clear")}
         busy={clearing}
         onConfirm={clearLogs}
         onClose={() => setConfirmOpen(false)}
@@ -182,13 +182,13 @@ const AdminLogView = forwardRef(function AdminLogView({ currentUser, active = tr
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{meta.label}</span>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{localize(meta.label)}</span>
                       {entry.status === "error" && <span className="text-[10px] font-semibold text-rose-500">{localize("failed")}</span>}
                     </div>
                     <p className={`mt-0.5 truncate text-[11px] text-slate-400 dark:text-slate-500 ${detailHasPersian ? "font-fa" : ""}`} dir="ltr">
                       <bdi>{detailText}</bdi>
                       {detailText ? " · " : ""}
-                      {entry.actorUsername ? `@${entry.actorUsername}` : "system"} · {fmtDateTime(entry.ts)}
+                      {entry.actorUsername ? `@${entry.actorUsername}` : localize("system")} · {fmtDateTime(entry.ts)}
                     </p>
                   </div>
                 </div>
@@ -265,6 +265,7 @@ const SystemLogView = forwardRef(function SystemLogView({ source, cachedData, on
 const _logCache = {};
 
 const LogsTab = forwardRef(function LogsTab({ currentUser, active = true }, ref) {
+  useAppLocale();
   const [source, setSource]                 = useState("admin");
   const [availableSources, setAvailableSources] = useState(null); // null = probing
 
@@ -355,10 +356,10 @@ const LogsTab = forwardRef(function LogsTab({ currentUser, active = true }, ref)
             disabled={disabled}
             className={`shrink-0 whitespace-nowrap rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 sm:px-3 sm:text-xs ${
               source === id
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
+                ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300"
                 : "border-transparent text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"
             }`}>
-            {label}
+            {localize(label)}
           </button>
         ))}
       </div>
