@@ -15,9 +15,10 @@ Ouj Chat / گفتگوی اوج is the dedicated messenger for املاک اوج 
 | Device-local queued work | `client/src/utils/chatOutbox.js`, `client/src/utils/cacheDb.js` |
 | Cache eviction | `client/src/hooks/chat/useChatCacheStats.js` |
 | Voice playback preferences | `client/src/utils/voicePlayback.js` |
+| Voice and circular-video media presentation | `client/src/components/chat/media/MessageFiles.jsx`, `client/src/components/chat/media/VideoMessageRecorder.jsx`, `client/src/components/chat/media/VideoNotePlayer.jsx`, `client/src/utils/videoNote.js`, `client/src/components/chat/messages/MessageComposer.jsx` |
 | Chat tools, search, sessions, topics and group permissions | `server/api/messaging.js`, `server/db.js` |
 | Scheduled publication and group posting policy | `server/lib/services/messagingService.js` |
-| Transactional event journal | `server/migrations/042-messaging-tools.js`, `server/migrations/043-transactional-chat-events.js` |
+| MongoDB persistence and transactional event journal | `server/db.js`, `server/db/mongoRepository.js`, `server/db/mongoSchema.js` and their modules; SQL migrations 42/43 are legacy import history |
 | Group call membership and signaling | `server/api/messaging.js`, `client/src/utils/groupCallSession.js` |
 | Locale and message formatting | `client/src/i18n/locale.js`, `client/src/i18n/fa.js` |
 | Theme controls and persisted appearance | `client/src/components/common/ThemeSwitcher.jsx`, `client/src/App.jsx` |
@@ -39,24 +40,29 @@ The API and domain sources own permissions and lifecycle rules. This contract re
 
 ## Canonical UI Map
 
-| Capability | Owner | Contract |
-|---|---|---|
-| Visual tokens and global scrollbars | `client/src/brand.css`, `client/src/index.css`, `DESIGN.md` | Reuse Ouj brand/accent and neutral tokens, shared `ouj-glass`, typography and scroll surfaces. |
-| Message composition | `MessageComposer.jsx` | Native textarea, automatic sizing, explicit validation and duplicate-submit prevention. |
-| Drafts | `chatDrafts.js` | Separate by stable account ID (normalized username fallback) and conversation; preserve text and reply target. |
-| Persistent sending queue | `chatOutbox.js` | Save message identity and file bytes before clearing composition. |
-| Voice speed and seek | `VoicePlaybackControls.jsx` | Native range input for pointer and keyboard seek; one browser-local speed preference. |
-| Modal focus | `useFocusTrap.js` and shared modal components | Portal, dialog semantics, keyboard focus containment and focus restoration. |
-| HTTP | `client/src/api/chatApi.js` | Use the credentialed API boundary for application requests. |
-| Chat tools and shared forms | `components/chat/tools/ToolDialog.jsx`, `ToolsPanels.jsx` | One modal owner, localized controls and explicit busy/error states. Native select/date controls accept platform popup behavior. |
-| Conversation filters and preferences | `MessagingToolbar.jsx`, `useMessagingTools.js` | Server-owned pin/archive/folder preferences; account-local active filter. |
-| Search and paginated tool data | `useToolData.js`, `messagingApi.js` | Cancel superseded requests; ignore stale results; explicit pagination. |
-| Message engagement | `MessageEngagement.jsx` | Shared reaction, pin, poll and topic actions under server authorization. |
-| Group call lifecycle | `useGroupCall.js`, `groupCallSession.js`, `GroupCallPanel.jsx` | Six-participant mesh room, explicit leave and media cleanup. |
-| Local performance measurements | `usePerfTelemetry.js`, `PerformancePanel.jsx` | Device-local measurements and user-controlled long-task recording. |
-| Application language | `components/common/LanguageSwitcher.jsx` and `i18n/locale.js` | Persian default, saved English/Persian preference, available on signed-out and signed-in routes. |
-| Application theme | `components/common/ThemeSwitcher.jsx` and `App.jsx` | One light/dark preference and consistent control beside language in conversation/admin headers. |
-| PWA identity and background locale | `manifest.webmanifest`, `manifest.en.webmanifest`, `sw.js`, `i18n/locale.js` | Locale-specific install metadata, Ouj square icons and browser-local notification language; platform owns installation UI. |
+| Capability | Canonical owner | Source of truth | Allowed variants | Verification |
+|---|---|---|---|---|
+| Visual tokens and global scrollbars | `client/src/brand.css`, `client/src/index.css`, `DESIGN.md` | Reuse Ouj brand/accent and neutral tokens, shared `ouj-glass`, typography and scroll surfaces. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Message composition | `MessageComposer.jsx` | Native textarea, automatic sizing, explicit validation and duplicate-submit prevention. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Drafts | `chatDrafts.js` | Separate by stable account ID (normalized username fallback) and conversation; preserve text and reply target. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Persistent sending queue | `chatOutbox.js` | Save message identity and file bytes before clearing composition. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Voice speed and seek | `VoicePlaybackControls.jsx` | Native range input for pointer and keyboard seek; one browser-local speed preference. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Recording gesture and voice capture | `RecordingButton.jsx`, `useHoldToRecord.js`, `useVoiceRecording.js`, `MessageComposer.jsx` | Tap switches mode; hold records; upward drag locks; unlocked release queues immediately. Locked capture supports explicit send, review and cancellation. | Shared | MessageComposer.recording.test.jsx; video-note-flow.mjs |
+| Circular video recording and playback | `VideoMessageRecorder.jsx`, `VideoNotePlayer.jsx`, `videoNote.js` and `MessageComposer.jsx` | Distinct `video_note` kind, centered hold capture, locked review/send and shared durable upload path. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Anchored creation menu | `components/common/AnchoredMenu.jsx`, `SidebarHeader.jsx` | Portal outside clipped surfaces; locale-aligned trigger anchoring, viewport clamping, keyboard navigation and focus restoration. | Shared | SidebarHeader.createMenu.test.jsx |
+| Modal focus | `useFocusTrap.js` and shared modal components | Portal, dialog semantics, keyboard focus containment and focus restoration. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| HTTP | `client/src/api/chatApi.js` | Use the credentialed API boundary for application requests. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Chat tools and shared forms | `components/chat/tools/ToolDialog.jsx`, `ToolsPanels.jsx` | One modal owner, localized controls and explicit busy/error states. Native select/date controls accept platform popup behavior. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Conversation filters and preferences | `MessagingToolbar.jsx`, `useMessagingTools.js` | Server-owned pin/archive/folder preferences; account-local active filter. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Search and paginated tool data | `useToolData.js`, `messagingApi.js` | Cancel superseded requests; ignore stale results; explicit pagination. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Message engagement | `MessageEngagement.jsx` | Shared reaction, pin, poll and topic actions under server authorization. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Group call lifecycle | `useGroupCall.js`, `groupCallSession.js`, `GroupCallPanel.jsx` | Six-participant mesh room, explicit leave and media cleanup. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Local performance measurements | `usePerfTelemetry.js`, `PerformancePanel.jsx` | Device-local measurements and user-controlled long-task recording. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Application language | `components/common/LanguageSwitcher.jsx` and `i18n/locale.js` | Persian default, saved English/Persian preference, available on signed-out and signed-in routes. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Application theme | `components/common/ThemeSwitcher.jsx` and `App.jsx` | One light/dark preference and consistent control beside language in conversation/admin headers. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| PWA identity and background locale | `manifest.webmanifest`, `manifest.en.webmanifest`, `sw.js`, `i18n/locale.js` | Locale-specific install metadata, Ouj square icons and browser-local notification language; platform owns installation UI. | Existing documented variant | Component tests; relevant browser flow in client/test/e2e/ |
+| Select/Listbox | Native select in MessageEngagement.jsx, MessagingToolbar.jsx and ToolsPanels.jsx | DESIGN.md; this contract accepts platform-owned popups | Native | Browser component tests and messaging-flow.mjs |
+| Date | Native datetime-local in ToolsPanels.jsx | DESIGN.md; browser-local entry converts to an absolute scheduling instant | Native | Scheduled delivery in messaging-flow.mjs |
 
 Existing unrelated screens retain their established behavior until migrated through their shared owner.
 
@@ -98,10 +104,10 @@ New-message sending is queued locally and displayed optimistically after the dur
 
 ## Durable event recovery
 
-- Migrations 42 and 43 establish the tool data and transactional event journal. The durable event and source mutation commit together for covered database changes.
+- MongoDB is the active indexed record store. It preserves public UUIDs and API field names, stores messages as separate encrypted records, and commits covered state changes and their journal events in one transaction. A replica set is required; standalone MongoDB and a blank URI are not silent fallback modes. Historical SQL migrations 42/43 are legacy import history.
 - Replay only after the account's saved cursor and reapply current membership/viewer restrictions. Persist a cursor only after processing that page of changes.
 - Reconcile loaded edits/deletions and invalidate affected inactive-history caches. A live-event connection alone is not proof that all prior changes have been applied.
-- Journal replay is synchronization, not deleted-content recovery or a backup. Do not label PostgreSQL behavior verified based solely on SQLite tests.
+- Journal replay is synchronization, not deleted-content recovery or a backup. File metadata is in MongoDB; local/S3 binaries remain separate. An import, transaction, restore or cloud topology is verified only by the checks actually exercised against it.
 
 ## Scheduling, polls, topics and group policy
 
@@ -133,12 +139,27 @@ New-message sending is queued locally and displayed optimistically after the dur
 
 ## Voice playback
 
+- Use the large circular play/pause action, a dense seekable waveform, elapsed/total time and file size as one coherent media control. Keep pointer targets and visible keyboard focus usable in both themes and both directions.
 - Supported speeds are 1, 1.25, 1.5, 1.75 and 2. Cycle back to 1 after 2.
 - Store the selected speed in the current browser and apply it consistently to voice players. The original recording is unchanged.
 - The native range control exposes an accessible name, current position and total duration; keyboard focus must be visible.
 - Seek must preserve the playing/paused choice. Seeking before metadata is available is applied once metadata arrives.
 - Disable unavailable playback and seek actions while processing; disable seek if the duration is unknown.
 - Clicking or dragging voice controls must not trigger the enclosing message's swipe or context actions.
+
+## Circular video messages
+
+- Preserve `kind=video_note` as a distinct media type throughout upload metadata, durable queue restoration and message rendering. Ordinary video attachments retain their existing rectangular presentation.
+- Render the recorder through a portal centered in the viewport on mobile and desktop. Reuse modal semantics, focus containment, Escape/cancel and focus restoration; the dialog must not inherit positioning or clipping from the composer.
+- Camera/microphone capture requires a supported secure context (HTTPS or localhost) and explicit browser permissions. Provide actionable permission/unsupported errors without publishing a message.
+- The shared composer button switches voice/video on a short tap. A 250 ms hold requests devices and starts capture when ready. An upward movement of 72 CSS pixels locks capture. Releasing an unlocked recording immediately queues it; releasing after locking does not send it. Prevent the original release's synthesized click from activating locked Send.
+- The video recorder is centered on the viewport on phones and desktop. Hold capture starts automatically once the preview is ready. The standalone/manual retry flow offers preview and Start. Releasing before device acquisition completes cancels the request and stops any late-arriving tracks.
+- Locked recording provides explicit Send, review and cancellation. Video also supports pause/resume; cap recorded content at 60 seconds. Review and the duration limit retain a preview without publication. A record-again action leaves the old gesture and requires a new explicit Start.
+- Offer keyboard hold with Space/Enter, Arrow Up to lock, Escape to cancel and an explicit Lock alternative. Application-owned instructions, permission recovery and errors follow the selected locale.
+- Closing, cancelling, changing conversation or unmounting stops every owned media track, releases recorder resources and discards active capture. If an asynchronous capture request resolves after dismissal, stop its returned tracks instead of reattaching them.
+- Preview and unfinished capture are not durable queued work. On unlocked release or explicit Send, reuse attachment validation, request identity, upload progress and the persistent outbox; clear accepted composition only after its durable save succeeds. If local queuing fails, retain captured voice/video bytes for retry and show a localized error.
+- Render video-note playback inline in a circular frame with play/pause, seek, mute/unmute and time. Keep seek and mute keyboard-accessible, and avoid propagating those actions to enclosing message gestures.
+- Preserve file availability/processing/error behavior from the shared media infrastructure. Do not claim recording or playback compatibility on browser/OS versions that were not exercised.
 
 ## Flow ledger
 
@@ -149,6 +170,7 @@ New-message sending is queued locally and displayed optimistically after the dur
 | Clear cache | Remove cache-owned entries | Keep drafts and pending work | Preserve the original cache error behavior |
 | Change voice speed | Apply locally | Update audio playback and browser preference | Retain a usable session preference if persistence is unavailable |
 | Seek in a voice message | Update target position | Update playback position without changing play/pause intent | Defer the seek until metadata is available |
+| Record voice or circular video | Hold to acquire devices and capture; drag up to lock | Unlocked release queues immediately; locked capture requires explicit Send or review | Retain bytes if local queue fails; cancel/context change discards capture and releases devices |
 | Save chat preference | Await server result | Refresh account preferences and active filter | Preserve the confirmed state and show inline error |
 | Search/load more | Cancel or invalidate earlier request | Append only to the matching committed search | Preserve current input and expose an actionable error |
 | Schedule message | Await durable server save | Clear the schedule form and reload the list | Retain text/time and show validation or dispatch error |
@@ -161,4 +183,4 @@ Run client unit tests, relevant Chromium and Firefox component tests, client lin
 
 Focused evidence includes `client/test/utils/chatDrafts.test.js`, `client/test/components/chat/ChatOutbox.test.jsx` and `client/test/components/chat/VoicePlaybackControls.test.jsx`, with tool, journal, permission and call coverage alongside the implementation. Test local save failure, account/conversation isolation, file-byte restoration, cache eviction, acknowledged retries, keyboard seek and remembered playback speed. Verify narrow and desktop viewports, light/dark themes and Persian text with reply context.
 
-Exercise search paging and stale queries, edits/deletions during disconnection, lost group permissions, failed scheduled sends, device revocation, topic/poll permissions and group-call admission/media cleanup. Verify Persian-first startup and saved English selection on signed-out, invitation, chat and admin routes, including errors and accessibility labels. Exercise both themes and their header controls, opaque/reduced-transparency fallback, reduced motion and unchanged user/code content after locale changes. Check both manifests, icon dimensions, background-worker locale persistence, unchanged notification message content and preservation of existing avatar colors. State the browsers/platforms actually exercised; do not generalize from web-route tests to untested installed-app environments. Verify migrations and concurrent writes independently on each deployed database; functional checks do not establish a production capacity limit.
+Exercise search paging and stale queries, edits/deletions during disconnection, lost group permissions, failed scheduled sends, device revocation, topic/poll permissions and group-call admission/media cleanup. Verify Persian-first startup and saved English selection on signed-out, invitation, chat and admin routes, including errors and accessibility labels. Exercise both themes and their header controls, opaque/reduced-transparency fallback, reduced motion and unchanged user/code content after locale changes. Check both manifests, icon dimensions, background-worker locale persistence, unchanged notification message content and preservation of existing avatar colors. For video notes, exercise centered phone/desktop dialogs, tap-to-switch, hold-to-record, upward lock, unlocked-release sending, locked review, video pause/resume, duration limit, explicit Send, denied permissions, late capture after dismissal, conversation changes and complete media-track cleanup. Verify `video_note` survives queue restoration/upload metadata and remains distinct from ordinary videos; verify inline seek/mute and the voice time/size controls with keyboard and touch. State the browsers/platforms actually exercised; do not generalize from web-route tests to untested installed-app environments. Verify collection/index initialization and concurrent transactions against the deployed replica set. Native backup archives contain records and encryption-key material; keep binary-file backups separate. Online MongoDB restore is rejected with HTTP 409, and offline restore requires stopped writers plus explicit `--yes --offline`. Isolated unit/API tests use injected repositories; real-Mongo integration uses a dedicated test/e2e database or a temporary real replica set. Functional checks do not establish a production capacity limit.

@@ -35,6 +35,7 @@ import {
 } from "../../../utils/messageContent.js";
 import { resolveMention, getCachedMention } from "../../../utils/mentions.js";
 import { summarizeFiles } from "../../../utils/messagePreview.js";
+import { isVideoNote } from "../../../utils/videoNote.js";
 import { resolveForwardedTarget } from "../../../utils/forwardOrigin.js";
 import Avatar from "../../common/Avatar.jsx";
 import UserRoleBadge from "../../common/UserRoleBadge.jsx";
@@ -318,6 +319,9 @@ export const MessageItem = memo(function MessageItem({
       (hasMixedVoiceAndOtherFiles &&
         /^Sent a voice message$/i.test(normalizedBodyText)));
   const messageBodyRef = useRef(null);
+  const compactVoice = shouldHideGeneratedFileBody && hasFiles && messageFiles.every((file) => String(file.mimeType || "").startsWith("audio/"));
+  const roundVideo = shouldHideGeneratedFileBody && messageFiles.length === 1 && isVideoNote(messageFiles[0]);
+  const mediaBubbleClass = compactVoice ? "ouj-voice-bubble" : roundVideo ? "ouj-video-bubble" : "";
   const suppressCodeClickUntilRef = useRef(0);
   const mentionDebugEnabled =
     typeof window !== "undefined" &&
@@ -1092,7 +1096,7 @@ export const MessageItem = memo(function MessageItem({
               <ContextMenuSurface
                 as="div"
                 data-message-bubble
-                className={`relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[calc(100vw-5.5rem)] sm:max-w-[86%] md:max-w-[min(84%,calc(100%-2rem))] ${
+                className={`${mediaBubbleClass} relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[calc(100vw-5.5rem)] sm:max-w-[86%] md:max-w-[min(84%,calc(100%-2rem))] ${
                   hasMarkdownCodeBlock ? "min-w-36" : "min-w-0"
                 } ${
                   hasFiles
@@ -1239,7 +1243,7 @@ export const MessageItem = memo(function MessageItem({
                     @{mentionDebug?.active ?? 0}/{mentionDebug?.total ?? 0}
                   </div>
                 ) : null}
-                <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                <div dir={compactVoice || roundVideo ? "ltr" : undefined} className="ouj-message-meta mt-2 flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                   <span>{msg._timeLabel || formatTime(msg.created_at)}</span>
                   {isEdited ? <span>{localize("edited")}</span> : null}
                 </div>
@@ -1249,7 +1253,7 @@ export const MessageItem = memo(function MessageItem({
             <ContextMenuSurface
               as="div"
               data-message-bubble
-              className={`relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[78%] sm:max-w-[82%] md:max-w-[75%] ${
+              className={`${mediaBubbleClass} relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[78%] sm:max-w-[82%] md:max-w-[75%] ${
                 hasMarkdownCodeBlock ? "min-w-36" : "min-w-0"
               } ${
                 hasFiles
@@ -1425,7 +1429,8 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               ) : null}
               <div
-                className={`mt-2 flex w-full items-center text-[10px] ${
+                dir={compactVoice || roundVideo ? "ltr" : undefined}
+                className={`ouj-message-meta mt-2 flex w-full items-center text-[10px] ${
                   isOwn
                     ? "text-brand-900/80 dark:text-brand-50/80"
                     : "text-slate-500 dark:text-slate-400"

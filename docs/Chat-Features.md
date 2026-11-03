@@ -14,6 +14,10 @@ Selected shell and overlay surfaces use a subtle shared glass treatment. If redu
 
 New default avatar colors use restrained tones that fit the Ouj palette. Existing saved user colors are preserved.
 
+## Start a conversation
+
+Open the **+** menu beside the conversation list to choose **New direct message**, **New group**, or **New channel**. The menu appears beside its button above the surrounding interface, follows the current right-to-left or left-to-right layout, and shifts or opens on the other side when needed to stay within the viewport. Use the arrow keys to move between choices and **Escape** to close it.
+
 ## Drafts
 
 Start typing in a conversation, then open another conversation or reload the page. Ouj Chat restores the unfinished text when you return. If the draft includes a reply, its reply target is restored too.
@@ -42,7 +46,29 @@ The queue is separate from the history cache. **Clear cache** in Ouj Chat's data
 Drafts and the sending queue belong to this browser profile. They are not a backup of server history and are not transferred when you sign in on another device.
 :::
 
+## Record voice and video messages
+
+With an empty composer and no pending attachments, use the **shared microphone/camera button**. Its icon identifies the selected recording mode. A short tap switches between voice and circular video; it does not start recording or send a message.
+
+| Action | Result |
+|---|---|
+| Hold the button for about **250 ms** | Begin capture in the selected mode once the required permissions and recording stream are ready. |
+| Release an active recording without locking | Finish and immediately submit it through the persistent sending queue. |
+| Drag upward by at least **72 px**, or use **Lock** | Keep recording after release, with explicit **Send** and **Cancel** controls. |
+| Choose **Review** for a locked voice recording | End capture and retain a preview until you explicitly choose **Send** or **Cancel**; review does not publish it. |
+| Cancel, close the recorder, or switch conversations | Discard active capture and release its microphone/camera tracks without publishing it. |
+
+For keyboard access, focus the recording button and hold **Space** or **Enter**. Use **ArrowUp** to lock and **Escape** to cancel. Releasing the key during an unlocked active recording follows the same immediate-send behavior as releasing the pointer. The visible **Lock**, **Send**, and **Cancel** buttons provide alternatives to the drag gesture. Locked voice recording supports **Review**, **Send**, and **Cancel**. Recording pause/resume is available only for video.
+
+Use HTTPS outside `localhost` and allow the microphone, plus the camera for video. Releasing before capture has actually started, denying permission, cancelling, or changing conversations must not send a message; a permission response arriving after cancellation is discarded. Camera and microphone tracks are stopped when capture is discarded.
+
+Immediate submission still waits for successful local persistence in the outbox; it is not server delivery confirmation. A recording preview that has not entered the queue is temporary and does not survive closing the recorder or reloading the page. See [Persistent sending queue](#persistent-sending-queue) for offline delivery and retry behavior.
+
 ## Voice message playback
+
+### Play, pause and details
+
+Use the large round play/pause button to control a voice message. The denser waveform shows the played portion and also acts as the seek area. Elapsed/total time and file size are displayed with the recording, so you can check its duration and download size before continuing.
 
 ### Playback speed
 
@@ -57,6 +83,27 @@ Ouj Chat remembers the selected speed in the browser and applies it to other voi
 Click or drag along the waveform to move to another point in the recording. The elapsed and total time show the current position.
 
 The playback-position control also supports the keyboard: focus it with **Tab**, then use the arrow keys to change the time. Seeking preserves the playing or paused state. Seeking is unavailable while the recording is still being processed or its duration is not yet known.
+
+## Circular video messages
+
+A video message is a short circular recording, distinct from an ordinary attached video. Sending a regular video file keeps its normal rectangular presentation; it does not automatically become a circular video message.
+
+### Record and send
+
+Select the camera mode with a short tap on the shared microphone/camera button, then hold to record using the [recording controls above](#record-voice-and-video-messages). The video recorder appears in a centered dialog on both mobile and desktop, rather than being constrained to the message input area.
+
+1. Use HTTPS, or `localhost` for local development, and allow camera and microphone access when the browser asks.
+2. The dialog displays the camera preview and recording controls. Granting access or viewing a preview alone does not send a message.
+3. Hold to record. Release an unlocked active recording to send immediately, or drag upward/use **Lock** to continue hands-free. Video messages are limited to **60 seconds** of recorded content.
+4. In locked mode, use pause, resume and stop/review as needed, then explicitly send or cancel. Stopping to review does not publish the clip.
+
+Cancelling, closing the recorder, or switching conversations stops camera and microphone tracks and discards the active capture. Late permission results cannot publish a discarded clip. If access is denied or the browser cannot record, the recorder shows an error without sending a message.
+
+Releasing an unlocked recording or choosing **Send** in locked mode submits the clip through the same attachment upload and persistent sending queue as other message files. Its video-message type is preserved through that path, and the server's normal attachment limits still apply. Until the queue has accepted it, a preview is temporary and should not be treated as saved work after closing the recorder.
+
+### Playback
+
+Received video messages play inline in a circular frame. Use play/pause, the seek control and mute/unmute to control playback; the time display shows the current position. These controls belong to the video message, so they do not require opening the ordinary video viewer.
 
 ## Conversation organization
 
@@ -148,9 +195,9 @@ Open **Chat tools → Performance** to compare **Loaded messages** with **Render
 
 ## Deployment notes
 
-Normal server startup applies migration **42** for messaging-tool data and migration **43** for transactional event journaling. Back up your existing database before upgrading, following the [database guide](./Database-Commands).
+Normal server startup initializes the MongoDB collections and indexes required by this branch. Message changes and their replay-journal records use MongoDB transactions, so a replica set is required. Existing SQL releases and their migrations 42/43 are legacy import sources; use the explicit [MongoDB import procedure](./MongoDB#import-a-legacy-sql-installation) rather than starting the active server against a SQL database.
 
-SQLite and PostgreSQL code paths are provided. Successful checks on one database do not certify the other: verify migrations, permissions, journal replay, and concurrent writes against the database you deploy. The features above do not imply Telegram-scale capacity; measure your own workload before increasing user counts.
+Back up MongoDB records, encryption keys and local/S3 binary files together. The MongoDB change preserves public UUIDs and API field names; files remain with their storage provider and are not moved into chat documents or GridFS. Verify imports, permissions, journal replay and concurrent writes on your own deployment. The features above do not imply Telegram-scale capacity; measure your workload before increasing user counts.
 
 ## Related guides
 

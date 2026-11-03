@@ -11,13 +11,12 @@ services:
       - key: BIND_ADDRESS
         value: 0.0.0.0
       - key: DB_CLIENT
-        value: postgres
-      # Provide your PostgreSQL connection string (e.g. from Neon, Supabase, Aiven, or Render Postgres)
-      # Example: postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/songbird?sslmode=require
-      - key: POSTGRES_URL
+        value: mongodb
+      # Configure an authenticated MongoDB replica set or Atlas cluster.
+      - key: MONGODB_URI
         sync: false
-      - key: POSTGRES_SSL
-        value: "true"
+      - key: MONGODB_DATABASE
+        value: ouj_chat
       # Worker & media processing (auto-starts internal media worker inside container)
       - key: STORAGE_PROCESSING_MODE
         value: auto

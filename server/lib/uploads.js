@@ -1,5 +1,5 @@
 import rateLimit from "express-rate-limit";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 
 export function createUploadTools({
   fs,
@@ -169,6 +169,8 @@ export function createUploadTools({
   const getUploadKind = (uploadType, mimeType = "") => {
     const type = String(mimeType || "").toLowerCase();
 
+    if (uploadType === "video_note") return type.startsWith("video/") ? "video_note" : null;
+
     if (type.startsWith("video/")) {
       return "media";
     }
@@ -211,15 +213,15 @@ export function createUploadTools({
     });
   };
 
-  const removeStoredFileNames = (storedNames = []) => {
-    storedNames.forEach((storedName) => {
+  const removeStoredFileNames = async (storedNames = []) => {
+    for (const storedName of storedNames) {
       try {
         const fileName = path.basename(String(storedName || "").trim());
-        if (!fileName) return;
-        const stillReferenced = adminGetRow(
-          dbKnex("chat_message_files").select(dbKnex.raw("1 as found")).where("stored_name", fileName).first(),
+        if (!fileName) continue;
+        const stillReferenced = await adminGetRow(
+          dbKnex("chat_message_files").select(dbKnex.literal(1, "found")).where("stored_name", fileName).first(),
         );
-        if (stillReferenced?.found) return;
+        if (stillReferenced?.found) continue;
 
         const filePath = path.join(uploadRootDir, fileName);
 
@@ -229,7 +231,7 @@ export function createUploadTools({
       } catch (_) {
         // best effort cleanup
       }
-    });
+    }
   };
 
   const removeAvatarByUrl = (avatarUrl = "") => {

@@ -20,6 +20,18 @@ function makeData(database) {
 }
 
 describe("ServicesTab database card", () => {
+  test("mongodb mode displays the native engine and latency", async () => {
+    render(<ServicesTab data={makeData({ client: "mongodb", configured: true, reachable: true, latencyMs: 7 })} />);
+    const card = page.getByRole("button", { name: /database/i });
+    await expect.element(card).toBeEnabled();
+    await expect.element(card.getByText("MongoDB | 7ms")).toBeInTheDocument();
+  });
+  test("unreachable mongodb shows a recoverable connection status", async () => {
+    render(<ServicesTab data={makeData({ client: "mongodb", configured: true, reachable: false })} />);
+    const card = page.getByRole("button", { name: /database/i });
+    await expect.element(card.getByText("MongoDB configured but unreachable.")).toBeInTheDocument();
+    await expect.element(card.getByText("Unreachable", { exact: true })).toBeInTheDocument();
+  });
   test("sqlite mode renders an active Database card with latency", async () => {
     render(
       <ServicesTab

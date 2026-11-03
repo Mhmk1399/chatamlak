@@ -1,5 +1,5 @@
 import { Queue, Worker } from "bullmq";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import { readEnvBool } from "../settings/env.js";
 
 export function createMediaQueueManager({
@@ -49,7 +49,7 @@ export function createMediaQueueManager({
     const { sql: checkSql, params: checkParams } = toSql(
       dbKnex("chat_message_files").where("id", fileId).first(),
     );
-    const row = adminGetRow ? adminGetRow(checkSql, checkParams) : null;
+    const row = adminGetRow ? await adminGetRow(checkSql, checkParams) : null;
 
     if (!row) return;
     if (row.processing_status === "ready") return; // Already processed by remote compute
@@ -80,7 +80,7 @@ export function createMediaQueueManager({
           const { sql: updateSql, params: updateParams } = toSql(
             dbKnex("chat_message_files").where("id", fileId).update({ processing_status: "ready" }),
           );
-          adminRun(updateSql, updateParams);
+          await adminRun(updateSql, updateParams);
         }
 
         // Broadcast SSE notification
@@ -97,7 +97,7 @@ export function createMediaQueueManager({
         const { sql: failSql, params: failParams } = toSql(
           dbKnex("chat_message_files").where("id", fileId).update({ processing_status: "failed" }),
         );
-        adminRun(failSql, failParams);
+        await adminRun(failSql, failParams);
       }
     }
   }

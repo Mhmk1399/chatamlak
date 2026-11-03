@@ -21,16 +21,13 @@ nano .env
 | `SERVER_PORT` | `integer` | `5174` | پورت سرور API. (`PORT` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
 | `CLIENT_PORT` | `integer` | `80` | پورت listen مربوط به Nginx (همان چیزی که کاربران به آن متصل می‌شوند). |
 | `BIND_ADDRESS` | `string` | `localhost` | رابط شبکه مورد اتصال. برای VPS / شبکه‌های خصوصی از `localhost` استفاده کنید تا هنگام غیرفعال بودن فایروال، بک‌اند قابل افشا نباشد؛ و برای کانتینرهای Docker از `0.0.0.0` استفاده کنید. |
-| `DATA_DIR` | `string` | `<project_root>/data` | مسیر مطلق پوشه داده (پایگاه داده، آپلودها، پشتیبان‌ها). این مقدار را روی پلتفرم‌های ابری (Railway، Render، Fly.io) به مسیر mount شده volume پایدار پلتفرم تنظیم کنید. |
-| `DB_CLIENT` | `string` | `sqlite3` | درایور پایگاه داده (`sqlite3` یا `postgres`). |
-| `POSTGRES_HOST` | `string` | `127.0.0.1` | آدرس هاست پایگاه داده PostgreSQL. |
-| `POSTGRES_PORT` | `integer` | `5432` | پورت پایگاه داده PostgreSQL. |
-| `POSTGRES_USER` | `string` | `postgres` | نام کاربری پایگاه داده PostgreSQL. |
-| `POSTGRES_PASSWORD` | `string` | `postgres` | رمز عبور پایگاه داده PostgreSQL. |
-| `POSTGRES_DB` | `string` | `songbird` | نام پایگاه داده PostgreSQL. |
-| `POSTGRES_URL` | `string` | `null` | رشته اتصال اختیاری کامل برای PostgreSQL. |
-| `POSTGRES_SSL` | `boolean` | `false` | فعالسازی SSL برای اتصالات PostgreSQL. |
-| `NODE_EXTRA_CA_CERTS` | `string` | `""` | مسیر مطلق به یک فایل گواهی ریشه مورد اعتماد اضافی با فرمت PEM (الزامی برای پایگاه های داده مدیریت شده مانند Aiven یا AWS RDS که از CA اختصاصی/سلف سایند استفاده میکنند). |
+| `DATA_DIR` | `string` | `<project_root>/data` | مسیر محلی آپلود، پشتیبان و فایل زمان اجرا؛ سرویس MongoDB فایل‌های دیتابیس را جداگانه مدیریت می‌کند. |
+| `DB_CLIENT` | `string` | `mongodb` | مقدار `mongodb` را نگه دارید؛ مقدارهای SQL قدیمی از سوی سرور فعال رد می‌شوند. |
+| `MONGODB_URI` | `string` | `""` | رشتهٔ اتصال خصوصی و الزامی replica set یا Atlas. در `.env.example` عمداً خالی است و fallback مربوط به SQL وجود ندارد. [MongoDB](./MongoDB.md) را ببینید. |
+| `MONGODB_DATABASE` | `string` | `ouj_chat` | دیتابیس فعال برنامه در MongoDB؛ در نمونه‌های مختلف برنامه یکسان باشد. |
+| `MONGODB_MAX_POOL_SIZE` | `integer` | `20` | بیشترین اتصال pool کلاینت MongoDB برای هر فرایند برنامه. |
+| `MONGODB_CONNECT_TIMEOUT_MS` | `integer` | `10000` | مهلت انتخاب سرور MongoDB بر حسب میلی‌ثانیه. |
+| `NODE_EXTRA_CA_CERTS` | `string` | `""` | مسیر گواهی PEM مرجع مورداعتماد اضافی، در صورت نیاز ارائه‌دهندهٔ دیتابیس یا شبکه. |
 | `REDIS_HOST` | `string` | `""` | آدرس اختیاری هاست Redis. در صورت تنظیم، Songbird از Redis برای صف های پس زمینه BullMQ (پردازش رسانه)، مدیریت نشست ها و pub/sub به جای مکانیزم درون-فرآیندی استفاده میکند. |
 | `REDIS_PORT` | `integer` | `6379` | پورت اختیاری Redis. |
 | `REDIS_URL` | `string` | `""` | آدرس URL اختیاری اتصال به Redis (مانند `redis://user:pass@host:port`). |
@@ -170,3 +167,7 @@ sudo systemctl restart songbird
 ```bash
 sudo systemctl reload nginx
 ```
+
+## متغیرهای آزمون و ورود دیتابیس
+
+`MONGODB_TEST_URI` یک دیتابیس اختصاصی integration با نام دارای `test` یا `e2e` را انتخاب می‌کند. بدون آن، `test:mongo` یک replica set موقت و واقعی می‌سازد. `MONGOMS_SYSTEM_BINARY` می‌تواند فایل اجرایی محلی و سازگار MongoDB را برای آزمون انتخاب کند. `LEGACY_POSTGRES_URI` ورودی خصوصی و فقط مربوط به `db:import-sql -- --postgres` است. مقدار `DB_CLIENT=mongodb` یا پیش‌فرض فعلی را نگه دارید؛ مقدارهای انتخاب‌گر SQL رد می‌شوند. `POSTGRES_*` و `DATABASE_URL` قدیمی، اتصال فعال MongoDB را تنظیم نمی‌کنند. راه‌اندازی و بازیابی کامل در [MongoDB](./MongoDB.md) آمده است.

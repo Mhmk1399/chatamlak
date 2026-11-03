@@ -158,11 +158,11 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
   useAppLocale();
   const [appInfo, setAppInfo] = useState(null);
   const [maintenanceInfo, setMaintenanceInfo] = useState({
-    engine: "sqlite",
-    backupExtension: ".db",
-    restoreAccept: ".db,application/x-sqlite3,application/vnd.sqlite3",
+    engine: "mongodb",
+    backupExtension: ".json.gz",
+    restoreAccept: ".json.gz,application/gzip",
     deleteAvailable: false,
-    offlineRestoreRequired: false,
+    offlineRestoreRequired: true,
     offlineDeleteRequired: false,
   });
   const [rowStatus, setRowStatus] = useState({});
@@ -215,10 +215,10 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
   useImperativeHandle(ref, () => ({ refresh: () => { loadAppInfo(); loadMaintenanceInfo(); } }), [loadAppInfo, loadMaintenanceInfo]);
 
   const confirmVacuum = async () => {
-    flashStatus("vacuum", "busy", "Vacuuming…");
+    flashStatus("vacuum", "busy", maintenanceInfo.engine === "mongodb" ? "Cleaning…" : "Vacuuming…");
     try {
       const r = await api.post("/api/admin/maintenance/vacuum", {});
-      flashStatus("vacuum", r.ok ? "success" : "error", r.ok ? "Vacuumed" : "Failed");
+      flashStatus("vacuum", r.ok ? "success" : "error", r.ok ? maintenanceInfo.engine === "mongodb" ? "Cleaned" : "Vacuumed" : "Failed");
     } catch {
       flashStatus("vacuum", "error", "Failed");
     } finally {
@@ -357,7 +357,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             icon={HardDriveDownload}
             iconAnim="icon-anim-drop"
             label={localize("Backup database")}
-            description={maintenanceInfo.engine === "postgres" ? localize("Create and download a native PostgreSQL backup archive.") : localize("Download the database file to your device.")}
+            description={maintenanceInfo.engine === "mongodb" ? localize("Download a MongoDB record backup. Back up uploaded media separately.") : maintenanceInfo.engine === "postgres" ? localize("Create and download a native PostgreSQL backup archive.") : localize("Download the database file to your device.")}
             onClick={downloadDb}
             status={rowStatus.backup}
           />
@@ -365,7 +365,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
             icon={HardDriveUpload}
             iconAnim="icon-anim-lift"
             label={localize("Restore database")}
-            description={maintenanceInfo.offlineRestoreRequired ? localize("PostgreSQL restores require Songbird to be stopped; use the db:restore CLI command.") : localize("Replace the current database by uploading a backup file.")}
+            description={maintenanceInfo.offlineRestoreRequired ? localize("Stop the server, then run db:restore with --file, --yes and --offline.") : localize("Replace the current database by uploading a backup file.")}
             onClick={() => fileRef.current?.click()}
             status={rowStatus.restore}
             disabled={maintenanceInfo.offlineRestoreRequired}
@@ -380,8 +380,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
           <ActionRow
             icon={Brush}
             iconAnim="icon-anim-wiggle"
-            label={localize("Vacuum database")}
-            description={maintenanceInfo.engine === "postgres" ? localize("Run PostgreSQL VACUUM ANALYZE.") : localize("Reclaim unused space and defragment the DB file.")}
+            label={maintenanceInfo.engine === "mongodb" ? localize("Clean up storage") : localize("Vacuum database")}
+            description={maintenanceInfo.engine === "mongodb" ? localize("Clean unused remote media. MongoDB manages database space automatically.") : maintenanceInfo.engine === "postgres" ? localize("Run PostgreSQL VACUUM ANALYZE.") : localize("Reclaim unused space and defragment the DB file.")}
             onClick={() => setVacuumConfirmOpen(true)}
             status={rowStatus.vacuum}
           />
@@ -458,9 +458,9 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
 
       <ConfirmModal
         open={vacuumConfirmOpen}
-        title={localize("Vacuum database")}
-        message={maintenanceInfo.engine === "postgres" ? "Run PostgreSQL VACUUM ANALYZE now?" : "Run VACUUM now? This rewrites the database file to reclaim space."}
-        confirmLabel={rowStatus.vacuum?.type === "busy" ? localize("Vacuuming…") : localize("Vacuum")}
+        title={maintenanceInfo.engine === "mongodb" ? localize("Clean up storage") : localize("Vacuum database")}
+        message={maintenanceInfo.engine === "mongodb" ? "Clean unused remote media now? Referenced files will be preserved." : maintenanceInfo.engine === "postgres" ? "Run PostgreSQL VACUUM ANALYZE now?" : "Run VACUUM now? This rewrites the database file to reclaim space."}
+        confirmLabel={rowStatus.vacuum?.type === "busy" ? localize(maintenanceInfo.engine === "mongodb" ? "Cleaning…" : "Vacuuming…") : localize(maintenanceInfo.engine === "mongodb" ? "Clean up storage" : "Vacuum")}
         busy={rowStatus.vacuum?.type === "busy"}
         onConfirm={confirmVacuum}
         onClose={() => {

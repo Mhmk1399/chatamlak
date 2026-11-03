@@ -6,7 +6,7 @@
 
 ## بررسی اجمالی و قابلیت های کلیدی
 
-- **بدون حالت و مستقل از پایگاه داده (Database-Agnostic)**: سرویس Media Worker هیچ اتصال مستقیمی به SQLite یا PostgreSQL ندارد. تمامی ارتباطات با سرور Songbird از طریق Endpointهای HTTP REST (مانند `POST /transcode`) و فراخوانی Webhook صورت میگیرد (`POST /api/uploads/webhook/processed`). بنابراین این ورکر در تمامی پیکربندی های دیتابیس به صورت یکسان کار میکند.
+- **بدون حالت و مستقل از پایگاه داده (Database-Agnostic)**: سرویس Media Worker هیچ اتصال مستقیمی به MongoDB ندارد. تمامی ارتباطات با سرور Songbird از طریق Endpointهای HTTP REST (مانند `POST /transcode`) و فراخوانی Webhook صورت میگیرد (`POST /api/uploads/webhook/processed`). به‌روزرسانی متادیتای MongoDB پس از callback، بر عهدهٔ برنامهٔ اصلی است.
 - **پشتیبانی از دو موتور ذخیره سازی**: پشتیبانی بومی هم از ذخیره سازی دیسک محلی (`STORAGE_DRIVER=local`) و هم از ذخیره سازی ابری سازگار با S3 (`STORAGE_DRIVER=remote` مانند Cloudflare R2، AWS S3، MinIO، ArvanCloud، Wasabi و غیره).
 - **ترنسکد هوشمند ویدیو**:
   - بررسی و اندازه گیری خودکار فرمت ویدیو، کدک ها، ابعاد و مدت زمان با استفاده از `ffprobe`.
@@ -201,7 +201,7 @@ docker compose -f docker-compose.yaml up -d
 
 #### پلتفرم های Railway / Fly.io
 
-- **استقرار خودکار (Railway IaC)**: پروژه Songbird دارای پیکربندی آماده زیرساخت به عنوان کد در مسیر `.railway/railway.ts` است که سرویس `songbird-worker` را به صورت کاملاً خودکار در کنار برنامه اصلی، پایگاه داده PostgreSQL و باکت ذخیره سازی فایل مستقر و متصل میکند. برای جزئیات کامل به [راهنمای استقرار ابری](./Cloud-Deployment.md#استقرار-خودکار-با-railway-زیرساخت-به-عنوان-کد-iac) مراجعه کنید.
+- **استقرار ابری**: ورکر را کنار برنامه با دسترسی فایل محلی/S3 مشترک و callback معتبر تنظیم کنید. دیتابیس فعال برنامه MongoDB است؛ نمودارهای تاریخی PostgreSQL در IaC قدیمی‌اند و ساخت خودکار MongoDB را ثابت نمی‌کنند. [استقرار ابری](./Cloud-Deployment.md#استقرار-خودکار-با-railway-زیرساخت-به-عنوان-کد-iac) را ببینید.
 - **راهاندازی دستی (Railway / Fly.io)**: ساخت مستقیم از `worker/Dockerfile` با دایرکتوری ریشه `worker`. پورت تعریف شده در `WORKER_PORT` (`8080`) را در معرض دسترسی قرار دهید و مطمئن شوید ورکر امکان دسترسی به Endpoint باکت S3 و `WEBHOOK_URL` سرور چت را دارد.
 
 ### ۴. استقرار به عنوان سرویس Systemd (سرور VPS لینوکس)

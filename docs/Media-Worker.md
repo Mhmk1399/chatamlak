@@ -6,7 +6,7 @@ Whether deployed as a built-in background process or as a standalone cloud micro
 
 ## Overview & Key Capabilities
 
-- **Stateless & Database-Agnostic**: The Media Worker does not connect directly to SQLite or PostgreSQL. All communication with Songbird occurs over HTTP REST endpoints (`POST /transcode`) and webhook callbacks (`POST /api/uploads/webhook/processed`). It operates identically across all database configurations.
+- **Stateless & Database-Agnostic**: The Media Worker does not connect directly to MongoDB. All communication with Songbird occurs over HTTP REST endpoints (`POST /transcode`) and webhook callbacks (`POST /api/uploads/webhook/processed`). MongoDB metadata updates are handled by the main application after its callback.
 - **Dual Storage Engine Support**: Native support for both local filesystem storage (`STORAGE_DRIVER=local`) and S3-compatible remote object storage (`STORAGE_DRIVER=remote` — Cloudflare R2, AWS S3, MinIO, ArvanCloud, Wasabi, etc.).
 - **Intelligent Transcoding**:
   - Automatically probes video format, codecs, dimensions, and duration using `ffprobe`.
@@ -197,7 +197,7 @@ You can deploy the Media Worker as a standalone Web Service on any cloud contain
 
 #### Railway / Fly.io
 
-- **Automated Deployment (Railway IaC)**: Songbird includes a ready-to-use Infrastructure as Code configuration at `.railway/railway.ts` that automatically provisions the `songbird-worker` service alongside the main application, PostgreSQL, and object storage bucket with zero manual configuration. See the [Cloud Deployment Guide](./Cloud-Deployment.md#railway-infrastructure-as-code) for full details.
+- **Cloud deployment**: Configure the worker alongside the application with shared local/S3 file access and valid callbacks. The active application database is MongoDB; historical PostgreSQL IaC diagrams are legacy and do not prove automatic MongoDB provisioning. See [Cloud Deployment](./Cloud-Deployment.md#railway-infrastructure-as-code).
 - **Manual Setup (Railway / Fly.io)**: Build from `worker/Dockerfile` with root directory context `worker`. Expose the HTTP port defined in `WORKER_PORT` (`8080`). Ensure the worker service has outbound Internet access to reach your object storage endpoint and Songbird `WEBHOOK_URL`.
 
 ### 4. Manual Systemd Service (Linux VPS)

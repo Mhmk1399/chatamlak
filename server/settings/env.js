@@ -38,10 +38,11 @@ function readEnvBool(keys, fallback) {
 function readDbConfig() {
   const dbClient = (
     process.env.DB_CLIENT ||
-    (process.env.POSTGRES_URL || process.env.DATABASE_URL ? "postgres" : "sqlite3")
+    "mongodb"
   ).toLowerCase();
   return {
-    client: ["postgres", "postgresql", "pg"].includes(dbClient) ? "postgres" : "sqlite3",
+    client: ["mongodb", "mongo"].includes(dbClient) ? "mongodb" : ["postgres", "postgresql", "pg"].includes(dbClient) ? "postgres" : "sqlite3",
+    mongo: { uri: process.env.MONGODB_URI || "", database: process.env.MONGODB_DATABASE || "ouj_chat" },
     postgres: {
       host: process.env.POSTGRES_HOST || "127.0.0.1",
       port: readEnvInt("POSTGRES_PORT", 5432, { min: 1, max: 65535 }),

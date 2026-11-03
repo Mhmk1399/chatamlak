@@ -11,8 +11,9 @@ import { createInviteToken } from "../lib/inviteTokens.js";
 import { storageEncryption } from "../lib/storageEncryption.js";
 import { generateUuid, isValidUuid } from "../lib/uuidUtils.js";
 import { userEvents } from "../lib/workers/autoAddWorker.js";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import crypto from "crypto";
+import { registerMongoAdminRoutes } from "./adminMongo.js";
 
 function normalizeTelegramSource(value) {
   const raw = String(value || "").trim();
@@ -50,6 +51,7 @@ function normalizeTelegramSource(value) {
 }
 
 function registerAdminRoutes(app, deps) {
+  if (deps.mongoRepository) return registerMongoAdminRoutes(app, deps);
   const {
     adminGetAll,
     adminGetRow,

@@ -27,6 +27,7 @@ const enSidebar = [
     collapsed: false,
     items: [
       {text: '🔧 Environment Variables', link: '/Environment-Variables'},
+      {text: '🍃 MongoDB Setup & Migration', link: '/MongoDB'},
       {text: '☁️ Object Storage', link: '/Object-Storage'},
       {text: '🎬 Media Worker', link: '/Media-Worker'},
       {text: '🛡️ Admin Panel', link: '/Admin-Panel'},
@@ -73,6 +74,7 @@ const faSidebar = [
     collapsed: false,
     items: [
       {text: '🔧 متغیرهای محیطی', link: '/fa/Environment-Variables'},
+      {text: '🍃 راه‌اندازی و انتقال MongoDB', link: '/fa/MongoDB'},
       {text: '☁️ ذخیره سازی ابری', link: '/fa/Object-Storage'},
       {text: '🎬 ورکر مدیا', link: '/fa/Media-Worker'},
       {text: '🛡️ پنل مدیریت', link: '/fa/Admin-Panel'},

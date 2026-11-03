@@ -1,9 +1,10 @@
 # نصب دستی
 
-**پیش‌نیازها (روی Ubuntu 22.04+ آزمایش شده):**
+**پیش‌نیازها (دستورالعمل Ubuntu 22.04+):**
 
 - یک سرور Ubuntu با دسترسی sudo
 - یک نام دامنه که به IP عمومی سرور شما اشاره می‌کند (توصیه‌شده)
+- replica set در MongoDB 8 یا استقرار مناسب Atlas؛ مطابق [راهنمای MongoDB](./MongoDB.md) تنظیم کنید.
 
 ## ۱. راه‌اندازی سیستم
 
@@ -39,7 +40,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/latest/install.sh | bash
 
 ```bash
 curl https://get.volta.sh | bash
-volta install node@24.22.1 npm@11.6.4
+volta install node@24.22.1 npm@11.18.0
 ```
 
 ## ۲. کلون‌کردن مخزن
@@ -61,16 +62,21 @@ nvm use
 
 :::
 
-## ۳. نصب وابستگی‌ها
+## ۳. تنظیم MongoDB و نصب وابستگی‌ها
+
+در ریشهٔ مخزن، `.env.example` را به `.env` کپی کنید و `MONGODB_URI` عمداً خالی را با URI مربوط به replica set یا Atlas تکمیل کنید. مقدار `MONGODB_DATABASE=ouj_chat` را نگه دارید. MongoDB مستقل و متغیرهای قدیمی SQL جایگزین اجرای فعلی نیستند.
 
 ```bash
-cd /opt/songbird/server
+cd /opt/songbird
+cp .env.example .env
 npm install
-
-cd /opt/songbird/client
-npm install
+npm --prefix client install
+npm --prefix server install
+npm --prefix worker install
 npm run build
 ```
+
+برای توسعهٔ محلی از `npm run dev` و برای اجرای API و برنامهٔ ساخته‌شده از `npm --prefix server run start` استفاده کنید. سرویس پایین به همان محیط خصوصی و primary در دسترس MongoDB نیاز دارد. نصب replica set با Docker یا محلی، Atlas، ورود داده، پشتیبان و آزمون در [MongoDB](./MongoDB.md) آمده است.
 
 ## ۴. ایجاد سرویس systemd
 

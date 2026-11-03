@@ -83,6 +83,9 @@ async function getSql() {
 export async function openDatabase(options = {}) {
   const { inMemory = false, dbPath: customDbPath = null, skipMigrations = false } = options
   const isInMemory = Boolean(inMemory || customDbPath === ':memory:')
+  if (!isInMemory && ['mongodb', 'mongo'].includes(String(process.env.DB_CLIENT || 'mongodb').toLowerCase())) {
+    throw new Error('Legacy SQL maintenance is disabled for MongoDB. Use the current npm run db:* commands (scripts/mongo-cli.js).')
+  }
   const targetDbPath = isInMemory ? ':memory:' : customDbPath || dbPath
 
   if (!isInMemory && !fs.existsSync(dataDir)) {

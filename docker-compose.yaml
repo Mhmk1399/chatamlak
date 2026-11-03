@@ -1,11 +1,8 @@
 services:
   songbird:
-    # Use the pre-built image from Docker Hub (recommended):
-    image: ${SONGBIRD_IMAGE:-bllackbull/songbird:latest}
-    # Or build locally from source (uncomment and remove the image line above):
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: songbird
     restart: unless-stopped
     expose:
@@ -17,12 +14,9 @@ services:
       APP_ENV: ${APP_ENV:-production}
       SERVER_PORT: ${SERVER_PORT:-5174}
       BIND_ADDRESS: "0.0.0.0"
-      DB_CLIENT: ${DB_CLIENT:-sqlite3}
-      POSTGRES_HOST: ${POSTGRES_HOST:-postgres}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-songbird}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_CLIENT: mongodb
+      MONGODB_URI: ${MONGODB_URI:?Set your MongoDB replica-set or Atlas URI in .env}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-ouj_chat}
       # Tell the admin panel which container to use via the Docker API.
       # Defaults to "songbird" which matches the container_name above.
       SONGBIRD_CONTAINER_NAME: ${SONGBIRD_CONTAINER_NAME:-songbird}
@@ -53,15 +47,13 @@ services:
       - ./certs/cert.pem:/etc/nginx/certs/cert.pem:ro
       - ./certs/key.pem:/etc/nginx/certs/key.pem:ro
     # Wait for the app to pass its healthcheck before nginx starts accepting traffic.
-    # This avoids 502s during the brief startup window (migrations, WASM init).
+    # This avoids 502s during database connection and index initialization.
     depends_on:
       songbird:
         condition: service_healthy
 
 volumes:
   songbird-data:
-  # Optional volume for PostgreSQL database:
-  # postgres-data:
 
 # Optional Standalone Media Worker container service (uncomment to run worker in a separate container):
 #  media-worker:
@@ -87,16 +79,3 @@ volumes:
 #    expose:
 #      - "${WORKER_PORT:-8080}"
 
-# Optional PostgreSQL container service (uncomment to run PostgreSQL via Docker):
-#  postgres:
-#    image: postgres:16-alpine
-#    container_name: songbird-postgres
-#    restart: unless-stopped
-#    environment:
-#      POSTGRES_DB: ${POSTGRES_DB:-songbird}
-#      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-#    volumes:
-#      - postgres-data:/var/lib/postgresql/data
-#    ports:
-#      - "5432:5432"

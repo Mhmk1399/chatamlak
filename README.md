@@ -19,6 +19,7 @@
 ## Key Features
 
 - 💬 **Chat Types**: Direct messages, groups, and channels
+- 🍃 **Database**: Native MongoDB driver with indexed collections and transactional event recovery; a MongoDB replica set is required
 - 📁 **Media Support**: File uploads, voice messages, video transcoding
 - ✍️ **Drafts & Sending Queue**: Device-local text/reply drafts and a persistent queue for new text and attachment messages
 - 🎧 **Voice Playback**: Remembered playback speed from 1× to 2× and waveform seeking
@@ -32,6 +33,8 @@
 - 🌍 **i18n**: English and Persian/Farsi support
 
 ## Quick Start
+
+Configure a MongoDB 8 replica set or Atlas deployment first. `MONGODB_URI` is intentionally blank in `.env.example`; enter your private connection URI in `.env` and keep `MONGODB_DATABASE=ouj_chat`. SQLite/PostgreSQL are legacy import sources only. The [MongoDB guide](docs/MongoDB.md) covers local Docker, Atlas, dependency installation, development/start commands, imports, backups and integration tests. Binary uploads remain in the configured local/S3 provider and need their own backup.
 
 The easiest way to install Songbird is the deployment script. On an Ubuntu server (22.04+) with sudo access, run:
 
@@ -53,6 +56,7 @@ songbird-deploy
 Full documentation lives at [docs.songbird.website](https://docs.songbird.website):
 
 - [Chat Features](https://docs.songbird.website/Chat-Features)
+- [MongoDB Setup & Migration](docs/MongoDB.md)
 - [Deployment Script](https://docs.songbird.website/Deployment-Script)
 - [Install via Docker](https://docs.songbird.website/Installation-Docker)
 - [Cloud Deployment](https://docs.songbird.website/Cloud-Deployment)

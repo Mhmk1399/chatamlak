@@ -7,6 +7,8 @@ import { canUseIdb, readIdbCache, writeIdbCache } from "../../../utils/chatCache
 import { isCrossOriginUrl, saveMedia } from "../../../utils/fileDownload.js";
 import VoicePlaybackControls from "./VoicePlaybackControls.jsx";
 import { readVoiceSpeed } from "../../../utils/voicePlayback.js";
+import { isVideoNote } from "../../../utils/videoNote.js";
+import VideoNotePlayer from "./VideoNotePlayer.jsx";
 
 const VOICE_WAVEFORM_CACHE_KEY = "voice-waveform-cache-v1";
 const VOICE_WAVEFORM_CACHE_MAX = 160;
@@ -15,8 +17,7 @@ const VOICE_WAVEFORM_PROMISES = new Map();
 const VOICE_AUDIO_POOL = new Map();
 const VOICE_AUDIO_LAST_USED_AT = new Map();
 const VOICE_AUDIO_POSITIONS = new Map();
-const VOICE_WAVEFORM_BARS_PER_SECOND = 3;
-const VOICE_WAVEFORM_MAX_BARS = 36;
+const VOICE_WAVEFORM_MAX_BARS = 64;
 const VOICE_WAVEFORM_MAX_DECODE_BYTES = Math.max(
   64 * 1024,
   Number(CHAT_PAGE_CONFIG.voiceWaveformMaxDecodeBytes || 5 * 1024 * 1024),
@@ -301,14 +302,7 @@ const VoiceMessageChip = memo(
         0,
         Number(VOICE_AUDIO_POSITIONS.get(cacheKey) || resumeTimeRef.current || 0),
       );
-    const getTargetBars = (value) =>
-      Math.max(
-        12,
-        Math.min(
-          VOICE_WAVEFORM_MAX_BARS,
-          Math.round((value || 3) * VOICE_WAVEFORM_BARS_PER_SECOND),
-        ),
-      );
+    const getTargetBars = () => VOICE_WAVEFORM_MAX_BARS;
     const [peaks, setPeaks] = useState(() => {
       const cached = VOICE_WAVEFORM_CACHE.get(cacheKey);
       return cached && cached.length
@@ -585,6 +579,7 @@ const VoiceMessageChip = memo(
       };
       const handlePlay = () => {
         if (!isCurrentAudio()) return;
+        window.dispatchEvent(new CustomEvent("songbird:media-play", { detail: audio }));
         userPausedRef.current = false;
         autoResumeAttemptsRef.current = 0;
         playInFlightRef.current = false;
@@ -667,7 +662,16 @@ const VoiceMessageChip = memo(
       audio.addEventListener("playing", handlePlaying);
       audio.addEventListener("pause", handlePause);
       audio.addEventListener("loadedmetadata", handleLoaded);
+      const pauseOther = (event) => {
+        if (event.detail === audio) return;
+        userPausedRef.current = true;
+        playInFlightRef.current = false;
+        playRequestTokenRef.current += 1;
+        audio.pause();
+      };
+      window.addEventListener("songbird:media-play", pauseOther);
       return () => {
+        window.removeEventListener("songbird:media-play", pauseOther);
         audio.removeEventListener("timeupdate", handleTime);
         audio.removeEventListener("ended", handleEnded);
         audio.removeEventListener("play", handlePlay);
@@ -797,22 +801,22 @@ const VoiceMessageChip = memo(
     const hasProgressPosition =
       progress > 0 || Number(VOICE_AUDIO_POSITIONS.get(cacheKey) || 0) > 0;
     const canPlay = Boolean(serverUrl);
-    const waveformMaxHeight = 32;
+    const waveformMaxHeight = 26;
     return (
-      <div className="inline-flex w-max max-w-full items-center gap-2 rounded-xl border border-brand-200/70 bg-white px-3 py-2 text-xs text-slate-900 transition hover:border-brand-300 hover:bg-white/90 hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:hover:bg-slate-900/70 dark:hover:shadow-[0_0_16px_rgba(102,48,141,0.14)]">
+      <div className="ouj-voice-message flex w-full min-w-0 items-center gap-3 text-xs text-brand-800 dark:text-brand-100" dir="ltr">
         <button
           type="button"
           onClick={togglePlay}
           disabled={!canPlay}
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-brand-200 bg-brand-100 text-brand-700 transition hover:border-brand-300 hover:bg-brand-200/70 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-200"
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-400 dark:text-slate-950"
           aria-label={
             hasActivePlayback ? localize("Pause voice message") : localize("Play voice message")
           }
         >
           {hasActivePlayback ? (
-            <Pause size={14} />
+            <Pause size={23} fill="currentColor" />
           ) : (
-            <Play size={14} className="translate-x-px" />
+            <Play size={23} fill="currentColor" className="translate-x-px" />
           )}
         </button>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -829,28 +833,31 @@ const VoiceMessageChip = memo(
                 audio.addEventListener("loadedmetadata", () => { audio.currentTime = target; }, { once: true });
               }
             }}>
-          <div className="flex items-center gap-[4px]" style={{ height: `${waveformMaxHeight}px` }}>
+          <div className="flex w-full items-center gap-[2px]" style={{ height: `${waveformMaxHeight}px` }}>
             {peaks.map((height, idx) => {
               const barHeight = Math.round(
-                6 + height * (waveformMaxHeight - 6),
+                3 + height * (waveformMaxHeight - 3),
               );
               const isPlayed = idx < playedBars;
               return (
                 <span
                   key={`wave-${cacheKey}-${idx}`}
-                  className={`w-[4px] rounded-full transition-colors duration-150 ${isPlayed ? "bg-brand-600" : "bg-brand-200/90 dark:bg-brand-500/30"}`}
-                  style={{ height: `${barHeight}px` }}
+                  className={`min-w-0 flex-1 rounded-full transition-colors duration-150 ${isPlayed ? "bg-brand-600 dark:bg-brand-200" : "bg-brand-300/80 dark:bg-brand-400/45"}`}
+                  style={{ height: `${barHeight}px`, maxWidth: "3px" }}
                 />
               );
             })}
           </div>
           </VoicePlaybackControls>
-          <span dir="ltr" className="text-[10px] text-slate-900/80 dark:text-brand-200/80">
+          <span className="ouj-voice-details flex min-w-0 items-center gap-1.5 text-[11px] tabular-nums text-brand-800/80 dark:text-brand-200/80">
+          <span dir="ltr">
             {canPlay
               ? hasActivePlayback || hasProgressPosition
                 ? `${formatSeconds((progress || 0) * (duration || file?.durationSeconds || 0))} / ${formatSeconds(duration || file?.durationSeconds || 0)}`
                 : formatSeconds(duration || file?.durationSeconds || 0)
               : localize("Processing...")}
+          </span>
+          {Number(file.sizeBytes) > 0 && <span dir="ltr">· {Number(file.sizeBytes) >= 1048576 ? `${(file.sizeBytes / 1048576).toFixed(1)} MB` : `${(file.sizeBytes / 1024).toFixed(1)} KB`}</span>}
           </span>
           {debugInfo ? (
             <span className="text-[9px] text-slate-500">
@@ -1154,7 +1161,7 @@ export function MessageFiles({
     const type = resolveFileRenderType(file);
     return type === "image" || type === "video";
   });
-  const containerClass = hasMediaFiles
+  const containerClass = hasMediaFiles || files.every((file) => resolveFileRenderType(file) === "audio")
     ? "mt-1 flex w-full max-w-full flex-col gap-2"
     : "mt-1 inline-grid w-max max-w-full grid-cols-1 gap-2 justify-items-stretch";
 
@@ -1207,6 +1214,10 @@ export function MessageFiles({
 
         if (isAudio) {
           return <VoiceMessageChip key={key} file={file} />;
+        }
+
+        if (isVideoNote(file)) {
+          return <VideoNotePlayer key={key} file={file} onLoaded={onMessageMediaLoaded} />;
         }
 
         if (isImage && file.url) {

@@ -1,4 +1,4 @@
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import { isValidUuid } from "./uuidUtils.js";
 
 export function normalizeHexColor(value) {

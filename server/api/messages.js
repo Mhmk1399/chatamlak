@@ -91,6 +91,7 @@ function registerMessageRoutes(app, deps) {
       ? getUploadKind
       : (_uploadType, mimeType) => {
           const m = String(mimeType || "").toLowerCase();
+          if (_uploadType === "video_note") return m.startsWith("video/") ? "video_note" : null;
           if (m.startsWith("image/")) return "image";
           if (m.startsWith("video/")) return "video";
           if (m.startsWith("audio/")) return "audio";
@@ -993,7 +994,7 @@ function registerMessageRoutes(app, deps) {
           }
 
           const isVideo = mimeType.startsWith("video/") || (inferredMime && String(inferredMime).toLowerCase().startsWith("video/"));
-          const kind = isVideo ? "media" : getUploadKind(uploadType, mimeType);
+          const kind = uploadType === "video_note" ? safeGetUploadKind(uploadType, mimeType) : isVideo ? "media" : getUploadKind(uploadType, mimeType);
           if (!kind) {
             throw new Error("Invalid file type for selected upload option.");
           }
@@ -1163,7 +1164,7 @@ function registerMessageRoutes(app, deps) {
             rawItemStatus = "ready";
           }
 
-          const effectiveKind = isVideo ? "media" : kind;
+          const effectiveKind = kind === "video_note" ? "video_note" : isVideo ? "media" : kind;
           const effectiveMime = isVideo && !mimeType.startsWith("video/") && inferredMime ? inferredMime : mimeType;
 
           return {
@@ -1218,7 +1219,7 @@ function registerMessageRoutes(app, deps) {
           await ensureFfmpegAvailable();
         }
 
-        if (hasVideoFiles && String(uploadType || "").toLowerCase() === "media") {
+        if (hasVideoFiles && ["media", "video_note"].includes(String(uploadType || "").toLowerCase())) {
           await Promise.all(
             normalizedFiles.map(async (file) => {
               const mimeType = String(file?.mimeType || "").toLowerCase();
@@ -1307,7 +1308,7 @@ function registerMessageRoutes(app, deps) {
         const fallbackBody =
           trimmedBody ||
           (normalizedFiles.length === 1
-            ? `Sent ${normalizedFiles[0].kind === "media" ? "a media file" : "a document"}`
+            ? `Sent ${["media", "video_note"].includes(normalizedFiles[0].kind) ? "a media file" : "a document"}`
             : `Sent ${normalizedFiles.length} files`);
 
         if (

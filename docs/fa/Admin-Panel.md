@@ -18,31 +18,24 @@
 
 دو روش اصلی برای اعطای نقش **مالک** (owner) یا **مدیر** (admin) به یک حساب کاربری وجود دارد:
 
-### روش ۱: از طریق CLI / اسکریپت نصب (سرورهای VPS و محیط های دارای دسترسی به ترمینال)
+### روش ۱: CLI بومی (VPS و محیط دارای ترمینال)
 
-1. یک کاربر ایجاد یا ویرایش کنید و نقش **مالک** یا **مدیر** به آن‌ها بدهید (در نصب جدید درخواست می‌شود، یا بعداً از طریق [اسکریپت نصب](./Deployment-Script.md)):
+1. از ریشهٔ مخزن، نحو فعلی فرمان را بررسی کنید:
 
-  ```bash
-  songbird-deploy
-  # به زیرمنوی "Manage Database" بروید
-  # "Create user" یا "Edit user" را انتخاب کنید
-  # دستورات را دنبال کرده و نقش "owner" یا "admin" را انتخاب کنید
-  ```
-  :::info اگر ترجیح می‌دهید می‌توانید از [دستورات دیتابیس](./Database-Commands.md) نیز استفاده کنید:
-
-   ```bash
-   cd /opt/songbird/server
-   # اگر می‌خواهید کاربر جدید ایجاد کنید
-   npm run db:user:create
-   # یا اگر می‌خواهید کاربری را ارتقا دهید
-   npm run db:user:edit
-   # دستورات را دنبال کرده و نقش "owner" یا "admin" را انتخاب کنید
+   ```sh
+   npm --prefix server run db:user:create -- --help
+   npm --prefix server run db:user:edit -- --help
    ```
-  :::
 
-2. با حساب ارتقا‌یافته به برنامه Songbird خود وارد شوید
+2. حساب را با فیلدهای لازم و نقش موردنظر ایجاد کنید یا حساب موجود را ویرایش کنید. برای نمونه، **پس از توقف همهٔ نویسندگان**، نقش مدیر را به یک حساب موجود بدهید:
 
-3. روی دکمه **Admin Panel** در نوار کناری کلیک کنید (فقط برای مالک و مدیران قابل دسترسی است).
+   ```sh
+   npm --prefix server run db:user:edit -- your_username --role admin --offline
+   ```
+
+   اگر سرور محلی در حال اجراست، `--offline` را حذف و `ADMIN_API_TOKEN` را خصوصی تنظیم کنید تا CLI از API مدیریت استفاده کند. فرمان‌ها آرگومان می‌پذیرند و پرسش‌های تعاملی اسکریپت‌های SQL تاریخی را ندارند. پشتیبانی منوی نصب به نسخهٔ نصب‌شدهٔ آن بستگی دارد.
+
+3. اگر برنامه متوقف است آن را اجرا کنید، با حساب ارتقایافته وارد شوید و **پنل مدیریت** را از نوار کناری باز کنید. رفتار آنلاین و آفلاین در [دستورهای دیتابیس](./Database-Commands.md) آمده است.
 
 ### روش ۲: ارتقای مدیریت اضطراری و مالکان (PaaS و رابط کاربری وب)
 
@@ -244,17 +237,19 @@
 ### عملیات دیتابیس
 
 **پشتیبان‌گیری**
-- دانلود یک پشتیبان زمان‌دار و سازگار با موتور پایگاه داده
-- SQLite یک فایل `.db` دانلود می‌کند؛ PostgreSQL یک آرشیو بومی `.dump` ساخته‌شده با `pg_dump` را دانلود می‌کند
+- آرشیو فعال MongoDB به‌صورت Extended JSON فشرده‌شده با gzip (`.json.gz`) و شامل رکوردهای دیتابیس و اطلاعات کلیدهای رمزگذاری است.
+- متادیتای پیوست در دیتابیس است؛ فایل باینری محلی یا S3 به پشتیبان جدا نیاز دارد. آرشیوها را خصوصی نگه دارید.
 
 **بازیابی**
-- پشتیبان SQLite را می‌توان هنگام اجرای سرویس آپلود و بازیابی کرد
-- بازیابی PostgreSQL عمداً فقط به‌صورت آفلاین است: Songbird را متوقف کنید، سپس `npm run db:restore -- -y --file <backup.dump>` را اجرا کنید
+- بازیابی آنلاین MongoDB، HTTP `409` و راهنمای CLI آفلاین برمی‌گرداند.
+- تمام نویسندگان برنامه را متوقف کنید؛ سپس `npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline` را اجرا کنید.
+- پس از بازیابی و پیش از شروع ترافیک، `npm --prefix server run db:check` را اجرا کنید.
 
-**Vacuum**
-- SQLite فایل پایگاه داده را با `VACUUM` فشرده می‌کند
-- PostgreSQL دستور بومی `VACUUM ANALYZE` را اجرا می‌کند
-- فضای استفاده‌نشده را بازپس می‌گیرد و برای پایگاه‌های داده بزرگ به‌صورت دوره‌ای توصیه می‌شود
+**بررسی دیتابیس**
+- MongoDB از `VACUUM` مربوط به SQLite یا PostgreSQL استفاده نمی‌کند.
+- از بررسی داده/ایندکس MongoDB و ابزارهای نگه‌داری provider استفاده کنید. فایل تاریخی `.db` یا `.dump` منبع ورود دادهٔ قدیمی است و آرشیو بازیابی بومی MongoDB نیست.
+
+قالب پشتیبان، ورود داده و محدودیت‌های بازیابی در [دستورهای دیتابیس](./Database-Commands.md) و [MongoDB](./MongoDB.md) آمده است.
 
 ### کنترل سیستم
 
@@ -324,28 +319,20 @@ ADMIN_PANEL=false
 
 ## جایگزین CLI
 
-اکثر عملیات مدیریتی هنوز می‌توانند از طریق CLI انجام شوند:
+فرمان‌های بومی MongoDB مدیریت حساب، گفتگو و فایل را پوشش می‌دهند. از ریشهٔ مخزن، پیش از تغییر داده نحو آرگومان‌ها را ببینید:
 
-```bash
-cd /opt/songbird/server
-
-# مدیریت کاربر
-npm run db:user:create
-npm run db:user:edit
-npm run db:user:delete
-npm run db:user:ban
-
-# مدیریت چت
-npm run db:chat:create
-npm run db:chat:edit
-npm run db:chat:delete
-
-# عملیات دیتابیس
-npm run db:backup
-npm run db:restore
-npm run db:vacuum
-npm run db:inspect
+```sh
+npm --prefix server run db:user:create -- --help
+npm --prefix server run db:user:edit -- --help
+npm --prefix server run db:user:delete -- --help
+npm --prefix server run db:chat:create -- --help
+npm --prefix server run db:chat:edit -- --help
+npm --prefix server run db:file:delete -- --help
+npm --prefix server run db:check
+npm --prefix server run db:inspect -- --limit 25
 ```
 
-برای مرجع کامل CLI، [دستورات دیتابیس](./Database-Commands.md) را ببینید.
+تغییرات کاربر، گفتگو و فایل از سرور محلی در حال اجرا با `ADMIN_API_TOKEN` استفاده می‌کنند، یا پس از توقف همهٔ نویسندگان به `--offline` نیاز دارند. حذف علاوه بر آن `--yes` یا `-y` می‌خواهد. بازیابی کل دیتابیس همیشه به مسیر آرشیو و `--yes --offline` نیاز دارد و از پنل MongoDB در حال اجرا انجام نمی‌شود.
+
+مرجع کامل CLI در [دستورهای دیتابیس](./Database-Commands.md) و پشتیبان‌گیری و انتقال در [MongoDB](./MongoDB.md) آمده است.
 

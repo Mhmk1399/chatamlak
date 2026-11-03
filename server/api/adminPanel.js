@@ -5,7 +5,7 @@ import { isValidUuid, generateUuid } from "../lib/uuidUtils.js";
 import { normalizeSongbirdSource, normalizeTelegramSource, resolveSongbirdSource } from "../lib/remoteChannels.js";
 import { readInstallerLog, readNginxLog, readServiceLog, readWorkerLog, probeLogSources } from "../lib/systemLogs.js";
 import { userEvents } from "../lib/workers/autoAddWorker.js";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import os from "node:os";
 import crypto from "node:crypto";
 import path from "node:path";
@@ -316,7 +316,7 @@ function registerAdminPanelRoutes(app, deps) {
 
       // 4. Role determination (owner vs admin)
       const getRow = deps.getRow || deps.adminGetRow || adminGetRow;
-      const existingOwner = await resolveMaybePromise(getRow("SELECT id FROM users WHERE role = 'owner' LIMIT 1"));
+      const existingOwner = await resolveMaybePromise(getRow(dbKnex("users").where("role", "owner").select("id").first()));
       const targetRole = existingOwner ? "admin" : "owner";
 
       // 5. Apply role change
@@ -424,7 +424,7 @@ function registerAdminPanelRoutes(app, deps) {
     res.json(stats);
   });
 
-  app.get("/api/admin/system", (req, res) => {
+  app.get("/api/admin/system", async (req, res) => {
     if (!requireAdmin(req, res)) return;
     const mem = process.memoryUsage();
     const totalMem  = os.totalmem();
@@ -447,6 +447,7 @@ function registerAdminPanelRoutes(app, deps) {
     } catch {}
 
     // Uploads folder size (recursive, TTL-cached — see getCachedUploadsSizeBytes)
+    if (deps.mongoRepository) { try { dbSizeBytes = (await deps.mongoRepository.health()).storageSize; } catch { /* The service health probe reports connection errors. */ } }
     let uploadsSizeBytes = 0;
     try {
       if (nodePath && fs) {
@@ -587,7 +588,7 @@ function registerAdminPanelRoutes(app, deps) {
     const rawDbClient = String(
       dbConfig?.client || process.env.DB_CLIENT || "sqlite3",
     ).trim().toLowerCase();
-    const dbClient = ["postgres", "postgresql", "pg"].includes(rawDbClient)
+    const dbClient = rawDbClient === "mongodb" ? "mongodb" : ["postgres", "postgresql", "pg"].includes(rawDbClient)
       ? "postgres"
       : "sqlite3";
     let database = { client: dbClient, configured: true, reachable: null, latencyMs: null };
@@ -602,7 +603,7 @@ function registerAdminPanelRoutes(app, deps) {
       });
       try {
         await Promise.race([
-          resolveMaybePromise(adminGetRow("SELECT 1 AS ok")),
+          deps.mongoRepository ? deps.mongoRepository.store.db.command({ ping: 1 }) : resolveMaybePromise(adminGetRow("SELECT 1 AS ok")),
           timeout,
         ]);
         database = {
@@ -736,8 +737,8 @@ function registerAdminPanelRoutes(app, deps) {
         color: assignedColor,
         status: "online",
         password_hash: passwordHash,
-        created_at: dbKnex.raw("datetime('now')"),
-        last_seen: dbKnex.raw("datetime('now')"),
+        created_at: dbKnex.now(),
+        last_seen: dbKnex.now(),
         verified,
       }),
     ));
@@ -999,11 +1000,10 @@ function registerAdminPanelRoutes(app, deps) {
       return res.status(403).json({ error: "Cannot delete the owner account." });
     }
 
-    const rawDeletion = adminDeleteUser(userId);
-    const { storedNames } = rawDeletion && typeof rawDeletion.then === "function"
-      ? await rawDeletion
-      : rawDeletion || {};
-    if (Array.isArray(storedNames) && storedNames.length > 0) removeStoredFileNames(storedNames);
+    const deletion = (await resolveMaybePromise(adminDeleteUser(userId))) || {};
+    const { storedNames } = deletion;
+    if (deps.cleanupDeletedFiles) await deps.cleanupDeletedFiles(deletion?.files || []);
+    else if (Array.isArray(storedNames) && storedNames.length > 0) await removeStoredFileNames(storedNames);
     if (user?.avatar_url) removeAvatarByUrl(user.avatar_url);
     log(session, "user.delete", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true });
@@ -1567,7 +1567,8 @@ function registerAdminPanelRoutes(app, deps) {
     const chat = await resolveMaybePromise(findChatById(chatId));
     const deletion = await resolveMaybePromise(adminDeleteChat(chatId));
     const { storedNames } = deletion || {};
-    if (Array.isArray(storedNames) && storedNames.length > 0) removeStoredFileNames(storedNames);
+    if (deps.cleanupDeletedFiles) await deps.cleanupDeletedFiles(deletion?.files || []);
+    else if (Array.isArray(storedNames) && storedNames.length > 0) await removeStoredFileNames(storedNames);
     if (chat?.group_avatar_url) removeAvatarByUrl(chat.group_avatar_url);
     log(session, "chat.delete", { targetType: "chat", targetLabel: chat?.name || `Chat #${chatId}` });
     res.json({ ok: true });
@@ -1633,6 +1634,7 @@ function registerAdminPanelRoutes(app, deps) {
   app.get("/api/admin/maintenance/info", (req, res) => {
     if (!requireAdmin(req, res)) return;
     const postgres = dbConfig?.client === "postgres";
+    if (deps.mongoRepository) return res.json({ engine: "mongodb", backupExtension: ".json.gz", restoreAccept: ".json.gz,application/gzip", deleteAvailable: false, offlineRestoreRequired: true, offlineDeleteRequired: true });
     res.json({
       engine: postgres ? "postgres" : "sqlite",
       backupExtension: postgres ? ".dump" : ".db",
@@ -1671,8 +1673,10 @@ function registerAdminPanelRoutes(app, deps) {
       return res.status(400).json({ error: "Confirmation phrase required." });
     }
     try {
-      const { storedNames } = (await resolveMaybePromise(adminClearAllMessages())) || {};
-      if (Array.isArray(storedNames) && storedNames.length > 0) removeStoredFileNames(storedNames);
+      const deletion = (await resolveMaybePromise(adminClearAllMessages())) || {};
+      const { storedNames } = deletion;
+      if (deps.cleanupDeletedFiles) await deps.cleanupDeletedFiles(deletion?.files || []);
+    else if (Array.isArray(storedNames) && storedNames.length > 0) await removeStoredFileNames(storedNames);
       log(session, "db.clear_messages", { targetType: "system", details: `${storedNames?.length || 0} files removed` });
       // Notify all connected clients so chat windows refresh their message list.
       broadcastAll({ type: "chat_list_changed" });
@@ -1691,8 +1695,10 @@ function registerAdminPanelRoutes(app, deps) {
       return res.status(400).json({ error: "Confirmation phrase required." });
     }
     try {
-      const { storedNames } = (await resolveMaybePromise(adminResetDatabase())) || {};
-      if (Array.isArray(storedNames) && storedNames.length > 0) removeStoredFileNames(storedNames);
+      const deletion = (await resolveMaybePromise(adminResetDatabase())) || {};
+      const { storedNames } = deletion;
+      if (deps.cleanupDeletedFiles) await deps.cleanupDeletedFiles(deletion?.files || []);
+    else if (Array.isArray(storedNames) && storedNames.length > 0) await removeStoredFileNames(storedNames);
       log(session, "db.reset", { targetType: "system", details: `${storedNames?.length || 0} files removed` });
       broadcastAll({ type: "session_revoked" });
       res.json({ ok: true });
@@ -1941,6 +1947,17 @@ function registerAdminPanelRoutes(app, deps) {
     if (!session) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 
+    if (deps.mongoRepository) {
+      try {
+        const backup = await deps.mongoRepository.backupDatabase();
+        const name = `ouj-mongodb-${stamp}.json.gz`;
+        res.setHeader("Content-Type", "application/gzip");
+        res.setHeader("Content-Disposition", `attachment; filename="${name}"`);
+        log(session, "db.backup", { targetType: "system", targetLabel: name });
+        return res.send(backup);
+      } catch { return res.status(500).json({ error: "MongoDB backup failed." }); }
+    }
+
     if (dbConfig?.client === "postgres") {
       const effectiveDataDir = adminDataDir || nodePath.join(projectRootDir, "data");
       const backupDir = nodePath.join(effectiveDataDir, "backups");
@@ -1985,6 +2002,7 @@ function registerAdminPanelRoutes(app, deps) {
     // Gate auth before multer buffers the upload.
     (req, res, next) => {
       if (!requireAdmin(req, res)) return;
+      if (deps.mongoRepository) return res.status(409).json({ error: "Stop the application, then run npm --prefix server run db:restore -- --file <backup.json.gz> --yes --offline." });
       // pg_restore --clean cannot safely run through the process that owns live
       // database connections. The offline CLI detects a running server first.
       if (dbConfig?.client === "postgres") {
@@ -2059,7 +2077,7 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // PUT /api/admin/settings — bulk update one or more settings
-  app.put("/api/admin/settings", (req, res) => {
+  app.put("/api/admin/settings", async (req, res) => {
     const session = requireAdmin(req, res);
     if (!session) return;
 
@@ -2068,7 +2086,7 @@ function registerAdminPanelRoutes(app, deps) {
       return res.status(400).json({ error: "Expected { settings: { key: value, ... } }" });
     }
 
-    const result = setSettings(updates, dbRun, dbSave);
+    const result = await setSettings(updates, dbRun, dbSave);
     // Log one entry per changed key so the log reads the same as single updates.
     (result.saved || []).forEach((key) => {
       log(session, "settings.update", {
@@ -2084,7 +2102,7 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // PUT /api/admin/settings/:key — update a single setting
-  app.put("/api/admin/settings/:key", (req, res) => {
+  app.put("/api/admin/settings/:key", async (req, res) => {
     const session = requireAdmin(req, res);
     if (!session) return;
 
@@ -2094,7 +2112,7 @@ function registerAdminPanelRoutes(app, deps) {
       return res.status(400).json({ error: "Missing 'value' in request body." });
     }
 
-    const result = setSetting(key, String(rawValue), dbRun, dbSave);
+    const result = await setSetting(key, String(rawValue), dbRun, dbSave);
     if (!result.ok) return res.status(400).json({ error: result.error });
 
     log(session, "settings.update", {
@@ -2106,12 +2124,12 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // DELETE /api/admin/settings/:key — reset a setting to its default
-  app.delete("/api/admin/settings/:key", (req, res) => {
+  app.delete("/api/admin/settings/:key", async (req, res) => {
     const session = requireAdmin(req, res);
     if (!session) return;
 
     const key = String(req.params.key || "").trim();
-    const result = resetSetting(key, dbRun, dbSave);
+    const result = await resetSetting(key, dbRun, dbSave);
     if (!result.ok) return res.status(400).json({ error: result.error });
 
     log(session, "settings.reset", {

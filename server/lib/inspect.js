@@ -1,6 +1,6 @@
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 
-export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }) {
+export function createInspector({ fs, dataDir, adminGetRow, adminGetAll, mongoRepository }) {
   const getDiskUsageInfo = () => {
     try {
       if (typeof fs.statfsSync !== "function") return null;
@@ -29,6 +29,23 @@ export function createInspector({ fs, dataDir, adminGetRow, adminGetAll }) {
   const buildInspectSnapshot = async (kind = "all", limit = 25) => {
     const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 25));
     const mode = String(kind || "all").toLowerCase();
+    if (mongoRepository) {
+      const s = mongoRepository.store;
+      const snapshot = { mode, limit: safeLimit, counts: {}, disk: getDiskUsageInfo(), engine: "mongodb" };
+      for (const [name, collection] of [["users", "users"], ["chats", "chats"], ["messages", "chat_messages"], ["files", "chat_message_files"]]) snapshot.counts[name] = await s.count(collection);
+      if (["all", "user"].includes(mode)) snapshot.users = await s.many("users", {}, { limit: safeLimit, sort: { id: 1 }, projection: { password_hash: 0 } });
+      if (["all", "chat"].includes(mode)) {
+        snapshot.chats = [];
+        for (const chat of await s.many("chats", {}, { limit: safeLimit, sort: { id: 1 } })) { const members = await s.many("chat_members", { chat_id: chat.id }); snapshot.chats.push({ ...chat, members: members.length, member_ids: members.map((row) => row.user_id), messages: await s.count("chat_messages", { chat_id: chat.id }) }); }
+      }
+      if (["all", "file"].includes(mode)) {
+        snapshot.messageFiles = await s.many("chat_message_files", {}, { limit: safeLimit, sort: { id: 1 } });
+        snapshot.avatarFiles = await s.many("users", { avatar_url: { $ne: null } }, { limit: safeLimit, projection: { id: 1, username: 1, nickname: 1, avatar_url: 1 } });
+        const total = await s.aggregate("chat_message_files", [{ $group: { _id: null, bytes: { $sum: "$size_bytes" } } }]);
+        snapshot.fileStorage = { messageFilesBytes: total[0]?.bytes || 0 };
+      }
+      return snapshot;
+    }
 
     const [userCount, chatCount, messageCount, fileCount] = await Promise.all([
       adminGetRow(dbKnex("users").count({ n: "*" }).first()),

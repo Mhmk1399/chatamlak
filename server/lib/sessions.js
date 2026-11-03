@@ -67,16 +67,17 @@ export function createSessionHelpers({
 
     const rawSession = getSession(cookies.sid);
     if (rawSession && typeof rawSession.then === "function") {
-      return rawSession.then((session) => {
+      return rawSession.then(async (session) => {
         if (session) {
-          touchSession(cookies.sid);
+          await touchSession(cookies.sid);
         }
         return session;
       });
     }
 
     if (rawSession) {
-      touchSession(cookies.sid);
+      const touched = touchSession(cookies.sid);
+      if (touched && typeof touched.then === "function") return touched.then(() => rawSession);
     }
 
     return rawSession;

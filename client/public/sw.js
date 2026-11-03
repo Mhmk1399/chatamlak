@@ -1,4 +1,4 @@
-const CACHE_VERSION = "0.13.2-ouj.1";
+const CACHE_VERSION = "0.13.2-ouj.2";
 const CACHE_NAME = `songbird-${CACHE_VERSION}`;
 const PREFERENCES_CACHE = "ouj-preferences-v1";
 const APP_SHELL = [

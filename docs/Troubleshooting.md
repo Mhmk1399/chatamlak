@@ -31,7 +31,7 @@ The [deployment script](./Deployment-Script.md) has a built-in **View Logs** men
 | Videos not playing | ffmpeg / transcoding | [Video transcoding](#video-transcoding-issues) |
 | Docker build seems stuck | Dependency download | [Docker build issues](#docker-build-issues) |
 | TLS/certificate errors | Cert paths or renewal | [TLS / certificate problems](#tls--certificate-problems) |
-| PostgreSQL SSL / CA error | Cloud DB SSL / CA cert | [PostgreSQL SSL & CA errors](#postgresql-ssl--ca-certificate-errors) |
+| MongoDB connection / transaction error | URI, replica set, network and TLS | [MongoDB errors](#mongodb-connection-errors) |
 | Remote Channel not mirroring | Telegram creds / queue | [Remote Channel](#remote-channel-not-mirroring) |
 | Admin panel service control fails | Permissions | [Admin panel issues](#admin-panel-issues) |
 
@@ -135,6 +135,25 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+### Fixing 502 Bad Gateway in cloud environments {#fixing-502-bad-gateway-in-cloud-environments}
+
+For [cloud deployments](./Cloud-Deployment.md), check that the platform routes to the actual API port (`PORT` / `SERVER_PORT`) and that the build and startup logs show a successful MongoDB connection. Verify replica-set reachability, TLS and private URI configuration before routing traffic. If using local file storage, point `DATA_DIR` at a writable persistent mount; that mount stores local files, not MongoDB records.
+
+## Port conflict with Nginx {#port-conflict-with-nginx}
+
+If Apache, another Nginx instance or a container already owns port 80/443, inspect the listeners:
+
+```sh
+sudo ss -tulpn | grep -E ':(80|443)\b'
+```
+
+Reconfigure the conflicting listener for the intended deployment, then validate and reload your Nginx service:
+
+```sh
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
 ## Real-time updates not arriving
 
 Songbird uses a persistent WebSocket for live messages, presence, and typing indicators, with Server-Sent Events (SSE) as a fallback stream. A user is shown as online while any realtime connection is open and goes offline when the last one closes. If messages only appear after a refresh, the SSE stream is likely being buffered by Nginx.
@@ -174,7 +193,7 @@ curl -x http://your-proxy:3128 https://fcm.googleapis.com
 | `403 Forbidden` on presigned PUT/GET | Verify `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, bucket permissions, and system clock sync. |
 | Presigned URL generation error (500) | Check `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, and server logs for S3 SDK initialization errors. |
 | Browser cannot reach storage endpoint | Ensure `STORAGE_ENDPOINT` is a public HTTPS URL accessible from end-user networks. |
-| Disk full (local storage) | Check free space with `npm run db:inspect` (reports disk usage) or `df -h`. |
+| Disk full (local storage) | Check free space with `npm --prefix server run db:inspect` (reports disk usage) or `df -h`. |
 
 After changing `.env`, apply the changes (see [Environment Variables](./Environment-Variables.md#apply-changes)).
 
@@ -214,43 +233,20 @@ Other checks:
 
 See [SSL Certificates](./SSL-Certificates.md) for the full setup options.
 
-## PostgreSQL SSL & CA certificate errors
+## MongoDB connection and transaction errors {#mongodb-connection-errors}
 
-When connecting Songbird to managed cloud PostgreSQL databases (such as **Aiven**, **AWS RDS**, **DigitalOcean**, **Supabase**, or **Neon**), the connection may fail on startup or during database migrations.
+| Symptom | Resolution |
+|---|---|
+| `MONGODB_URI is empty` | Fill the intentionally blank private URI; the template is not a working connection. |
+| SQL engine selection rejected | Set `DB_CLIENT=mongodb`; old `POSTGRES_*`/`DATABASE_URL` values do not configure MongoDB. |
+| Transactions need a replica set | Initialize the replica set, wait for a primary, and include the correct set name in the URI. |
+| Server selection timeout | Check DNS/ports, credentials, Atlas network access and the advertised replica-set hostnames. Inside an app container, `localhost` is not a separate database container. |
+| TLS / custom CA error | Use the provider's valid CA configuration, for example `NODE_EXTRA_CA_CERTS` when appropriate; do not disable TLS verification as a substitute. |
+| Import target is not empty | Use a new target database, review a dry run and retain the source backup; do not overwrite an existing installation implicitly. |
+| Online restore returns `409` | Stop all writers and use the explicit offline MongoDB restore CLI. |
+| Integration-test executable cannot download | Set `MONGOMS_SYSTEM_BINARY` to a compatible local `mongod`, or provide a dedicated test/e2e database through `MONGODB_TEST_URI`. |
 
-### `self-signed certificate in certificate chain` / `SELF_SIGNED_CERT_IN_CHAIN`
-
-**Symptom:**
-
-```txt
-[db-migrations] Error initializing Postgres schema sets: Error: self-signed certificate in certificate chain
-  code: 'SELF_SIGNED_CERT_IN_CHAIN'
-Acquire connection error: Error: self-signed certificate in certificate chain
-```
-
-**Cause:**
-Managed database providers encrypt connections with SSL/TLS using their own project Certificate Authority (CA). Because this custom CA is not included in Node.js's built-in trusted root CA store, Node.js rejects the connection.
-
-**Fix:**
-Provide the provider's CA certificate to Node.js via the `NODE_EXTRA_CA_CERTS` environment variable:
-
-1. Download or copy the **CA certificate** (`ca.pem`) from your cloud database dashboard (e.g. Aiven console project CA).
-2. **On Render / PaaS:**
-   - Go to your service's **Environment** tab in the Render dashboard.
-   - Under **Secret Files**, add a file with name `aiven-ca.pem` (or `/etc/secrets/aiven-ca.pem`) and paste the PEM certificate content.
-   - Add the environment variable:
-
-     ```txt
-     NODE_EXTRA_CA_CERTS=/etc/secrets/aiven-ca.pem
-     ```
-
-3. **On Docker / VPS:**
-   - Save the CA certificate to disk (e.g., `/opt/songbird/certs/ca.pem` or mount it into the container).
-   - In `.env` or container environment, set:
-
-     ```txt
-     NODE_EXTRA_CA_CERTS=/opt/songbird/certs/ca.pem
-     ```
+See [MongoDB](./MongoDB.md) for replica-set/Atlas setup, legacy import and backup formats. PostgreSQL-specific TLS instructions apply only while reading an old PostgreSQL source through the importer, not to the active database engine.
 
 ## Remote Channel not mirroring
 
@@ -260,7 +256,7 @@ Provide the provider's CA certificate to Node.js via the `NODE_EXTRA_CA_CERTS` e
 | Telegram credentials | API ID, API hash, and session string must be configured. Run `npm run remote:configure`. |
 | Channel is public | Remote Channel is locked for private channels. |
 | History not imported | On first enable, only posts published after that point are mirrored, not history. |
-| Queue paused | Resume with `npm run db:chat:edit -- <channel> --resume-queue`. |
+| Queue paused | Resume with `npm --prefix server run db:chat:edit -- <channel> --resume-queue`; online CLI needs `ADMIN_API_TOKEN`, or use `--offline` after stopping writers. |
 | Proxy needed | If the server cannot reach Telegram, set a proxy (`REMOTE_CHANNEL_TELEGRAM_PROXY_URL`). |
 
 See [Remote Channel Setup](./Remote-Channel-Setup.md) for the complete configuration guide.

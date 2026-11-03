@@ -1,4 +1,5 @@
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
+import { createMongoFileJobs } from "./mongoFileJobs.js";
 
 export function createMessageFileJobs({
   adminGetAll,
@@ -12,7 +13,9 @@ export function createMessageFileJobs({
   path,
   getSetting,
   storageProvider,
+  mongoRepository,
 }) {
+  if (mongoRepository) return createMongoFileJobs({ mongoRepository, storageProvider, fs, path, uploadRootDir, getSetting });
   // Always read the live setting instead of a value captured once at startup,
   // so admin-panel changes to retention take effect without a restart.
   const getMessageFileRetentionDays = () =>
@@ -319,7 +322,7 @@ export function createMessageFileJobs({
         .distinct("stored_name")
         .whereNotNull("expires_at")
         .where("expires_at", "!=", "")
-        .whereRaw("julianday(expires_at) <= julianday(?)", [nowIso]),
+        .where("expires_at", "<=", nowIso),
     );
     const processRows = (rows) => {
       const storedNames = (rows || []).map((row) => row.stored_name);
@@ -422,7 +425,7 @@ export function createMessageFileJobs({
             this.whereNull("expires_at").orWhere("expires_at", "");
           })
           .update({
-            expires_at: dbKnex.raw("datetime(created_at, '+' || ? || ' days')", [nowDays]),
+            expires_at: dbKnex.addDays("created_at", nowDays),
           }),
       );
 

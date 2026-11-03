@@ -178,6 +178,8 @@ const ServicesTab = forwardRef(function ServicesTab(
   const isDatabaseConfigured = database?.configured !== false;
   const databaseDescription = !isDatabaseConfigured
     ? "Database disabled."
+    : database?.client === "mongodb"
+      ? databaseReachable === false ? "MongoDB configured but unreachable." : `MongoDB${databaseReachable && database?.latencyMs != null ? ` | ${database.latencyMs}ms` : ""}`
     : isPostgres
       ? databaseReachable === false
         ? "PostgreSQL configured but unreachable."

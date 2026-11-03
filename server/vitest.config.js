@@ -7,6 +7,7 @@ export default defineConfig({
     },
     environment: "node",
     include: ["test/**/*.test.{js,mjs,cjs}"],
+    exclude: ["test/mongo/**", "node_modules/**"],
     reporters: ["default"],
     coverage: {
       provider: "v8",

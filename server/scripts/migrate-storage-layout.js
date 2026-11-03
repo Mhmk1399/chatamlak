@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { detectRunningServer } from "./_db-admin.js";
 import { confirmAction, getCliArgs, hasFlag, hasForceYes } from "./_cli.js";
 import { createStorageProvider } from "../lib/storage/index.js";
 import {
@@ -15,7 +14,6 @@ const projectRootDir = path.resolve(serverDir, "..");
 dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({
   path: path.join(serverDir, ".env"),
-  override: true,
   quiet: true,
 });
 
@@ -49,7 +47,8 @@ if (hasFlag(args, "-h") || hasFlag(args, "--help")) {
 const dryRun = hasFlag(args, "--dry-run");
 const force = hasForceYes(args);
 
-const { running, port } = await detectRunningServer();
+const port = Number(process.env.PORT || process.env.SERVER_PORT || 5174);
+const running = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1500) }).then((response) => response.ok, () => false);
 if (running) {
   console.error(
     `Refusing to run storage:migrate while Songbird is running on port ${port}. Stop the server first so the bucket and database cannot race the migration.`,
@@ -66,7 +65,7 @@ if (storageProvider?.type !== "remote" && storageProvider?.type !== "s3") {
 }
 
 // Importing db.js runs pending DB migrations first (same as db:migrate).
-const { rewriteStorageKeys, adminSave } = await import("../db.js");
+const { rewriteStorageKeys, adminSave, closeDatabase } = await import("../db.js");
 
 const detection = await detectLegacyLayout(storageProvider).catch((err) => {
   console.error(`Failed to list bucket objects: ${err?.message || err}`);
@@ -129,6 +128,7 @@ console.log(
 );
 console.log(`  DB rows updated: ${summary.dbUpdated}`);
 console.log(`  legacy objects deleted: ${summary.deletedLegacy.length}`);
+await closeDatabase();
 if (summary.failed.length) {
   console.log(`  copy failures: ${summary.failed.length}`);
   for (const f of summary.failed.slice(0, 10)) {

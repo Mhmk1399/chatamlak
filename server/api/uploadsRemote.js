@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import rateLimit from "express-rate-limit";
 import { storageEncryption as defaultStorageEncryption } from "../lib/storageEncryption.js";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import { dispatchMediaWorkerJob } from "../lib/mediaWorker.js";
 import { ensureBucketCorsForRequest } from "../lib/bucketCors.js";
 import { resolveWebhookCallbackUrl } from "../lib/webhookUrl.js";

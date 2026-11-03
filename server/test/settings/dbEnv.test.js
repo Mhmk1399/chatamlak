@@ -12,10 +12,10 @@ describe("readDbConfig", () => {
     process.env = originalEnv;
   });
 
-  test("defaults to sqlite3 client when DB_CLIENT is not set", () => {
+  test("defaults to mongodb client when DB_CLIENT is not set", () => {
     delete process.env.DB_CLIENT;
     const config = readDbConfig();
-    expect(config.client).toBe("sqlite3");
+    expect(config.client).toBe("mongodb");
   });
 
   test("parses postgres configuration when DB_CLIENT=postgres", () => {

@@ -17,6 +17,10 @@ hero:
       link: https://github.com/bllackbull/Songbird
 
 features:
+  - icon: 🍃
+    title: MongoDB Setup
+    details: Configure a replica set or Atlas, import legacy SQL records, and back up database records separately from file storage.
+    link: /MongoDB
   - icon: 💬
     title: Drafts & Voice Playback
     details: Keep text drafts and queued messages on your device, and control voice message speed and playback position.

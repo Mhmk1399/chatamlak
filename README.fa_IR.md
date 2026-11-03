@@ -19,6 +19,7 @@
 ## قابلیت‌های کلیدی
 
 - 💬 **انواع چت**: پیام مستقیم، گروه و کانال
+- 🍃 **دیتابیس**: درایور بومی MongoDB با collectionهای ایندکس‌شده و بازیابی تراکنشی رویدادها؛ replica set الزامی است
 - 📁 **پشتیبانی از رسانه**: آپلود فایل، پیام صوتی، تبدیل ویدئو
 - ✍️ **پیش‌نویس و صف ارسال**: پیش‌نویس متن و پاسخ روی همان دستگاه و صف ماندگار پیام‌های جدید متنی و دارای پیوست
 - 🎧 **پخش ویس**: حفظ سرعت پخش از ۱ تا ۲ برابر و جابه‌جایی نقطهٔ پخش روی شکل موج
@@ -32,6 +33,8 @@
 - 🌍 **چندزبانه**: پشتیبانی از انگلیسی و فارسی
 
 ## نصب سریع
+
+ابتدا replica set در MongoDB 8 یا استقرار Atlas را تنظیم کنید. `MONGODB_URI` در `.env.example` عمداً خالی است؛ URI خصوصی خود را در `.env` وارد کنید و `MONGODB_DATABASE=ouj_chat` را نگه دارید. SQLite و PostgreSQL فقط منبع ورود دادهٔ قدیمی هستند. [راهنمای MongoDB](docs/fa/MongoDB.md) نصب Docker محلی، Atlas، نصب وابستگی‌ها، توسعه و اجرا، ورود داده، پشتیبان و آزمون integration را پوشش می‌دهد. باینری آپلودها در provider محلی/S3 باقی می‌مانند و به پشتیبان جدا نیاز دارند.
 
 ساده‌ترین روش نصب Songbird، اسکریپت نصب آسان است. روی یک سرور Ubuntu (نسخه 22.04+) با دسترسی `sudo` این دستور را اجرا کنید:
 
@@ -53,6 +56,7 @@ songbird-deploy
 مستندات کامل در [docs.songbird.website](https://docs.songbird.website/fa/) قرار دارد:
 
 - [قابلیت‌های گفتگو](https://docs.songbird.website/fa/Chat-Features)
+- [راه‌اندازی و انتقال MongoDB](docs/fa/MongoDB.md)
 - [اسکریپت نصب](https://docs.songbird.website/fa/Deployment-Script)
 - [نصب از طریق Docker](https://docs.songbird.website/fa/Installation-Docker)
 - [نصب ابری](https://docs.songbird.website/fa/Cloud-Deployment)

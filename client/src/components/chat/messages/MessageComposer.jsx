@@ -14,7 +14,9 @@ import {
   Reply,
   Send,
   Close,
-  Video,
+  Lock,
+  Pause,
+  Trash,
 } from "../../../icons/lucide.js";
 import { hasPersian } from "../../../utils/fontUtils.js";
 import { renderMarkdownInlinePlain } from "../../../utils/markdown.js";
@@ -25,6 +27,10 @@ import {
 import VerifiedBadge from "../../common/VerifiedBadge.jsx";
 import UserRoleBadge from "../../common/UserRoleBadge.jsx";
 import Tooltip from "../../common/Tooltip.jsx";
+import VideoMessageRecorder from "../media/VideoMessageRecorder.jsx";
+import RecordingButton from "../media/RecordingButton.jsx";
+import { useHoldToRecord } from "../../../hooks/useHoldToRecord.js";
+import { useVoiceRecording } from "../../../hooks/chat/useVoiceRecording.js";
 
 function applyTextareaSize({
   textareaEl,
@@ -86,11 +92,10 @@ export function MessageComposer({
   onComposerHeightChange,
   onComposerFocusChange,
   composerInputRef,
-  microphonePermissionStatus = "unknown",
-  onRequestMicrophonePermission,
   currentUsername = "",
   draftAccountId = "",
   mentionCandidates = [],
+  maxVideoNoteBytes,
 }) {
   useLocale();
   const composerRef = useRef(null);
@@ -107,16 +112,32 @@ export function MessageComposer({
   const appliedEditIdRef = useRef(0);
   const [messageValue, setMessageValue] = useState(() => readChatDraft(draftOwner, activeChatId)?.body || "");
   const [submitting, setSubmitting] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingMs, setRecordingMs] = useState(0);
-  const recordingTimerRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const recordingStreamRef = useRef(null);
-  const recordingChunksRef = useRef([]);
-  const recordingStartRef = useRef(0);
-  const recordingDurationMsRef = useRef(0);
-  const isPressingMicRef = useRef(false);
-  const pendingStopRef = useRef(false);
+  const [recordingMode, setRecordingMode] = useState("voice");
+  const [videoRecorderOpen, setVideoRecorderOpen] = useState(false);
+  const [videoCommand, setVideoCommand] = useState("hold");
+  const recordingContext = String(draftOwner) + ":" + String(activeChatId);
+  const voice = useVoiceRecording({ contextKey: recordingContext, maxBytes: maxVideoNoteBytes,
+    onSend: sendRecordedMessage, onReview: onVoiceRecorded, onComplete: () => gesture.reset() });
+  const isRecording = voice.status !== "idle";
+  const recordingMs = voice.milliseconds;
+  const gesture = useHoldToRecord({ contextKey: recordingContext,
+    disabled: uploadBusy || submitting || !fileUploadEnabled || Boolean(editTarget) || Boolean(pendingVoiceMessage) || Boolean(pendingUploadFiles?.length),
+    onTap: () => setRecordingMode((mode) => mode === "voice" ? "video" : "voice"),
+    onStart: () => {
+      messageInputRef.current?.blur(); setShowUploadMenu(false);
+      if (recordingMode === "video") { setVideoCommand("hold"); setVideoRecorderOpen(activeChatId); return true; }
+      return voice.start();
+    },
+    onFinish: () => { if (recordingMode === "video") setVideoCommand("send"); else voice.stop(); },
+    onCancel: () => { voice.cancel(); setVideoRecorderOpen(false); },
+  });
+  useEffect(() => { setVideoRecorderOpen(false); }, [activeChatId]);
+  async function sendRecordedMessage(payload) {
+    if (!composerRef.current) return false;
+    setSubmitting(true);
+    try { return await handleSend({ preventDefault() {}, currentTarget: composerRef.current }, payload); }
+    finally { setSubmitting(false); }
+  }
   const maxTextareaHeight = 136;
   const openFilePicker = useCallback((inputRef) => {
     const input = inputRef?.current;
@@ -234,7 +255,7 @@ export function MessageComposer({
   const isEditMode = Boolean(editTarget);
   const micMode =
     !isEditMode && !hasText && !hasPendingUploads && !hasPendingVoice && !isRecording;
-  const micDisabled = uploadBusy || !fileUploadEnabled || isEditMode;
+  const micDisabled = uploadBusy || submitting || !fileUploadEnabled || isEditMode;
   const canSubmitMessage = isEditMode
     ? hasText
     : hasText || hasPendingUploads || hasPendingVoice;
@@ -349,221 +370,6 @@ export function MessageComposer({
     onMessageInput,
   ]);
 
-  useEffect(() => {
-    return () => {
-      if (recordingTimerRef.current) {
-        window.clearInterval(recordingTimerRef.current);
-      }
-      if (recordingStreamRef.current) {
-        recordingStreamRef.current
-          .getTracks()
-          ?.forEach((track) => track.stop());
-        recordingStreamRef.current = null;
-      }
-    };
-  }, []);
-
-  const startRecordingTimer = () => {
-    if (recordingTimerRef.current) {
-      window.clearInterval(recordingTimerRef.current);
-    }
-    recordingStartRef.current = Date.now();
-    setRecordingMs(0);
-    recordingTimerRef.current = window.setInterval(() => {
-      setRecordingMs(Date.now() - recordingStartRef.current);
-    }, 200);
-  };
-
-  const stopRecordingTimer = () => {
-    if (recordingTimerRef.current) {
-      window.clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-  };
-
-  const stopRecording = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-    const canStop = recorder && recorder.state !== "inactive";
-    if (!isRecording && !canStop) return;
-    recordingDurationMsRef.current = Date.now() - recordingStartRef.current;
-    setIsRecording(false);
-    stopRecordingTimer();
-    if (canStop) {
-      try {
-        if (
-          recorder.state === "recording" &&
-          typeof recorder.requestData === "function"
-        ) {
-          recorder.requestData();
-        }
-      } catch {
-        // no-op
-      }
-      try {
-        recorder.stop();
-      } catch {
-        // no-op
-      }
-    }
-    if (recordingStreamRef.current) {
-      recordingStreamRef.current.getTracks()?.forEach((track) => track.stop());
-      recordingStreamRef.current = null;
-    }
-  }, [isRecording]);
-
-  const createVoiceFileFromChunks = async (chunks, durationSeconds) => {
-    if (!chunks.length) return null;
-    const preferredTypes = [
-      "audio/webm;codecs=opus",
-      "audio/ogg;codecs=opus",
-      "audio/webm",
-      "audio/ogg",
-    ];
-    const mimeType =
-      preferredTypes.find(
-        (type) =>
-          typeof MediaRecorder !== "undefined" &&
-          MediaRecorder.isTypeSupported(type),
-      ) ||
-      chunks[0].type ||
-      "audio/webm";
-    const ext = mimeType.includes("ogg") ? "ogg" : "webm";
-    const blob = new Blob(chunks, { type: mimeType });
-    const filename = `voice-message-${Date.now()}.${ext}`;
-    let file = blob;
-    try {
-      if (typeof File !== "undefined") {
-        file = new File([blob], filename, { type: mimeType });
-      } else {
-        file = blob;
-      }
-    } catch {
-      file = blob;
-    }
-    if (file && !file.name) {
-      Object.defineProperty(file, "name", {
-        value: filename,
-        configurable: true,
-      });
-    }
-    return {
-      file,
-      durationSeconds,
-      mimeType,
-    };
-  };
-
-  const requestMicrophoneStream = async () => {
-    if (
-      typeof navigator === "undefined" ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
-      throw new Error("Microphone access is not supported in this browser.");
-    }
-    if (navigator.permissions?.query) {
-      try {
-        await navigator.permissions.query({ name: "microphone" });
-      } catch {
-        // ignore permissions API failures
-      }
-    }
-    return navigator.mediaDevices.getUserMedia({ audio: true });
-  };
-
-  const startRecording = useCallback(async () => {
-    if (isRecording) return;
-    if (pendingVoiceMessage) return;
-    if (!fileUploadEnabled) return;
-    if (uploadBusy) return;
-    if (pendingUploadFiles?.length) return;
-    setShowUploadMenu(false);
-    recordingChunksRef.current = [];
-    const stream = await requestMicrophoneStream();
-    if (!isPressingMicRef.current) {
-      stream.getTracks()?.forEach((track) => track.stop());
-      return;
-    }
-    recordingStreamRef.current = stream;
-    const options = {};
-    if (typeof MediaRecorder !== "undefined") {
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        options.mimeType = "audio/webm;codecs=opus";
-      } else if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) {
-        options.mimeType = "audio/ogg;codecs=opus";
-      }
-    }
-    const recorder = new MediaRecorder(stream, options);
-    mediaRecorderRef.current = recorder;
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        recordingChunksRef.current.push(event.data);
-      }
-    };
-    recorder.onerror = (event) => {
-      console.warn("[voice] recorder error", event);
-    };
-    recorder.onstop = async () => {
-      const fallbackDurationMs = Date.now() - recordingStartRef.current;
-      const durationMs = recordingDurationMsRef.current || fallbackDurationMs;
-      const chunks = recordingChunksRef.current;
-      recordingChunksRef.current = [];
-      recordingDurationMsRef.current = 0;
-      if (!chunks.length) {
-        console.warn("[voice] no audio chunks collected");
-        return;
-      }
-      if (durationMs <= 1000) {
-        return;
-      }
-      const durationSeconds = Math.max(1, Math.round(durationMs / 1000));
-      const payload = await createVoiceFileFromChunks(chunks, durationSeconds);
-      if (payload && typeof onVoiceRecorded === "function") {
-        onVoiceRecorded(payload);
-      }
-    };
-    recorder.start(250);
-    setIsRecording(true);
-    startRecordingTimer();
-    if (pendingStopRef.current || !isPressingMicRef.current) {
-      pendingStopRef.current = false;
-      stopRecording();
-    }
-  }, [
-    isRecording,
-    pendingVoiceMessage,
-    fileUploadEnabled,
-    uploadBusy,
-    pendingUploadFiles?.length,
-    setShowUploadMenu,
-    stopRecording,
-    onVoiceRecorded,
-  ]);
-
-  const handleMicPointerDown = useCallback(
-    async (event) => {
-      event.preventDefault();
-      if (micDisabled) return;
-      if (microphonePermissionStatus === "prompt") {
-        try {
-          await onRequestMicrophonePermission?.();
-        } catch {
-          // ignore prompt failures
-        }
-        isPressingMicRef.current = false;
-        pendingStopRef.current = false;
-        return;
-      }
-      isPressingMicRef.current = true;
-      pendingStopRef.current = false;
-      try {
-        await startRecording();
-      } catch {
-        // ignore
-      }
-    },
-    [micDisabled, microphonePermissionStatus, onRequestMicrophonePermission, startRecording],
-  );
-
   const restoreComposerFocus = () => {
     if (!keepFocusRef.current) return;
     keepFocusRef.current = false;
@@ -576,53 +382,6 @@ export function MessageComposer({
       keepFocusRef.current = true;
     }
   };
-
-  const handleMicPointerUp = (event) => {
-    event?.preventDefault?.();
-    isPressingMicRef.current = false;
-    const recorder = mediaRecorderRef.current;
-    if (isRecording || (recorder && recorder.state === "recording")) {
-      stopRecording();
-      if (keepFocusRef.current) {
-        keepFocusRef.current = false;
-        requestAnimationFrame(() => focusElementPreventScroll(messageInputRef.current));
-      }
-      return;
-    }
-    pendingStopRef.current = true;
-    if (keepFocusRef.current) {
-      keepFocusRef.current = false;
-      requestAnimationFrame(() => focusElementPreventScroll(messageInputRef.current));
-    }
-  };
-
-  useEffect(() => {
-    if (!isRecording) return;
-    const handleWindowPointerUp = (event) => {
-      event?.preventDefault?.();
-      isPressingMicRef.current = false;
-      const recorder = mediaRecorderRef.current;
-      if (isRecording || (recorder && recorder.state === "recording")) {
-        stopRecording();
-        if (keepFocusRef.current) {
-          keepFocusRef.current = false;
-          requestAnimationFrame(() => focusElementPreventScroll(messageInputRef.current));
-        }
-        return;
-      }
-      pendingStopRef.current = true;
-      if (keepFocusRef.current) {
-        keepFocusRef.current = false;
-        requestAnimationFrame(() => focusElementPreventScroll(messageInputRef.current));
-      }
-    };
-    window.addEventListener("pointerup", handleWindowPointerUp);
-    window.addEventListener("pointercancel", handleWindowPointerUp);
-    return () => {
-      window.removeEventListener("pointerup", handleWindowPointerUp);
-      window.removeEventListener("pointercancel", handleWindowPointerUp);
-    };
-  }, [isRecording, messageInputRef, stopRecording]);
 
   useEffect(() => {
     const handleWindowFocus = () => {
@@ -745,6 +504,12 @@ export function MessageComposer({
         event.currentTarget?.requestSubmit?.();
       }}
     >
+      {videoRecorderOpen === activeChatId && <VideoMessageRecorder key={activeChatId} maxBytes={maxVideoNoteBytes}
+        gesture={gesture.locked ? "locked" : videoCommand}
+        onGestureLock={gesture.lock}
+        onClose={() => { setVideoRecorderOpen(false); gesture.reset(); }}
+        onSend={sendRecordedMessage} />}
+      {voice.error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{t(voice.error)}</p>}
       {draftError && <p role="status" className="text-xs text-rose-600 dark:text-rose-300">{t("Draft could not be saved on this device.")}</p>}
       {suggestions.length > 0 && <div id={`mention-list-${activeChatId}`} role="listbox" aria-label={t("Mention a member")} className="max-h-48 overflow-y-auto rounded-xl border border-brand-200 bg-white p-1 dark:border-brand-500/30 dark:bg-slate-950">
         {suggestions.map((member, index) => <button key={member.id || member.username} id={`mention-${activeChatId}-${index}`} type="button" role="option" aria-selected={index === mentionIndex} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseMention(member)} className={`block min-h-10 w-full rounded-lg px-3 py-2 text-start text-sm transition hover:bg-brand-50 dark:hover:bg-brand-500/10 ${index === mentionIndex ? "bg-brand-50 dark:bg-brand-500/10" : ""}`}>{member.nickname || member.username} <span className="text-slate-500">@{member.username}</span></button>)}
@@ -1224,59 +989,20 @@ export function MessageComposer({
             />
           </>
         ) : (
-          <div className="flex min-w-0 flex-1 items-center justify-between rounded-2xl border border-brand-200 bg-white px-4 py-2 text-sm text-brand-700 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200">
-            <span className="text-xs font-semibold uppercase tracking-wide">{t("Recording")}</span>
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" />
-              {formatDuration(recordingMs / 1000)}
-            </span>
-            <span className="w-12" />
+          <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-brand-200 bg-white px-3 py-2 text-sm text-brand-700 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200">
+            <button type="button" onClick={gesture.cancel} disabled={voice.status === "stopping" || voice.status === "sending"} aria-label={t("Cancel recording")} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-500/10"><Trash size={19} /></button>
+            <span role="status" className="flex min-w-0 flex-1 items-center gap-2 text-sm tabular-nums"><span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-rose-500" /><span dir="ltr">{formatDuration(recordingMs / 1000)}</span><span className="truncate text-xs">{t(voice.status === "requesting" ? "Opening microphone…" : voice.status === "sending" ? "Sending…" : gesture.locked ? "Recording locked" : "Release to send; swipe up to lock")}</span></span>
+            {gesture.active && !gesture.locked && <button type="button" onClick={gesture.lock} aria-label={t("Lock recording")} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-brand-50 dark:hover:bg-brand-500/10"><Lock size={18} /></button>}
+            {gesture.locked && voice.status === "recording" && <button type="button" onClick={() => { gesture.reset(); voice.stop("review"); }} aria-label={t("Review voice message")} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-brand-50 dark:hover:bg-brand-500/10"><Pause size={18} /></button>}
           </div>
         )}
-        <button
-          type={micMode || isRecording ? "button" : "submit"}
-          onPointerDown={(event) => {
-            captureComposerFocus();
-            if (!isDesktop) event.preventDefault();
-            if (micMode) {
-              handleMicPointerDown(event);
-            }
-          }}
-          onPointerUp={isRecording ? handleMicPointerUp : undefined}
-          onMouseDown={(event) => {
-            if (!isDesktop) {
-              event.preventDefault();
-            }
-          }}
-          disabled={
-            ((micMode || isRecording) && micDisabled) ||
-            (!micMode && !isRecording && !canSubmitMessage)
-          }
-          aria-label={
-            isRecording
-              ? t("Stop recording")
-              : micMode
-              ? t("Record voice message")
-              : editTarget
-              ? t("Save edit")
-              : t("Send message")
-          }
-          className={`inline-flex h-11 items-center justify-center rounded-2xl px-4 py-2 text-sm font-semibold text-white shadow-lg transition disabled:cursor-not-allowed disabled:opacity-70 ${
-            isRecording
-              ? "bg-rose-500 shadow-rose-500/30 hover:bg-rose-400 hover:shadow-rose-500/40"
-              : "bg-brand-600 shadow-brand-500/30 hover:bg-brand-500 hover:shadow-brand-500/40"
-          }`}
-        >
-          {micMode || isRecording ? (
-            <Mic className="icon-anim-pop" />
-          ) : (
-            editTarget ? (
-              <Check className="icon-anim-slide" />
-            ) : (
-              <Send className="icon-anim-slide" />
-            )
-          )}
-        </button>
+        {micMode || isRecording ? <RecordingButton mode={recordingMode} gesture={gesture} disabled={micDisabled} busy={isRecording && !gesture.active} onFocusCapture={captureComposerFocus} /> : <button
+          type="submit" onPointerDown={(event) => { captureComposerFocus(); if (!isDesktop) event.preventDefault(); }}
+          disabled={!canSubmitMessage || submitting || uploadBusy}
+          aria-label={editTarget ? t("Save edit") : t("Send message")}
+          className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-70">
+          {editTarget ? <Check className="icon-anim-slide" /> : <Send className="icon-anim-slide" />}
+        </button>}
       </div>
     </form>
   );

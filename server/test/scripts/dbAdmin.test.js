@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { openDatabase } from "../../scripts/_db-admin.js";
 import * as knexModule from "../../db/knex.js";
 
@@ -28,16 +28,8 @@ describe("openDatabase Admin Utility", () => {
     else delete process.env.DB_CLIENT;
   });
 
-  test("opens SQLite database by default and provides db API", async () => {
-    activeDb = await openDatabase();
-    expect(activeDb).toBeDefined();
-    expect(typeof activeDb.getRow).toBe("function");
-    expect(typeof activeDb.getAll).toBe("function");
-    expect(typeof activeDb.run).toBe("function");
-    expect(typeof activeDb.save).toBe("function");
-    expect(typeof activeDb.close).toBe("function");
-    const row = await activeDb.getRow("SELECT 1 AS count");
-    expect(Number(row?.count)).toBe(1);
+  test("blocks the legacy writer when MongoDB is the configured database", async () => {
+    await expect(openDatabase()).rejects.toThrow("Legacy SQL maintenance is disabled");
   });
 
   test("opens in-memory database when inMemory: true", async () => {
@@ -55,7 +47,7 @@ describe("openDatabase Admin Utility", () => {
   test("creates SQLite DATA_DIR when openDatabase runs instead of on import", () => {
     const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-data-"));
     const dataDir = path.join(tempDataDir, "data");
-    const dbAdminUrl = pathToFileURL(path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../scripts/_db-admin.js")).href;
+    const dbAdminUrl = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../scripts/_db-admin.js")).href;
     const script = `
       import fs from "node:fs";
       import path from "node:path";
@@ -111,7 +103,7 @@ describe("openDatabase Admin Utility", () => {
     const dataDir = path.join(tempDataDir, "data");
     const mockKnexPath = path.join(tempDataDir, "mock-knex.mjs");
     const loaderPath = path.join(tempDataDir, "mock-knex-loader.mjs");
-    const dbAdminUrl = pathToFileURL(path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../scripts/_db-admin.js")).href;
+    const dbAdminUrl = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../scripts/_db-admin.js")).href;
     const script = `
       import fs from "node:fs";
       import path from "node:path";
@@ -125,7 +117,7 @@ describe("openDatabase Admin Utility", () => {
     fs.writeFileSync(mockKnexPath, `export function createKnexInstance() { return { raw: async () => ({ rows: [] }), destroy: async () => {}, client: { config: { client: "pg" } } }; } export const dbKnex = createKnexInstance();`);
     fs.writeFileSync(loaderPath, `const mockKnexUrl = ${JSON.stringify(pathToFileURL(mockKnexPath).href)}; export async function resolve(specifier, context, nextResolve) { const result = await nextResolve(specifier, context); if (result.url.endsWith("/server/db/knex.js")) return { url: mockKnexUrl, shortCircuit: true }; return result; }`);
     try {
-      const result = JSON.parse(execFileSync(process.execPath, ["--experimental-loader", loaderPath, "--input-type=module", "--eval", script], { encoding: "utf8", env: { ...process.env, DATA_DIR: dataDir, DB_CLIENT: "postgres" } }));
+      const result = JSON.parse(execFileSync(process.execPath, ["--experimental-loader", pathToFileURL(loaderPath).href, "--input-type=module", "--eval", script], { encoding: "utf8", env: { ...process.env, DATA_DIR: dataDir, DB_CLIENT: "postgres" } }));
       expect(result).toEqual({ createdDataDir: true, createdSqliteFile: false });
     } finally {
       fs.rmSync(tempDataDir, { recursive: true, force: true });

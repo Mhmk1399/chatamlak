@@ -4,10 +4,11 @@
 This guide uses Docker Compose and is designed for **IaaS** (Infrastructure as a Service — self-hosted VPS or dedicated virtual machines running Docker Engine). If you are deploying to managed cloud platforms (PaaS / CaaS) like Render, Railway, AWS ECS, Google Cloud Run, or Kubernetes, see the [Cloud Deployment](./Cloud-Deployment.md) guide.
 :::
 
-**Prerequisites (tested on Ubuntu 22.04+):**
+**Prerequisites (Ubuntu 22.04+ instructions):**
 
 - An Ubuntu server with sudo access
 - A domain name pointing to your server's public IP (recommended)
+- A MongoDB 8 replica set or suitable Atlas deployment reachable from the application container
 
 ## 1. System Setup
 
@@ -71,12 +72,16 @@ cp .env.example .env
 nano .env
 ```
 
-:::info Using PostgreSQL with Docker
-Songbird defaults to SQLite (`DB_CLIENT=sqlite3`). To use PostgreSQL instead, edit `.env` to set `DB_CLIENT=postgres` along with your `POSTGRES_*` environment variables, or uncomment the optional `postgres` service and `postgres-data` volume block in `docker-compose.yaml`.
+:::info MongoDB connection required
+The main `docker-compose.yaml` runs the application and nginx against an **external MongoDB replica set or Atlas deployment**. Fill the intentionally blank `MONGODB_URI` in your private `.env` and keep `DB_CLIENT=mongodb` and `MONGODB_DATABASE=ouj_chat`. Use hostnames reachable from the application container, including the member hostnames advertised by the replica set. The main file does not provision a SQL database or import old data. See [MongoDB](./MongoDB.md) for setup and migration.
+
+The separate `docker-compose.mongo.yaml` is for development with Node.js running **on the host**. It publishes MongoDB on `127.0.0.1:27017` and advertises `localhost:27017`; that address does not point from the application container to the host database. Do not combine the two Compose files as an application/database stack. Follow the [host development setup](./MongoDB#local-mongodb-with-docker) instead.
+
+The `songbird-data` volume still preserves local upload binaries and local runtime files; it is not the MongoDB database volume. Back up the configured MongoDB deployment and file volume separately.
 :::
 
 :::info Media Worker Container
-Songbird automatically spawns and manages a local Media Worker child process inside the all-in-one container (`bllackbull/songbird:latest`) by default. For distributed or high-load setups, you can offload media processing to the dedicated standalone image (`bllackbull/songbird-worker:latest`) or uncomment the optional `media-worker` service in `docker-compose.yaml`. See [Media Worker](./Media-Worker.md) for details.
+The all-in-one application container manages a local Media Worker child process by default. You can also configure a standalone worker; see [Media Worker](./Media-Worker.md). When selecting a published application or worker image, verify that it contains the version and database support you intend to deploy.
 :::
 
 ## 4. Set up TLS certificates
@@ -90,16 +95,16 @@ See [SSL Certificates](./SSL-Certificates.md) for the available options.
 
 ## 5. Build and start
 
-Pull the pre-built image and start the containers:
+Build the checked-out source and start the containers:
 
 ```bash
 cd /opt/songbird
-docker compose up -d
+docker compose up -d --build
 ```
 
-The image is pulled automatically from Docker Hub on first run. If you prefer to build from source instead, edit `docker-compose.yaml` and swap the `image:` line for the `build:` block (instructions are in the comments).
+The main Compose file builds the local source by default. To use a published image instead, explicitly select a release that includes this MongoDB implementation; an upstream image tag alone is not evidence that it contains the changes in your checkout.
 
-The nginx container waits for the app to pass its health check before it starts accepting traffic. This prevents 502 errors during the brief startup window while migrations run.
+The nginx container waits for the app to pass its health check before it starts accepting traffic. This prevents 502 errors during the brief startup window while database initialization runs.
 
 Optional: verify the containers started successfully:
 
@@ -162,12 +167,11 @@ If you do not need service control from the admin panel, you can remove the sock
 
 ## Updating
 
-Pull the latest image and restart:
+Update your source checkout, then rebuild and restart:
 
 ```bash
 cd /opt/songbird
-docker compose pull
-docker compose up -d
+docker compose up -d --build
 ```
 
-See the [Updating](./Updating.md) page for the full update procedure.
+If you explicitly selected a published image, pull that chosen version before restarting. See the [Updating](./Updating.md) page for backups, database compatibility and the full procedure.

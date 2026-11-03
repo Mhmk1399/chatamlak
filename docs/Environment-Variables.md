@@ -21,16 +21,13 @@ nano .env
 | `SERVER_PORT` | `integer` | `5174` | API server port. (`PORT` is supported as a legacy fallback.) |
 | `CLIENT_PORT` | `integer` | `80` | Nginx listen port (what users connect to). |
 | `BIND_ADDRESS` | `string` | `localhost` | Network interface to bind to. Use `localhost` for VPS/private networks to avoid exposing backend when firewall is disabled; use `0.0.0.0` for Docker containers. |
-| `DATA_DIR` | `string` | `<project_root>/data` | Absolute path to the data directory (database, uploads, backups). Override this on cloud platforms (Railway, Render, Fly.io) to point at the platform's persistent volume mount. |
-| `DB_CLIENT` | `string` | `sqlite3` | Database driver client (`sqlite3` or `postgres`). |
-| `POSTGRES_HOST` | `string` | `127.0.0.1` | PostgreSQL database host. |
-| `POSTGRES_PORT` | `integer` | `5432` | PostgreSQL database port. |
-| `POSTGRES_USER` | `string` | `postgres` | PostgreSQL username. |
-| `POSTGRES_PASSWORD` | `string` | `postgres` | PostgreSQL password. |
-| `POSTGRES_DB` | `string` | `songbird` | PostgreSQL database name. |
-| `POSTGRES_URL` | `string` | `null` | Optional full PostgreSQL connection string URL. |
-| `POSTGRES_SSL` | `boolean` | `false` | Enable SSL for PostgreSQL connections. |
-| `NODE_EXTRA_CA_CERTS` | `string` | `""` | Absolute path to an additional trusted PEM CA certificate bundle or file (required for managed PostgreSQL databases with custom/self-signed CAs like Aiven or AWS RDS). |
+| `DATA_DIR` | `string` | `<project_root>/data` | Local upload, backup and runtime-file directory; the MongoDB service manages its own database files separately. |
+| `DB_CLIENT` | `string` | `mongodb` | Keep `mongodb`; legacy SQL values are rejected by the active server. |
+| `MONGODB_URI` | `string` | `""` | Required private MongoDB replica-set/Atlas connection URI. Intentionally empty in `.env.example`; there is no SQL fallback. See [MongoDB](./MongoDB.md). |
+| `MONGODB_DATABASE` | `string` | `ouj_chat` | Active MongoDB application database. Keep it consistent across application instances. |
+| `MONGODB_MAX_POOL_SIZE` | `integer` | `20` | Maximum MongoDB client connection-pool size per application process. |
+| `MONGODB_CONNECT_TIMEOUT_MS` | `integer` | `10000` | MongoDB server-selection timeout in milliseconds. |
+| `NODE_EXTRA_CA_CERTS` | `string` | `""` | Additional trusted CA certificate PEM path when required by the database/network provider. |
 | `REDIS_HOST` | `string` | `""` | Optional Redis host. If set, Songbird uses Redis for BullMQ background job queues (media processing), session storage, and pub/sub instead of in-process fallback. |
 | `REDIS_PORT` | `integer` | `6379` | Optional Redis port. |
 | `REDIS_URL` | `string` | `""` | Optional Redis connection URL (e.g. `redis://user:pass@host:port`). |
@@ -170,3 +167,7 @@ sudo systemctl restart songbird
 ```bash
 sudo systemctl reload nginx
 ```
+
+## Database test and import variables
+
+`MONGODB_TEST_URI` selects an explicit dedicated integration-test database containing `test` or `e2e`. Without it, `test:mongo` starts a temporary real replica set. `MONGOMS_SYSTEM_BINARY` can select a compatible local MongoDB executable for tests. `LEGACY_POSTGRES_URI` is private input only for the `db:import-sql -- --postgres` command. Keep `DB_CLIENT=mongodb` or use its current default; SQL selector values are rejected. Historical `POSTGRES_*` and SQL `DATABASE_URL` settings do not configure the active MongoDB connection. See [MongoDB](./MongoDB.md) for the complete setup and recovery procedures.

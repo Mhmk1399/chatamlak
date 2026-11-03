@@ -17,6 +17,10 @@ hero:
       link: https://github.com/bllackbull/Songbird
 
 features:
+  - icon: 🍃
+    title: راه‌اندازی MongoDB
+    details: replica set یا Atlas را تنظیم کنید، رکوردهای SQL قدیمی را وارد کنید و از دیتابیس جدا از فایل‌ها پشتیبان بگیرید.
+    link: /fa/MongoDB
   - icon: 💬
     title: پیش‌نویس و پخش ویس
     details: متن ناتمام و پیام‌های در صف را روی دستگاه نگه دارید و سرعت و نقطهٔ پخش ویس را کنترل کنید.

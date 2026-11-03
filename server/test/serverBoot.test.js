@@ -16,6 +16,8 @@ function bootServer(timeoutMs = BOOT_TIMEOUT_MS) {
     cwd: serverDir,
     env: {
       ...process.env,
+      DB_CLIENT: "mongodb",
+      MONGODB_URI: "",
       SERVER_PORT: "0",
       BIND_ADDRESS: "127.0.0.1",
       DATA_DIR: dataDir,
@@ -48,14 +50,12 @@ function bootServer(timeoutMs = BOOT_TIMEOUT_MS) {
 }
 
 describe("Server boot", () => {
-  test("index.js starts and binds a port without crashing", { timeout: 30_000 }, async () => {
+  test("refuses an unconfigured MongoDB without falling back to SQL", { timeout: 30_000 }, async () => {
     const result = await bootServer();
     try {
-      expect(
-        result.ok,
-        `server exited early (code=${result.code}, signal=${result.signal}) stderr:\n${result.stderr}`,
-      ).toBe(true);
-      expect(result.stdout).toContain("Songbird server running");
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain("MONGODB_URI is empty");
+      expect(result.stdout).not.toContain("Songbird server running");
       expect(result.stderr).not.toMatch(/ReferenceError/);
     } finally {
       fs.rmSync(result.dataDir, { recursive: true, force: true });

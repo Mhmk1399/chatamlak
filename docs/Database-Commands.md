@@ -1,542 +1,108 @@
 # Database Commands
 
-Songbird supports both SQLite (default) and PostgreSQL database engines, and ships a set of `npm` scripts for managing the database, users, chats, files, and backups from the command line. Run them from the `server/` directory:
-
-```bash
-cd /opt/songbird/server
-```
-
-:::tip
-
-You can also run every database command interactively via the [Deployment Script](./Deployment-Script.md) (`songbird-deploy`).
-
-:::
-
-## Conventions
-
-A few rules apply across all commands:
-
-| Convention | Detail |
-|---|---|
-| `--` separator | When running through npm, place `--` before any flags or arguments so npm forwards them to the script (e.g. `npm run db:backup -- --password "secret"`). |
-| Selectors | Commands that target a user, chat, or file accept either a numeric **id** or a **name** (username / group username / stored file name). |
-| Force flags | Destructive commands prompt for confirmation. Pass `-y` or `--yes` to skip the prompt in non-interactive contexts. |
-| `--all` | Bulk delete commands refuse to run without an explicit `--all` when no selector is given. |
-| Built-in help | Run `npm run db:help` for a condensed cheat sheet of every command. |
-
-### Data directory ownership
-
-Supported database commands use a pre-Node launcher and follow Songbird's runtime account:
-
-- **Docker:** The command runs as the container's current UID/GID. Docker does not use `songbird.service`.
-- **systemd:** The command follows the effective `User=` and `Group=` of `songbird.service`, including systemd overrides. A missing `Group=` uses the service user's primary group. When root invokes a command for a non-root service account, the launcher repairs only this installation's `data/` directory and then switches to that configured account.
-- **Manual/no-systemd:** The command uses the caller's current account. It does not create an account or attempt ownership repair.
-
-If `User=` is missing or `User=root`, the systemd command remains root: it does not run `chown` or change users. An explicit `Group=` is still preserved, so `User=root` and `Group=appgroup` executes as `root:appgroup`. For safety, the root/non-root-systemd repair path accepts only the deployed instance's own `data/` directory next to the launcher (`/opt/songbird/data` in the standard installation); it rejects an overridden `DATA_DIR` rather than recursively changing an arbitrary path.
-
-`DATA_DIR` contains Songbird-managed SQLite data, uploads, and backups. PostgreSQL server data is managed externally by PostgreSQL and is not stored in, or changed by, this directory.
-
-:::warning
-
-Do not run individual scripts with `sudo node` or `sudo npm`. Those direct invocations bypass the launcher and are unsupported. Use the documented `npm run db:*` commands instead.
-
-:::
+The active Ouj Chat database is MongoDB. These Node.js/npm maintenance commands run from the repository root without a Bash wrapper. Configure `MONGODB_URI` and `MONGODB_DATABASE` in private configuration first; see [MongoDB](./MongoDB).
 
 ## Quick reference
 
 | Command | Purpose |
 |---|---|
-| `npm run db:help` | Print the built-in command guide. |
-| [`npm run db:backup`](#db-backup) | Create an engine-native database backup. |
-| [`npm run db:restore`](#db-restore) | Restore an engine-native database backup. |
-| [`npm run db:vacuum`](#db-vacuum) | Compact SQLite or run PostgreSQL `VACUUM ANALYZE`. |
-| [`npm run db:migrate`](#db-migrate) | Apply pending database migrations. |
-| [`npm run db:reset`](#db-reset) | Wipe database content and uploaded message files. |
-| [`npm run db:delete`](#db-delete) | Delete the database file. |
-| [`npm run db:inspect`](#db-inspect-and-friends) | Print a full summary (users, chats, messages, files, disk). |
-| [`npm run db:chat:inspect`](#db-inspect-and-friends) | Inspect chats only. |
-| [`npm run db:user:inspect`](#db-inspect-and-friends) | Inspect users only. |
-| [`npm run db:file:inspect`](#db-inspect-and-friends) | Inspect files only. |
-| [`npm run db:user:create`](#db-user-create) | Create a single user. |
-| [`npm run db:user:generate`](#db-user-generate) | Generate random test users. |
-| [`npm run db:user:edit`](#db-user-edit) | Edit a user profile. |
-| [`npm run db:user:ban`](#db-user-ban) | Toggle a user's ban state. |
-| [`npm run db:user:verify`](#db-user-verify) | Toggle a user's verified status. |
-| [`npm run db:user:delete`](#db-user-delete) | Delete one, many, or all users. |
-| [`npm run db:chat:create`](#db-chat-create) | Create a group or channel (optionally a Remote Channel). |
-| [`npm run db:chat:add`](#db-chat-add) | Add members to a group or channel. |
-| [`npm run db:chat:edit`](#db-chat-edit) | Edit a chat profile, ownership, or Remote Channel config. |
-| [`npm run db:chat:verify`](#db-chat-verify) | Toggle a chat's verified status. |
-| [`npm run db:chat:delete`](#db-chat-delete) | Delete one, many, or all chats. |
-| [`npm run db:file:delete`](#db-file-delete) | Delete uploaded message files and/or avatars. |
-| [`npm run db:message:generate`](#db-message-generate) | Generate random messages between two users. |
-| [`npm run remote:configure`](#remote-configure) | Configure Telegram credentials for Remote Channel. |
-| [`npm run storage:migrate`](#storage-migrate) | Migrate object storage keys to unified layout and rewrite DB records. |
+| `npm --prefix server run db:check` | Check connectivity and report database statistics, including index counts. |
+| `npm --prefix server run db:migrate` | Create/verify MongoDB collections and indexes; this does not run legacy SQL migrations. |
+| `npm --prefix server run db:inspect -- --limit 25` | Report counts and a bounded snapshot of user, chat and file metadata. |
+| `npm --prefix server run db:user:inspect -- --limit 25` | Inspect user metadata with password hashes omitted. |
+| `npm --prefix server run db:chat:inspect -- --limit 25` | Inspect chat and membership metadata. |
+| `npm --prefix server run db:file:inspect -- --limit 25` | Inspect attachment/avatar metadata and recorded file sizes. |
+| `npm --prefix server run db:help` | Show the current native maintenance command help. |
+| `npm --prefix server run db:backup -- --file ./backups/ouj.backup.json.gz` | Write the application's gzip Extended JSON archive. |
+| `npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline` | Restore an archive with the application stopped. |
+| `npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run` | Inspect an old SQLite database before import. |
+| `npm --prefix server run db:import-sql -- --postgres --dry-run` | Inspect an old PostgreSQL source configured through `LEGACY_POSTGRES_URI`. |
 
+Paths are examples. Choose a writable backup directory outside ephemeral container storage. The selected database comes from the MongoDB environment configuration, not `DATA_DIR`, `DB_CLIENT` or a `.db` filename.
 
-## Backup & restore
+## Database checks
 
-### `db:backup`
-
-Creates a timestamped, engine-native backup in `data/backups/`:
-
-- **SQLite:** copies `songbird.db` to `songbird-backup-<timestamp>.db`.
-- **PostgreSQL:** creates `songbird-backup-<timestamp>.dump` with `pg_dump --format=custom`.
-
-```bash
-# SQLite or PostgreSQL; the extension is selected from DB_CLIENT
-npm run db:backup
+```sh
+npm --prefix server run db:check
 ```
 
-:::info
+Run checks after initial setup, a legacy import or an offline restore. Review the command's actual results; a successful connection alone does not establish that all application behavior or production load has been verified.
 
-Backups contain database content only. They do **not** include `.env`, local uploads, or objects in remote storage; manage those separately. 
+## Backup
 
-The PostgreSQL client tools `pg_dump`, `pg_restore`, `vacuumdb`, `dropdb`, and `createdb` must be available in `PATH`, and the configured database user needs the corresponding PostgreSQL permissions.
-
-:::
-
-### `db:restore`
-
-Restores the newest matching backup or an explicitly selected file. SQLite accepts `.db` files; PostgreSQL accepts native `.dump` archives and validates them with `pg_restore --list` before restoring.
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `--file <path>` | No | Path to a `.db` backup in SQLite mode or a `.dump` archive in PostgreSQL mode. |
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:restore -- -y --file /path/to/songbird-backup.db
-npm run db:restore -- -y --file /path/to/songbird-backup.dump
+```sh
+npm --prefix server run db:backup -- --file ./backups/ouj.backup.json.gz
 ```
 
-:::warning PostgreSQL must be offline
+The archive contains MongoDB records and encryption-key material as gzip-compressed Extended JSON. It is not a SQLite `.db`, PostgreSQL `.dump`, or MongoDB `mongodump` archive. Keep it private and retain the matching environment/encryption configuration.
 
-Stop Songbird before running PostgreSQL `db:restore`. Native `pg_restore --clean` replaces database objects and cannot safely run through the live Songbird process. Start or restart Songbird only after the command succeeds.
+File metadata is in MongoDB, but binary attachments and avatars remain in the configured local/S3 provider. Back up their volume or remote objects separately. For a coordinated recovery point, quiesce writers or use your database/provider's supported backup procedure; the application archive is not a promise of a cluster-wide point-in-time snapshot.
 
-:::
+## Offline restore
 
+Stop every application instance and worker that can write to the target before restoring:
 
-## Maintenance
-
-### `db:vacuum`
-
-Compacts SQLite with `VACUUM`; in PostgreSQL mode it runs native `vacuumdb --analyze` (`VACUUM ANALYZE`).
-
-| Flag | Required | Description |
-|---|---|---|
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:vacuum -- -y
+```sh
+npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline
+npm --prefix server run db:check
 ```
 
-### Migrating from SQLite to PostgreSQL
+`--yes` confirms the operation, and `--offline` acknowledges that writers have been stopped. The CLI does not stop services for you. Online MongoDB restore from the Admin Panel returns HTTP `409` with an offline recovery instruction. Start the application only after checking the restored records and required files/keys.
 
-For converting a SQLite database to PostgreSQL, standard industry tools such as [**pgloader**](https://pgloader.readthedocs.io/) provide robust, battle-tested migration with automatic type mapping, sequence creation, and transaction safety.
+The application `.json.gz` format is distinct from provider snapshots or `mongodump`/`mongorestore` BSON archives. Use the matching restore tool for the format you created.
 
-#### 1. Prepare target PostgreSQL database
+## Import old SQL data
 
-Configure your `.env` with PostgreSQL connection details (`DB_CLIENT=postgres` and `POSTGRES_*` variables) and run migrations to create the schema:
+SQLite and PostgreSQL are read-only migration sources. They are not active runtime choices and do not provide a fallback when `MONGODB_URI` is blank.
 
-```bash
-# Apply migrations to create schema tables in PostgreSQL
-npm run db:migrate
+1. Stop the old installation and preserve its database, uploaded files and encryption keys.
+2. Configure a new, empty MongoDB database as the target.
+3. Run the relevant dry run, review counts and validation findings, then explicitly apply:
+
+```sh
+npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run
+npm --prefix server run db:import-sql -- --source ./backups/songbird.db --apply
 ```
 
-#### 2. Install pgloader
+For PostgreSQL, set `LEGACY_POSTGRES_URI` in your private environment and use a flag without a password-bearing argument:
 
-```bash
-# Debian / Ubuntu
-sudo apt-get install -y pgloader
+```sh
+npm --prefix server run db:import-sql -- --postgres --dry-run
+npm --prefix server run db:import-sql -- --postgres --apply
 ```
 
-#### 3. Run migration with pgloader
+4. Run `db:check` and verify accounts, permissions, message counts, UUIDs, encrypted content and file access before switching traffic.
 
-```bash
-pgloader ./data/songbird.db postgresql://songbird:password@localhost:5432/songbird
-```
+Importing does not copy upload binaries, certify the source installation, or erase the need for a rollback backup. SQL schema migrations and `VACUUM` commands belong to old installations and are not MongoDB maintenance operations. See the [full MongoDB migration guide](./MongoDB#import-a-legacy-sql-installation).
 
-Or using a `songbird.load` configuration file for fine-grained control:
+## Other administration
 
-```lisp
-LOAD DATABASE
-     FROM sqlite://./data/songbird.db
-     INTO postgresql://songbird:password@localhost:5432/songbird
+Use the [Admin Panel](./Admin-Panel) or the native Node.js CLI for account, chat and file operations. The commands below use `server/scripts/mongo-cli.js`, without a Bash wrapper. Run a command's `--help` to check the current syntax; help does not require a working MongoDB URI.
 
- WITH include drop, create tables, create indexes, reset sequences
-
-  SET work_mem to '16MB', maintenance_work_mem to '512MB';
-```
-
-```bash
-pgloader songbird.load
-```
-
-### `db:migrate`
-
-Applies any pending migrations. Migrations also run automatically on server start.
-
-```bash
-npm run db:migrate
-```
-
-### `db:reset`
-
-Wipes database content and local uploaded message files.
-
-| Flag | Required | Description |
-|---|---|---|
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-| `--recreate` | No | Recreate a fresh database after wiping (implied with `-y`). |
-| `--no-recreate` | No | Wipe without recreating the database. |
-
-```bash
-npm run db:reset -- -y --recreate
-npm run db:reset -- -y --no-recreate
-```
-
-:::info Online vs. Offline behavior
-
-When Songbird is running, the command delegates to the authenticated local server and performs an schema-preserving reset. When Songbird is stopped, SQLite removes its database file and PostgreSQL drops the database; either engine can then be recreated and migrated.
-
-:::
-
-### `db:delete`
-
-Deletes the SQLite database file or, in PostgreSQL mode, drops the PostgreSQL database with native `dropdb`.
-
-| Flag | Required | Description |
-|---|---|---|
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:delete -- -y
-```
-
-:::warning PostgreSQL must be offline
-
-Stop Songbird before PostgreSQL `db:delete`; `dropdb --force` terminates active PostgreSQL connections. Local message uploads are also removed, but remote object storage must be cleaned separately if configured.
-
-:::
-
-
-## Inspection
-
-### `db:inspect` and friends
-
-Prints counts, disk usage, and per-entity rows. The `db:chat:inspect`, `db:user:inspect`, and `db:file:inspect` variants scope the output to one entity.
-
-| Argument / Flag | Required | Default | Description |
-|---|---|---|---|
-| `--limit <n>` | No | `25` | Max rows listed per entity (`1`-`1000`). Also accepted as a positional number. |
-
-```bash
-npm run db:inspect
-npm run db:inspect -- --limit 50
-npm run db:chat:inspect
-npm run db:user:inspect
-npm run db:file:inspect
-```
-
-
-## Users
-
-### `db:user:create`
-
-Creates a single user. Accepts named flags or three positional arguments (`nickname`, `username`, `password`).
-
-| Flag | Positional | Required | Description |
-|---|---|---|---|
-| `--nickname <value>` | 1st | Yes | Display name. Max length follows `NICKNAME_MAX_CHARS`. |
-| `--username <value>` | 2nd | Yes | Lowercase letters, numbers, `.`, `_`. Min 3 chars, max follows `USERNAME_MAX_CHARS`. |
-| `--password <value>` | 3rd | Yes | Account password (bcrypt-hashed on save). |
-| `--role <owner\|admin\|user>` | 4th | No | User role. |
-
-```bash
-npm run db:user:create -- --nickname "Songbird Sage" --username songbird.sage --password "12345678"
-
-# positional form:
-npm run db:user:create -- "Songbird Sage" songbird.sage "12345678"
-```
-
-### `db:user:generate`
-
-Creates random test users.
-
-| Flag | Positional | Required | Default | Description |
-|---|---|---|---|---|
-| `--count <n>` | 1st | No | `10` | Number of users to create (`1`-`5000`). |
-| `--password <value>` | 2nd | No | `Passw0rd!` | Shared password for all generated users. |
-| `--nickname-prefix <value>` | — | No | `User` | Prefix for generated nicknames. |
-| `--username-prefix <value>` | — | No | `user` | Prefix for generated usernames. |
-
-```bash
-npm run db:user:generate -- --count 50 --password "12345678"
-npm run db:user:generate -- --count 50 --password "12345678" --nickname-prefix Member --username-prefix member
-```
-
-### `db:user:edit`
-
-Edits a user profile. The first positional argument is the user selector (id or username).
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<user-id-or-username>` | Yes | The user to edit. |
-| `--username <value>` | No | New username (same rules as create). |
-| `--nickname <value>` | No | New display name. |
-| `--avatar-url <value>` | No | Avatar URL, e.g. `/api/uploads/avatars/file.png`. |
-| `--status <online\|invisible>` | No | Presence status. |
-| `--color <#hex>` | No | Profile color, e.g. `#10b981`. |
-| `--role <owner\|admin\|user>` | No | User role. |
-
-```bash
-npm run db:user:edit -- songbird.sage --nickname "Songbird Sage" --color "#ff6b6b"
-npm run db:user:edit -- 1 --username songbird.admin --status invisible
-```
-
-### `db:user:ban`
-
-Toggles a user's ban state. Running it again unbans. Banning also expires all of the user's sessions.
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<user-id-or-username>` | Yes | The user to ban or unban. |
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:user:ban -- songbird.sage
-# run again to unban:
-npm run db:user:ban -- songbird.sage
-```
-
-### `db:user:verify`
-
-Toggles a user's verified status. Run the command again for the same user to remove verification.
-
-| Argument | Required | Description |
-|---|---|---|
-| `<user-id-or-username>` | Yes | The user to verify or unverify. |
-
-```bash
-npm run db:user:verify -- songbird.sage
-# run again to unverify:
-npm run db:user:verify -- songbird.sage
-```
-
-### `db:user:delete`
-
-Deletes one, many, or all users along with their sessions and messages. Owned chats are either deleted (if no members remain) or transferred to a random remaining member.
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<user-id-or-username> [more...]` | Conditional | One or more users to delete. Required unless `--all` is given. |
-| `--all` | Conditional | Delete every user. Required when no selector is provided. |
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:user:delete -- songbird.sage -y
-npm run db:user:delete -- --all -y
-```
-
-
-## Chats
-
-### `db:chat:create`
-
-Creates a group or channel. Channels can optionally be configured as a Remote Channel at creation time.
-
-| Flag | Required | Description |
-|---|---|---|
-| `--type <group\|channel>` | Yes | Chat type. |
-| `--name <value>` | Yes | Display name. |
-| `--owner <user>` | Yes | Owner user (id or username). |
-| `--username <value>` | Yes | Public handle for the chat. |
-| `--visibility <public\|private>` | No | Visibility (defaults to public). |
-| `--users <a,b,c>` | No | Comma-separated initial members. |
-| `--remote-channel <source>` | No | Telegram source (`@name`, `t.me` link, or numeric id). Channels only; requires `REMOTE_CHANNEL=true`. |
-| `--sync-metadata` | No | Copy the source's title/avatar into the channel. |
-| `--stream-media` | No | Download source media into Songbird uploads. |
-
-```bash
-npm run db:chat:create -- --type group --name "Core Team" --owner songbird.sage --username core.team --visibility private --users songbird.sage2,songbird.sage3
-
-npm run db:chat:create -- --type channel --name "Announcements" --owner songbird.sage --username announcements
-
-# Channel with a Remote Channel source:
-npm run db:chat:create -- --type channel --name "My Channel" --owner alice --username my_channel --remote-channel @telegram_source --sync-metadata --stream-media
-```
-
-### `db:chat:add`
-
-Adds members to a group or channel. The first positional argument is the chat selector. Users who previously left are skipped unless `--force` is given.
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<chat-id-or-username>` | Yes | The target chat. |
-| `<user> [more...]` | Conditional | One or more users to add. Required unless `--all` is given. |
-| `--all` | Conditional | Add every user in the database. |
-| `--force` | No | Re-add users who previously left the chat. |
-
-```bash
-npm run db:chat:add -- core.team songbird.sage2 songbird.sage3
-npm run db:chat:add -- 1 --all
-npm run db:chat:add -- 1 --all --force
-```
-
-### `db:chat:edit`
-
-Edits a chat profile, transfers ownership, or manages its Remote Channel. The first positional argument is the chat selector.
-
-**Profile flags:**
-
-| Flag | Description |
+| Commands | Arguments / behavior |
 |---|---|
-| `--name <value>` | New display name. |
-| `--username <value>` | New public handle. |
-| `--visibility <public\|private>` | New visibility. |
-| `--color <#hex>` | New chat color. |
-| `--owner <user>` | Transfer ownership to another user. |
-| `--allow-member-invites` / `--disallow-member-invites` | Toggle member invites (private chats only; public chats always allow them). |
+| `db:user:create`, `db:user:edit` | Creation uses `--username`, `--password` and optional `--nickname` / `--role`. Editing accepts a user ID or username followed by changed fields. |
+| `db:user:ban`, `db:user:verify` | Select a user by ID or username; the corresponding state is toggled unless an explicit value is supplied. |
+| `db:chat:create`, `db:chat:edit` | Create with `--name`, `--username`, `--owner` and optional `--type` (`group` or `channel`) / `--users alice,bob`; edit by chat ID or username. |
+| `db:chat:add`, `db:chat:verify` | Add members with `CHAT --users alice,bob` or `CHAT --all`; verification accepts a chat selector. |
+| `db:user:delete`, `db:chat:delete`, `db:file:delete` | Select users/chats by ID or username, and files by ID. Deletion requires `-y` or `--yes`. |
+| `db:user:generate`, `db:message:generate` | Create demonstration users with `--count` / `--password`, or messages with `--chat`, `--user` and `--count`. |
 
-**Remote Channel config flags (channels only):**
+From the repository root, inspect help or resume an existing remote-channel queue:
 
-| Flag | Description |
-|---|---|
-| `--remote-channel <source>` | Set/replace the Telegram source. |
-| `--sync-metadata` / `--no-sync-metadata` | Enable/disable metadata sync. |
-| `--stream-media` / `--no-stream-media` | Enable/disable media streaming. |
-
-**Remote Channel control flags:**
-
-| Flag | Description |
-|---|---|
-| `--enable-remote` / `--disable-remote` | Enable or disable the configured source. |
-| `--pause-queue` / `--resume-queue` | Pause or resume mirror queue processing. |
-| `--skip-queue` | Skip the current queue item. |
-| `--skip-all-queue` | Skip all pending/retry queue items. |
-
-```bash
-npm run db:chat:edit -- core.team --name "Core Team HQ" --visibility public --color "#14b8a6"
-npm run db:chat:edit -- 1 --owner songbird.sage2
-
-# Remote Channel:
-npm run db:chat:edit -- my_channel --remote-channel @new_telegram_source
-npm run db:chat:edit -- my_channel --no-stream-media
-npm run db:chat:edit -- my_channel --enable-remote
-npm run db:chat:edit -- my_channel --pause-queue
-npm run db:chat:edit -- my_channel --skip-all-queue
+```sh
+npm --prefix server run db:user:edit -- --help
+npm --prefix server run db:chat:edit -- your_channel --resume-queue
 ```
 
-### `db:chat:verify`
+When the local server is running, user/chat/file mutations use its `/api/admin/db-tools` endpoint and require `ADMIN_API_TOKEN` in private configuration. When it is stopped, stop all other writers and append `--offline` to allow direct MongoDB administration. Offline deletion needs both `--offline` and `--yes`; the flags do not stop services. Whole-database `db:reset`, `db:delete` and `db:restore` always require `--yes --offline`. `--force` is not a substitute for those confirmations.
 
-Toggles a group or channel's verified status. Run the command again for the same chat to remove verification.
+Inspection output includes account and chat metadata: keep it private. It is not limited to counts, although password hashes are omitted from user snapshots. File deletion and database backup are separate operations; database archives do not contain the binary media provider's objects.
 
-| Argument | Required | Description |
-|---|---|---|
-| `<chat-id-or-username>` | Yes | The group or channel to verify or unverify. |
+`remote:configure` remains an interactive environment/Telegram setup helper; see [Remote Channel Setup](./Remote-Channel-Setup). Storage maintenance commands have their own help and are not SQL-to-MongoDB import commands.
 
-```bash
-npm run db:chat:verify -- core.team
-# run again to unverify:
-npm run db:chat:verify -- core.team
-```
+For missing dimensions/durations in existing **local** uploads, `npm --prefix server run db:backfill -- --limit=1000` reads the local media and updates metadata through the MongoDB facade. Video probing requires `ffprobe`. It is not a bucket download, SQL import or dry run; preserve backups and stop writers before maintenance.
 
-### `db:chat:delete`
+For legacy S3 object-key layouts, stop the application and review `npm --prefix server run storage:migrate -- --dry-run`. An applying run uses `npm --prefix server run storage:migrate -- --yes`; it copies verified objects to `uploads/messages/*` / `uploads/avatars/*`, rewrites MongoDB metadata, then removes the corresponding legacy keys. This helper accepts `--dry-run`, `--yes` / `-y` and `--help`; it refuses a running local server and does not require the database CLI's `--offline` flag. Back up both records and objects first; review partial copy/deletion failures before restarting.
 
-Deletes one, many, or all chats and their related data (messages, members, files).
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<chat-id-or-username> [more...]` | Conditional | One or more chats to delete. Required unless `--all` is given. |
-| `--all` | Conditional | Delete every chat. Required when no selector is provided. |
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:chat:delete -- 12 -y
-npm run db:chat:delete -- core.team -y
-npm run db:chat:delete -- --all -y
-```
-
-
-## Files
-
-### `db:file:delete`
-
-Deletes uploaded message files and/or avatar files, both from the database and from disk.
-
-| Argument / Flag | Required | Description |
-|---|---|---|
-| `<file-id-or-name> [more...]` | Conditional | File ids or stored file names to delete. Required unless `--all` is given. |
-| `--all` | Conditional | Delete all uploaded files (message files + avatars). |
-| `-y`, `--yes` | No | Skip the confirmation prompt. |
-
-```bash
-npm run db:file:delete -- 42 -y
-npm run db:file:delete -- stored-file-name.ext -y
-npm run db:file:delete -- --all -y
-```
-
-
-## Messages
-
-### `db:message:generate`
-
-Generates random messages in one chat between two users. Accepts positional arguments or named flags.
-
-| Argument / Flag | Positional | Required | Default | Description |
-|---|---|---|---|---|
-| `--chatId <id>` | 1st | Yes | — | Target chat id. |
-| `--userA <user>` | 2nd | Yes | — | First participant (id or username). |
-| `--userB <user>` | 3rd | Yes | — | Second participant (id or username). |
-| `--count <n>` | 4th | No | `1` | Number of messages (`1`-`10000`). |
-| `--days <n>` | 5th | No | `7` | Spread messages across the last N days (`1`-`365`). |
-
-```bash
-npm run db:message:generate -- 1 songbird.sage songbird.sage2 300 7
-npm run db:message:generate -- --chatId 1 --userA songbird.sage --userB songbird.sage2 --count 300 --days 7
-```
-
-
-## Remote Channel configuration
-
-### `remote:configure`
-
-Interactively configures Telegram credentials for the Remote Channel feature. This sets up `REMOTE_CHANNEL_TELEGRAM_API_ID`, `REMOTE_CHANNEL_TELEGRAM_API_HASH`, and `REMOTE_CHANNEL_TELEGRAM_SESSION_STRING` in your `.env` file.
-
-```bash
-npm run remote:configure
-```
-
-See [Remote Channel Setup](./Remote-Channel-Setup.md) for the complete guide, including how to obtain API credentials.
-
-## Object Storage
-
-### `storage:migrate`
-
-Migrates object-storage keys from the legacy root-level layout to the unified layout and updates database columns.
-
-| Flag | Shorthand | Description |
-|---|---|---|
-| `--dry-run` | | Preview legacy objects. |
-| `--yes` | `-y` | Skip interactive confirmation prompt. |
-| `--help` | `-h` | Display command help. |
-
-```bash
-npm run storage:migrate
-```
-
-:::warning Concurrency Guard
-`storage:migrate` refuses to run if the Songbird server process is actively running, preventing race conditions with live uploads. Stop the server before executing.
-:::
-
-## Running commands via Docker
-
-To run database and maintenance commands inside a Docker container:
-
-```bash
-docker compose exec songbird npm --prefix /app/server run db:backup
-docker compose exec songbird npm --prefix /app/server run db:migrate
-docker compose exec songbird npm --prefix /app/server run db:inspect
-docker compose exec songbird npm --prefix /app/server run storage:migrate -- -y
-```
+For Docker, run a supported maintenance command in a container that has the correct environment and access to the chosen archive path. An offline restore must use a separate maintenance container/process while application writers are stopped, rather than executing through a running API instance.

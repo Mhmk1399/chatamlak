@@ -49,6 +49,12 @@ function makeFile(overrides = {}) {
 // ─── Empty / null ─────────────────────────────────────────────────────────────
 
 describe("MessageFiles — empty state", () => {
+  test("renders circular video controls only for an explicit video note", async () => {
+    render(<MessageFiles {...BASE_PROPS} files={[makeFile({ kind: "video_note", name: "video-message.webm", mimeType: "video/webm", url: null, durationSeconds: 5 })]} />);
+    await expect.element(page.getByTestId("video-note-message")).toBeInTheDocument();
+    await expect.element(page.getByRole("button", { name: "Play video message", exact: true })).toBeDisabled();
+    await expect.element(page.getByRole("slider", { name: "Video message playback position" })).toBeDisabled();
+  });
   test("renders nothing when files array is empty", async () => {
     render(<MessageFiles {...BASE_PROPS} files={[]} />);
     // null is returned — nothing in the DOM

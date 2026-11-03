@@ -31,7 +31,7 @@
 | ویدیوها پخش نمیشوند | FFmpeg / ترنسکد / Worker | [مشکلات ترنسکد ویدیو](#video-transcoding-issues) |
 | بیلد Docker متوقف به نظر میرسد | دانلود وابستگی ها | [مشکلات بیلد Docker](#docker-build-issues) |
 | خطاهای TLS/گواهینامه | مسیرهای گواهینامه یا تمدید | [مشکلات TLS / گواهینامه](#tls--certificate-problems) |
-| خطای SSL / گواهی CA پایگاه داده PostgreSQL | گواهی SSL / CA دیتابیس ابری | [خطاهای SSL و گواهی CA در PostgreSQL](#postgresql-ssl--ca-certificate-errors) |
+| خطای اتصال یا تراکنش MongoDB | URI، replica set، شبکه و TLS | [خطاهای MongoDB](#mongodb-connection-errors) |
 | کانال ریموت بازتاب نمیدهد | اعتبارنامه های Telegram / صف | [کانال ریموت](#remote-channel-not-mirroring) |
 | کنترل سرویس در پنل مدیریت شکست میخورد | مجوزها | [مشکلات پنل مدیریت](#مشکلات-پنل-مدیریت) |
 
@@ -99,11 +99,7 @@ sudo tail -n 50 /var/log/nginx/error.log
 
 ### برطرف کردن خطای 502 در محیط های ابری (Render, Railway, Fly.io) {#fixing-502-bad-gateway-in-cloud-environments}
 
-اگر هنگام استفاده از [استقرار ابری](./Cloud-Deployment.md) خطای ۵۰۲ دریافت میکنید:
-
-1. **بررسی پورت**: مطمئن شوید پورت سرویس شما در پنل به درستی روی ۵۱۷۴ (یا مقدار `SERVER_PORT`) تنظیم شده است.
-2. **بررسی Mount مسیر دیتا**: پلتفرم هایی مثل Render نیاز دارند متغیر `DATA_DIR` به مسیر Volume متصل شده اشاره کند (مانند `DATA_DIR=/data`). اگر دیتا دایرکتوری به اشتباه کانفیگ شده باشد، سرور بالا نمی آید.
-3. **لاگ های Build و Deploy**: مطمئن شوید بیلد بدون خطا پایان یافته و وابستگی های دیتابیس مهیا هستند.
+در [استقرار ابری](./Cloud-Deployment.md)، بررسی کنید پلتفرم ترافیک را به پورت واقعی API یعنی `PORT` یا `SERVER_PORT` می‌فرستد و لاگ ساخت و اجرا اتصال موفق MongoDB را نشان می‌دهد. پیش از ورود ترافیک، دسترسی به replica set، تنظیم TLS و URI خصوصی را بررسی کنید. برای ذخیره‌سازی فایل محلی، `DATA_DIR` باید روی mount ماندگار و قابل‌نوشتن باشد؛ این mount فایل‌های محلی را نگه می‌دارد، نه رکوردهای MongoDB را.
 
 
 ## تداخل پورت با Nginx {#port-conflict-with-nginx}
@@ -161,7 +157,7 @@ curl -x http://your-proxy:3128 https://fcm.googleapis.com
 | خطای `403 Forbidden` روی URLهای Presigned | مقادیر `STORAGE_ACCESS_KEY_ID`، `STORAGE_SECRET_ACCESS_KEY`، دسترسی های باکت و همگام بودن ساعت سیستم را بررسی کنید. |
 | خطای ۵۰۰ در ساخت Presigned URL | متغیرهای `STORAGE_ENDPOINT` و `STORAGE_BUCKET` و لاگ های سرور را بررسی کنید. |
 | عدم دسترسی مرورگر به اندپوینت ذخیره سازی | اطمینان حاصل کنید `STORAGE_ENDPOINT` یک آدرس عمومی HTTPS قابل دسترس از شبکه کاربران است. |
-| دیسک پر است (ذخیره سازی محلی) | فضای آزاد را با `npm run db:inspect` (استفاده از دیسک را گزارش میکند) یا `df -h` بررسی کنید. |
+| دیسک پر است (ذخیره سازی محلی) | فضای آزاد را با `npm --prefix server run db:inspect` (استفاده از دیسک را گزارش میکند) یا `df -h` بررسی کنید. |
 
 پس از تغییر `.env`، تغییرات را اعمال کنید (به [متغیرهای محیطی](./Environment-Variables.md#apply-changes) مراجعه کنید).
 
@@ -201,43 +197,20 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 
 برای گزینه های کامل راه اندازی به [گواهینامه های SSL](./SSL-Certificates.md) مراجعه کنید.
 
-## خطاهای SSL و گواهی CA در PostgreSQL {#postgresql-ssl--ca-certificate-errors}
+## خطاهای اتصال و تراکنش MongoDB {#mongodb-connection-errors}
 
-هنگام اتصال Songbird به پایگاه های داده مدیریت شده ابری PostgreSQL (مانند **Aiven**، **AWS RDS**، **DigitalOcean**، **Supabase** یا **Neon**)، ممکن است اتصال هنگام شروع برنامه یا در حین مایگریشن های پایگاه داده با خطا مواجه شود.
+| نشانه | راه‌حل |
+|---|---|
+| `MONGODB_URI is empty` | URI عمداً خالی را در تنظیم خصوصی تکمیل کنید؛ فایل نمونه اتصال قابل‌اجرا نیست. |
+| ردشدن انتخاب موتور SQL | `DB_CLIENT=mongodb` را تنظیم کنید؛ `POSTGRES_*` و `DATABASE_URL` قدیمی، MongoDB را تنظیم نمی‌کنند. |
+| نیاز تراکنش به replica set | مجموعه را مقداردهی کنید، تا primary صبر کنید و نام صحیح مجموعه را در URI قرار دهید. |
+| پایان مهلت انتخاب سرور | DNS، پورت، مجوز، شبکهٔ Atlas و نام‌های اعلام‌شدهٔ replica set را بررسی کنید. `localhost` کانتینر برنامه، کانتینر دیتابیس دیگر نیست. |
+| خطای TLS یا CA اختصاصی | تنظیم معتبر CA ارائه‌دهنده، مانند `NODE_EXTRA_CA_CERTS` در صورت نیاز، را اعمال کنید؛ غیرفعال‌کردن بررسی TLS جایگزین آن نیست. |
+| خالی‌نبودن مقصد ورود داده | دیتابیس جدید انتخاب کنید، dry run را بررسی و پشتیبان منبع را حفظ کنید؛ نصب موجود را ضمنی بازنویسی نکنید. |
+| پاسخ `409` برای بازیابی آنلاین | تمام نویسندگان را متوقف و CLI صریح بازیابی آفلاین MongoDB را اجرا کنید. |
+| شکست دریافت فایل اجرایی integration | `MONGOMS_SYSTEM_BINARY` را به `mongod` محلی سازگار اشاره دهید یا دیتابیس اختصاصی test/e2e را با `MONGODB_TEST_URI` معرفی کنید. |
 
-### خطای `self-signed certificate in certificate chain` / `SELF_SIGNED_CERT_IN_CHAIN`
-
-**نشانه:**
-
-```txt
-[db-migrations] Error initializing Postgres schema sets: Error: self-signed certificate in certificate chain
-  code: 'SELF_SIGNED_CERT_IN_CHAIN'
-Acquire connection error: Error: self-signed certificate in certificate chain
-```
-
-**علت:**
-ارائه دهندگان پایگاه داده ابری اتصالات را با استفاده از مرجع گواهی (CA) اختصاصی پروژه خود رمزنگاری میکنند. از آنجا که این CA سفارشی در مخزن پیشفرض گواهی های مورد اعتماد Node.js قرار ندارد، Node.js اتصال را رد میکند.
-
-**راه حل:**
-گواهی CA ارائه دهنده دیتابیس را از طریق متغیر محیطی `NODE_EXTRA_CA_CERTS` به Node.js معرفی کنید:
-
-1. گواهی **CA Certificate** (`ca.pem`) را از داشبورد دیتابیس ابری خود (مثلاً پنل Aiven) دانلود یا کپی کنید.
-2. **در Render یا پلتفرم های PaaS:**
-   - در داشبورد Render به تب **Environment** سرویس خود بروید.
-   - در بخش **Secret Files**، فایلی با نام `aiven-ca.pem` (یا `/etc/secrets/aiven-ca.pem`) ایجاد کرده و متن گواهی PEM را در آن قرار دهید.
-   - متغیر محیطی زیر را اضافه کنید:
-
-     ```txt
-     NODE_EXTRA_CA_CERTS=/etc/secrets/aiven-ca.pem
-     ```
-
-3. **در Docker یا VPS:**
-   - فایل گواهی CA را روی دیسک ذخیره کنید (مثلاً `/opt/songbird/certs/ca.pem` یا آن را درون کانتینر mount کنید).
-   - در فایل `.env` یا متغیرهای کانتینر مقدار زیر را تنظیم کنید:
-
-     ```txt
-     NODE_EXTRA_CA_CERTS=/opt/songbird/certs/ca.pem
-     ```
+راه‌اندازی replica set و Atlas، ورود دادهٔ قدیمی و قالب پشتیبان در [MongoDB](./MongoDB.md) آمده است. راهنمای TLS اختصاصی PostgreSQL فقط هنگام خواندن منبع قدیمی با importer کاربرد دارد، نه برای موتور دیتابیس فعال.
 
 ## کانال ریموت بازتاب نمیدهد {#remote-channel-not-mirroring}
 
@@ -247,7 +220,7 @@ Acquire connection error: Error: self-signed certificate in certificate chain
 | اعتبارنامه های Telegram | API ID، API hash و رشته session باید پیکربندی شوند. `npm run remote:configure` را اجرا کنید. |
 | عمومی بودن کانال | کانال ریموت برای کانال های خصوصی قفل است. |
 | تاریخچه وارد نشده | در اولین فعال سازی، تنها پست های منتشرشده پس از آن نقطه بازتاب داده میشوند، نه تاریخچه. |
-| صف متوقف شده | با `npm run db:chat:edit -- <channel> --resume-queue` از سر بگیرید. |
+| صف متوقف شده | با `npm --prefix server run db:chat:edit -- <channel> --resume-queue` ادامه دهید؛ CLI آنلاین به `ADMIN_API_TOKEN` نیاز دارد یا پس از توقف نویسندگان از `--offline` استفاده کنید. |
 | نیاز به پراکسی | اگر سرور نمیتواند به Telegram دسترسی پیدا کند، یک پراکسی تنظیم کنید (`REMOTE_CHANNEL_TELEGRAM_PROXY_URL`). |
 
 برای راهنمای کامل پیکربندی به [راه اندازی کانال ریموت](./Remote-Channel-Setup.md) مراجعه کنید.

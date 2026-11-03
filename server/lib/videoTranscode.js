@@ -1,4 +1,4 @@
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 import { dispatchMediaWorkerJob } from "./mediaWorker.js";
 import { resolveWebhookCallbackUrl } from "./webhookUrl.js";
 import { readEnvBool } from "../settings/env.js";
@@ -220,7 +220,7 @@ export function createVideoTranscodeManager({
 
     let fileRow = null;
     if (typeof adminGetRow === "function") {
-      fileRow = adminGetRow(
+      fileRow = await adminGetRow(
         dbKnex("chat_message_files").where("id", fileId).first(),
       );
     }
@@ -246,7 +246,7 @@ export function createVideoTranscodeManager({
         : "none");
 
     if (typeof adminRun === "function") {
-      adminRun(
+      await adminRun(
         dbKnex("chat_message_files")
           .where("id", fileId)
           .update({ processing_status: "pending" }),
@@ -388,7 +388,7 @@ export function createVideoTranscodeManager({
         updated = true;
 
         if (typeof adminRun === "function") {
-          adminRun(
+          await adminRun(
             dbKnex("chat_message_files").where("id", row.id).update({
               width_px: nextWidth,
               height_px: nextHeight,

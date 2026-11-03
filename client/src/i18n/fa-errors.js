@@ -1,4 +1,10 @@
 export const faErrors = {
+  "Stop the application, then run npm --prefix server run db:restore -- --file <backup.json.gz> --yes --offline.": "برای بازیابی MongoDB، برنامه را متوقف کنید و دستور db:restore را همراه مسیر پشتیبان و گزینه‌های --yes و --offline اجرا کنید.",
+  "MongoDB backup failed.": "ساخت پشتیبان MongoDB انجام نشد. اتصال دیتابیس و فضای ذخیره‌سازی را بررسی کنید.",
+  "Stop the application and restore MongoDB with npm run db:restore -- --file <backup.json.gz> --yes --offline.": "برای بازیابی MongoDB، برنامه را متوقف کنید و دستور db:restore را همراه مسیر پشتیبان و گزینه‌های --yes و --offline اجرا کنید.",
+  "The uploaded file is not a valid Ouj MongoDB backup.": "فایل انتخاب‌شده پشتیبان معتبر MongoDB گفتگوی اوج نیست.",
+  "Unsupported MongoDB backup format.": "قالب پشتیبان MongoDB پشتیبانی نمی‌شود.",
+  "Incomplete MongoDB backup; no data has been replaced.": "پشتیبان MongoDB کامل نیست؛ داده‌های فعلی حفظ شدند.",
   "Forbidden": "دسترسی مجاز نیست", "Invalid admin token.": "توکن مدیریت معتبر نیست.", "Invalid admin token": "توکن مدیریت معتبر نیست",
   "Provide chatIds or set all=true to delete every chat.": "شناسهٔ گفتگوها را تعیین کنید؛ برای حذف همه، all=true را بفرستید.",
   "Cannot delete user. \"{value0}\" is a group/channel username.": "حذف کاربر ممکن نیست؛ «{value0}» نام کاربری گروه یا کانال است.",

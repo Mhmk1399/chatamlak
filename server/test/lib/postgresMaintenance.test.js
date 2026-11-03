@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, test } from "vitest";
 import {
   createPostgresMaintenance,
@@ -42,7 +43,7 @@ describe("postgresMaintenance", () => {
       "createdb",
     ]);
     expect(calls[0].args).toContain("--format=custom");
-    expect(calls[0].args).toContain("--file=/tmp/songbird.dump");
+    expect(calls[0].args).toContain(`--file=${path.resolve("/tmp/songbird.dump")}`);
     expect(calls[2].args).toContain("--single-transaction");
     expect(calls[4].args).toContain("--force");
     expect(calls[5].args).toContain("--owner=songbird");
@@ -107,7 +108,7 @@ describe("postgresMaintenance", () => {
     await maintenance.verifyArchive("/tmp/songbird.dump");
 
     const listCall = calls.find((call) => call.args.includes("--list"));
-    expect(listCall.args).toContain("/tmp/songbird.dump");
+    expect(listCall.args).toContain(path.resolve("/tmp/songbird.dump"));
     expect(listCall.args).not.toContain("--file=/tmp/songbird.dump");
   });
 

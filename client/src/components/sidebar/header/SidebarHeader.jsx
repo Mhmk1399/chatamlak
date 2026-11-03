@@ -2,7 +2,7 @@ import BrandIdentity from "../../common/BrandIdentity.jsx";
 import LanguageSwitcher from "../../common/LanguageSwitcher.jsx";
 import ThemeSwitcher from "../../common/ThemeSwitcher.jsx";
 import { t as localize, useLocale as useAppLocale } from "../../../i18n/locale.js";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   AlertCircle,
   Bell,
@@ -19,6 +19,7 @@ import {
   Users,
 } from "../../../icons/lucide.js";
 import { hasPersian } from "../../../utils/fontUtils.js";
+import AnchoredMenu from "../../common/AnchoredMenu.jsx";
 import UserMenuButton from "./UserMenuButton.jsx";
 
 export default function SidebarHeader({
@@ -72,7 +73,12 @@ export default function SidebarHeader({
   const isCallsMode = mobileTab === "calls";
   const isChatsTab = mobileTab !== "calls" && mobileTab !== "settings";
   const [showCreateMenu, setShowCreateMenu] = useState(false);
-  const createMenuRef = useRef(null);
+  const createButtonRef = useRef(null);
+  const createMenuId = useId();
+  const closeCreateMenu = useCallback((restoreFocus = true) => {
+    setShowCreateMenu(false);
+    if (restoreFocus) requestAnimationFrame(() => createButtonRef.current?.focus({ preventScroll: true }));
+  }, []);
   const searchInputRef = useRef(null);
   const hasSearchText = Boolean(String(chatsSearchQuery || "").trim());
   const searchHasPersian = hasPersian(chatsSearchQuery || "");
@@ -101,15 +107,7 @@ export default function SidebarHeader({
     isChatsTab && insecureConnection && !hideInsecureBanner && !isLocalhost,
   );
 
-  useEffect(() => {
-    if (!showCreateMenu) return;
-    const handleOutside = (event) => {
-      if (createMenuRef.current?.contains(event.target)) return;
-      setShowCreateMenu(false);
-    };
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [showCreateMenu]);
+
 
   return (
     <div
@@ -244,22 +242,25 @@ export default function SidebarHeader({
                   <PhoneCall size={18} className={isInCall || callsDisabled ? "" : "icon-anim-pop"} />
                 </button>
               ) : (
-                <div className="relative" ref={createMenuRef}>
+                <div className="relative">
                   <button
                     type="button"
+                    ref={createButtonRef}
                     onClick={() => setShowCreateMenu((prev) => !prev)}
                     className="inline-flex items-center justify-center rounded-full border border-brand-200 bg-white/80 p-2 text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200"
                     aria-label={localize("Create")}
+                    aria-haspopup="menu"
+                    aria-controls={showCreateMenu ? createMenuId : undefined}
                     aria-expanded={showCreateMenu}
                   >
                     <Plus size={18} className="icon-anim-pop" />
                   </button>
                   {showCreateMenu ? (
-                    <div className="absolute right-0 top-12 z-20 w-44 overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100">
+                    <AnchoredMenu anchorRef={createButtonRef} onClose={closeCreateMenu} id={createMenuId} label={localize("Create")}>
                       <button
-                        type="button"
+                        type="button" role="menuitem"
                         onClick={() => {
-                          setShowCreateMenu(false);
+                          closeCreateMenu();
                           onNewChat?.();
                         }}
                         className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
@@ -269,9 +270,9 @@ export default function SidebarHeader({
                           className="text-brand-500 icon-anim-bob"
                         />{localize("New DM")}</button>
                       <button
-                        type="button"
+                        type="button" role="menuitem"
                         onClick={() => {
-                          setShowCreateMenu(false);
+                          closeCreateMenu();
                           onNewGroup?.();
                         }}
                         className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
@@ -281,9 +282,9 @@ export default function SidebarHeader({
                           className="text-brand-500 icon-anim-sway"
                         />{localize("New group")}</button>
                       <button
-                        type="button"
+                        type="button" role="menuitem"
                         onClick={() => {
-                          setShowCreateMenu(false);
+                          closeCreateMenu();
                           onNewChannel?.();
                         }}
                         className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
@@ -292,7 +293,7 @@ export default function SidebarHeader({
                           size={18}
                           className="text-brand-500 icon-anim-swing"
                         />{localize("New channel")}</button>
-                    </div>
+                    </AnchoredMenu>
                   ) : null}
                 </div>
               )}

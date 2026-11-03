@@ -5485,9 +5485,15 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     ],
   );
 
-  async function handleSend(event) {
+  async function handleSend(event, recordedMedia = null) {
     event.preventDefault();
-    if (!activeChatId) return;
+    if (!activeChatId) return false;
+    const recordedKind = recordedMedia?.kind === "voice" ? "voice" : "video_note";
+    if (recordedMedia && (!CHAT_PAGE_CONFIG.fileUploadEnabled || !recordedMedia.file?.type?.startsWith(recordedKind === "voice" ? "audio/" : "video/") ||
+      recordedMedia.file.size > Math.min(CHAT_PAGE_CONFIG.maxFileSizeBytes, CHAT_PAGE_CONFIG.maxTotalUploadBytes))) {
+      setUploadError(recordedKind === "voice" ? "The voice message exceeds the server upload limit. Record a shorter message." : "The video message exceeds the server upload limit. Record a shorter message.");
+      return false;
+    }
     stopTypingIndicator(activeChatId);
     const isEditingMessage = Boolean(editTarget?.id);
     const shouldSnapToBottom = !(isEditingMessage && userScrolledUpRef.current);
@@ -5508,8 +5514,9 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       return;
     }
     const trimmedBody = body.trim();
-    const hasPendingFiles = pendingUploadFiles.length > 0;
-    const hasPendingVoice = Boolean(pendingVoiceMessage);
+    const selectedFiles = recordedMedia ? [{ ...recordedMedia, id: `video-note-${Date.now()}`, name: recordedMedia.file.name, sizeBytes: recordedMedia.file.size }] : pendingUploadFiles;
+    const hasPendingFiles = selectedFiles.length > 0;
+    const hasPendingVoice = !recordedMedia && Boolean(pendingVoiceMessage);
     const hasAnyPendingFiles = hasPendingFiles || hasPendingVoice;
     if (!trimmedBody && !hasAnyPendingFiles) return;
     const maxMessageChars = messageMaxChars;
@@ -5530,7 +5537,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     const pendingDayKey = `${pendingDate.getFullYear()}-${pendingDate.getMonth()}-${pendingDate.getDate()}`;
     const pendingFiles = hasAnyPendingFiles
       ? [
-          ...pendingUploadFiles.map((item) => {
+          ...selectedFiles.map((item) => {
             const localUrl =
               item.file instanceof Blob &&
               (String(item.mimeType || "").startsWith("image/") ||
@@ -5541,7 +5548,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             return {
               id: item.id,
               _localId: item.id,
-              kind: pendingUploadType === "document" ? "document" : "media",
+              kind: recordedMedia ? recordedKind : pendingUploadType === "document" ? "document" : "media",
               name: item.name,
               mimeType: item.mimeType,
               sizeBytes: item.sizeBytes,
@@ -5594,7 +5601,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         }
       : null;
 
-    const effectiveUploadType = hasPendingFiles
+    const effectiveUploadType = recordedMedia ? (recordedKind === "voice" ? "media" : "video_note") : hasPendingFiles
       ? pendingUploadType
       : hasPendingVoice
         ? "media"
@@ -7078,6 +7085,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         pendingUploadFiles={pendingUploadFiles}
         pendingUploadType={pendingUploadType}
         pendingVoiceMessage={pendingVoiceMessage}
+        maxVideoNoteBytes={Math.min(CHAT_PAGE_CONFIG.maxFileSizeBytes, CHAT_PAGE_CONFIG.maxTotalUploadBytes)}
         uploadError={uploadError}
         activeUploadProgress={activeUploadProgress}
         messageMaxChars={messageMaxChars}
@@ -7336,8 +7344,8 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
             onClose={closeNewGroupModal}
             title={
               editingGroup
-                ? localize("Edit {value0}", { value0: groupModalType === "channel" ? "channel" : "group" })
-                : localize("New {value0}", { value0: groupModalType === "channel" ? "channel" : "group" })
+                ? localize("Edit {value0}", { value0: localize(groupModalType === "channel" ? "channel" : "group") })
+                : localize(groupModalType === "channel" ? "New channel" : "New group")
             }
             submitLabel={editingGroup ? localize("Save") : localize("Create")}
             avatarPreview={groupAvatarPreview}

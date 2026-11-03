@@ -1,0 +1,14 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["client/src"],
+  "locale": "fa-IR",
+  "canonicalMap": "UX-CONTRACT.md",
+  "ownership": {
+    "Select/Listbox": "native",
+    "Date": "native"
+  },
+  "evidence": {
+    "crudFullFlow": "client/test/e2e/messaging-flow.mjs",
+    "failurePaths": "client/test/e2e/video-note-flow.mjs"
+  }
+}

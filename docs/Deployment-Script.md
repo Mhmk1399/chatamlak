@@ -1,6 +1,6 @@
 # Deployment Script
 
-The deployment script (`songbird-deploy`) is the recommended way to install and manage Songbird. It is an interactive, menu-driven tool that handles dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates, so you do not have to run those steps by hand.
+The deployment script (`songbird-deploy`) is an interactive, menu-driven tool for dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates. Its menus depend on the installed script version. For this MongoDB branch, use the current [MongoDB guide](./MongoDB.md) and verify the generated environment before starting the server.
 
 :::info
 
@@ -70,12 +70,11 @@ HTTPS is required for push notifications (except on `localhost`). Choose a certi
 
 :::
 
-### 4. Database engine selection
+### 4. MongoDB configuration
 
-| Option | Description |
-|---|---|
-| SQLite (Default) | In-memory SQLite database with debounced disk persistence (`better-sqlite3`). Best for small to medium instances. |
-| PostgreSQL | External PostgreSQL database engine. Recommended for larger instances (+500 users). Prompts for PostgreSQL host, port, database name, username, and password. |
+This branch requires a reachable MongoDB replica set or suitable Atlas deployment. Configure `MONGODB_URI` privately and `MONGODB_DATABASE=ouj_chat` before starting the server; the URI in `.env.example` deliberately remains blank. Follow [MongoDB](./MongoDB.md) for replica-set setup and explicit legacy import.
+
+Older deployment-script versions offered SQLite/PostgreSQL choices. Those describe the old SQL installation and do not select the current runtime database. Review the script version and generated environment rather than assuming it automatically provisions MongoDB or imports existing data.
 
 ### 5. Environment prompts
 
@@ -102,7 +101,7 @@ After installation completes and the service starts, you'll be prompted to creat
 
 ## Database submenu
 
-Option **5** opens a full database manager that wraps the [database commands](./Database-Commands.md) with guided prompts, so you do not need to remember flags:
+Option **5** opens the installed script's database manager. The following table describes its historical menu groups; availability does not establish that an action supports MongoDB. Use the current [database commands](./Database-Commands.md) for MongoDB backup, offline restore, import, and checks. Manage accounts and chats through the Admin Panel until the installed menu's MongoDB support has been verified.
 
 | Group | Actions |
 |---|---|
@@ -116,6 +115,8 @@ Option **5** opens a full database manager that wraps the [database commands](./
 ## Updating and downgrading
 
 Choose **Update Songbird** (Option 2) from the menu to update or downgrade your installation:
+
+The flow below describes the deployment menu. A downgrade across the SQL-to-MongoDB boundary requires the matching old application and its SQL backup; the menu does not convert MongoDB data back to SQL. Follow [Updating & Downgrading](./Updating.md) before changing database generations.
 
 1. **Database backup**: The script offers to create a timestamped backup before touching application files.
 2. **GitHub mode**:

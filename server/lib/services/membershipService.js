@@ -6,7 +6,7 @@
  * post-commit effects (system messages, SSE payloads, and notification targets).
  */
 
-import { dbKnex } from "../../db/knex.js";
+import { dbKnex } from "../../db/query.js";
 
 export function createMembershipService(dbApi) {
   const {
@@ -29,8 +29,8 @@ export function createMembershipService(dbApi) {
    */
   function isUserPriorLeft(chatId, userId) {
     if (typeof getRow === "function") {
-      const qb1 = dbKnex("chat_left_members").select(dbKnex.raw("1 as prior_left")).where({ chat_id: chatId, user_id: userId });
-      const qb2 = dbKnex("chat_messages").select(dbKnex.raw("1 as prior_left")).where({ chat_id: chatId, user_id: userId }).where("body", "like", "[[system:left:%");
+      const qb1 = dbKnex("chat_left_members").select(dbKnex.literal(1, "prior_left")).where({ chat_id: chatId, user_id: userId });
+      const qb2 = dbKnex("chat_messages").select(dbKnex.literal(1, "prior_left")).where({ chat_id: chatId, user_id: userId }).where("body", "like", "[[system:left:%");
       const priorLeft = getRow(
         dbKnex.union([qb1, qb2]).first(),
       );

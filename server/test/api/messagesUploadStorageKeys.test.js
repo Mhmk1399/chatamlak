@@ -73,6 +73,28 @@ describe("POST /api/messages/upload with storageKeys", () => {
     expect(emittedEvents[0].files[0].url).toContain("uploads/doc123.pdf");
   });
 
+  test("preserves the circular video kind through remote upload and SSE", async () => {
+    const res = await request(appObj.app).post("/api/messages/upload")
+      .set("Cookie", [`sid=${sessionToken}`])
+      .send({ chatId, username: "remoteuser", uploadType: "video_note", storageKeys: [{
+        storageKey: "uploads/video-note.webm", originalName: "video-message.webm", mimeType: "video/webm",
+        sizeBytes: 20480, width: 480, height: 480, durationSeconds: 3,
+      }] });
+    expect(res.status).toBe(200);
+    expect(res.body.files[0]).toMatchObject({ kind: "video_note", width: 480, height: 480, durationSeconds: 3 });
+    expect(emittedEvents[0].files[0].kind).toBe("video_note");
+  });
+
+  test("rejects nonvideo attachments masquerading as a circular video", async () => {
+    const res = await request(appObj.app).post("/api/messages/upload")
+      .set("Cookie", [`sid=${sessionToken}`])
+      .send({ chatId, username: "remoteuser", uploadType: "video_note", storageKeys: [{
+        storageKey: "uploads/image.png", mimeType: "image/png", sizeBytes: 100,
+      }] });
+    expect(res.status).toBe(400);
+    expect(emittedEvents).toHaveLength(0);
+  });
+
   test("accepts storageKeys as JSON stringified array or object array", async () => {
     const res = await request(appObj.app)
       .post("/api/messages/upload")

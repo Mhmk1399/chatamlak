@@ -15,7 +15,7 @@
  */
 
 import { readEnvBool, readEnvInt } from "../settings/env.js";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 
 // ─── Setting types ────────────────────────────────────────────────────────────
 
@@ -772,19 +772,9 @@ export function getSetting(key) {
 export function setSetting(key, rawValue, dbRun, dbSave) {
   const validation = validateSetting(key, rawValue);
   if (!validation.valid) return { ok: false, error: validation.error };
-
-  dbRun(
-    dbKnex("app_settings")
-      .insert({ key, value: validation.value })
-      .onConflict("key")
-      .merge({ value: validation.value }),
-  );
-  dbSave();
-
-  const def = DEFS_BY_KEY[key];
-  _cache[key] = coerce(def, validation.value);
-
-  return { ok: true, value: _cache[key] };
+  const finish = () => { dbSave(); _cache[key] = coerce(DEFS_BY_KEY[key], validation.value); return { ok: true, value: _cache[key] }; };
+  const write = dbRun(dbKnex('app_settings').insert({ key, value: validation.value }).onConflict('key').merge({ value: validation.value }));
+  return write && typeof write.then === 'function' ? write.then(finish) : finish();
 }
 
 /**
@@ -796,30 +786,20 @@ export function setSetting(key, rawValue, dbRun, dbSave) {
  * @param {Function} dbSave
  */
 export function setSettings(updates, dbRun, dbSave) {
-  const errors = {};
-  const saved = [];
-
+  const errors = {}, validated = [], pending = [];
   for (const [key, rawValue] of Object.entries(updates)) {
     const validation = validateSetting(key, rawValue);
-    if (!validation.valid) {
-      errors[key] = validation.error;
-      continue;
-    }
-    dbRun(
-      dbKnex("app_settings")
-        .insert({ key, value: validation.value })
-        .onConflict("key")
-        .merge({ value: validation.value }),
-    );
-    const def = DEFS_BY_KEY[key];
-    _cache[key] = coerce(def, validation.value);
-    saved.push(key);
+    if (!validation.valid) { errors[key] = validation.error; continue; }
+    const write = dbRun(dbKnex('app_settings').insert({ key, value: validation.value }).onConflict('key').merge({ value: validation.value }));
+    if (write && typeof write.then === 'function') pending.push(write);
+    validated.push([key, validation.value]);
   }
-
-  if (saved.length > 0) dbSave();
-
-  if (Object.keys(errors).length > 0) return { ok: false, errors, saved };
-  return { ok: true, saved };
+  const finish = () => {
+    const saved = validated.map(([key, value]) => { _cache[key] = coerce(DEFS_BY_KEY[key], value); return key; });
+    if (saved.length) dbSave();
+    return Object.keys(errors).length ? { ok: false, errors, saved } : { ok: true, saved };
+  };
+  return pending.length ? Promise.all(pending).then(finish) : finish();
 }
 
 /**
@@ -858,12 +838,10 @@ export function getAllSettings() {
  */
 export function resetSetting(key, dbRun, dbSave) {
   const def = DEFS_BY_KEY[key];
-  if (!def) return { ok: false, error: `Unknown setting: ${key}` };
-
-  dbRun(dbKnex("app_settings").where("key", key).del());
-  dbSave();
-  _cache[key] = resolveEnvDefault(def);
-  return { ok: true, value: _cache[key] };
+  if (!def) return { ok: false, error: 'Unknown setting: ' + key };
+  const finish = () => { dbSave(); _cache[key] = resolveEnvDefault(def); return { ok: true, value: _cache[key] }; };
+  const write = dbRun(dbKnex('app_settings').where('key', key).del());
+  return write && typeof write.then === 'function' ? write.then(finish) : finish();
 }
 
 export { DEFS_BY_KEY };

@@ -18,31 +18,24 @@ Only one user with owner role can exist at a time.
 
 There are two primary ways to grant an account **owner** or **admin** privileges:
 
-### Option 1: CLI / Deployment Script (VPS & Shell Deployments)
+### Option 1: Native CLI (VPS & Shell Deployments)
 
-1. Create or edit a user and give them the **owner** or **admin** role (prompted on fresh install, or later via the [Deployment Script](./Deployment-Script.md)):
+1. Check the current command syntax from the repository root:
 
-  ```bash
-  songbird-deploy
-  # Navigate to "Manage Database" submenu
-  # Select "Create user" or "Edit user"
-  # Follow prompts and select either "owner" or "admin" role
-  ```
-  :::info You can also use [database commands](./Database-Commands.md) if you prefer:
-
-   ```bash
-   cd /opt/songbird/server
-   # If you want to create a new user
-   npm run db:user:create
-   # Or if you want to promote a user
-   npm run db:user:edit
-   # Follow prompts and select either "owner" or "admin" role
+   ```sh
+   npm --prefix server run db:user:create -- --help
+   npm --prefix server run db:user:edit -- --help
    ```
-  :::
 
-2. Log in to your Songbird instance with the promoted account.
+2. Create an account with the required fields and role, or edit an existing account. For example, **after stopping all writers**, grant an existing account the admin role:
 
-3. Click the **Admin Panel** button in the sidebar (accessible only by owner and admins).
+   ```sh
+   npm --prefix server run db:user:edit -- your_username --role admin --offline
+   ```
+
+   When the local server is running, omit `--offline` and configure `ADMIN_API_TOKEN` privately so the CLI can use the admin API. The commands accept arguments; they do not provide the historical SQL scripts' interactive prompts. Deployment-menu support depends on the installed script version.
+
+3. Start the application if stopped, log in with the promoted account, and open **Admin Panel** from the sidebar. See [Database Commands](./Database-Commands.md) for online/offline behavior.
 
 ### Option 2: Emergency Admin & Owner Claim (PaaS & Web UI)
 
@@ -233,17 +226,19 @@ Perform system administration tasks:
 ### Database Operations
 
 **Backup**
-- Download a timestamped engine-native database backup
-- SQLite downloads a `.db` file; PostgreSQL downloads a native `.dump` archive created with `pg_dump`
+- The active MongoDB archive is gzip-compressed Extended JSON (`.json.gz`), containing database records and encryption-key material.
+- Attachment metadata is in the database; local/S3 binary files need a separate backup. Keep archives private.
 
 **Restore**
-- SQLite backups can be uploaded and restored while the service is running
-- PostgreSQL restore is deliberately offline-only: stop Songbird, then use `npm run db:restore -- -y --file <backup.dump>`
+- Online MongoDB restore returns HTTP `409` and an offline CLI instruction.
+- Stop all application writers, then use `npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline`.
+- After restore, run `npm --prefix server run db:check` before restarting traffic.
 
-**Vacuum**
-- SQLite compacts the database file with `VACUUM`
-- PostgreSQL runs native `VACUUM ANALYZE`
-- Reclaims unused space and is recommended periodically for large databases
+**Database checks**
+- MongoDB does not use SQLite/PostgreSQL `VACUUM`.
+- Use the current MongoDB data/index checks and provider maintenance tools. Historical `.db`/`.dump` files are legacy import sources, not native MongoDB restore archives.
+
+See [Database Commands](./Database-Commands.md) and [MongoDB](./MongoDB.md) for backup formats, import and recovery boundaries.
 
 ### System Control
 
@@ -313,28 +308,20 @@ When disabled:
 
 ## CLI Alternative
 
-Most admin operations can still be performed via CLI:
+Native MongoDB commands cover account, chat and file administration. From the repository root, inspect the argument syntax before making changes:
 
-```bash
-cd /opt/songbird/server
-
-# User management
-npm run db:user:create
-npm run db:user:edit
-npm run db:user:delete
-npm run db:user:ban
-
-# Chat management
-npm run db:chat:create
-npm run db:chat:edit
-npm run db:chat:delete
-
-# Database operations
-npm run db:backup
-npm run db:restore
-npm run db:vacuum
-npm run db:inspect
+```sh
+npm --prefix server run db:user:create -- --help
+npm --prefix server run db:user:edit -- --help
+npm --prefix server run db:user:delete -- --help
+npm --prefix server run db:chat:create -- --help
+npm --prefix server run db:chat:edit -- --help
+npm --prefix server run db:file:delete -- --help
+npm --prefix server run db:check
+npm --prefix server run db:inspect -- --limit 25
 ```
 
-See [Database Commands](./Database-Commands.md) for full CLI reference.
+User/chat/file mutations use the running local server with `ADMIN_API_TOKEN`, or require `--offline` after all writers stop. Deletion additionally requires `--yes` or `-y`. Whole-database restore always requires an archive path plus `--yes --offline`; it cannot be performed through the running MongoDB Admin Panel.
+
+See [Database Commands](./Database-Commands.md) for the full CLI reference and [MongoDB](./MongoDB.md) for backup and migration.
 

@@ -72,13 +72,10 @@ describe("POST /api/admin/claim", () => {
 
   test("promotes user to 'admin' when an owner already exists", async () => {
     deps.onGetRow = async (query) => {
-      if (
-        typeof query === "string" &&
-        query.includes("users WHERE role = 'owner'")
-      ) {
-        return { id: "11111111-1111-4111-a111-111111111111", username: "existing_owner" };
-      }
-      return null;
+      const sql = typeof query === "string" ? query : query.toString();
+      expect(sql).toContain("users");
+      expect(sql).toContain("owner");
+      return { id: "11111111-1111-4111-a111-111111111111", username: "existing_owner" };
     };
 
     let assignedRole = null;

@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import webpush from "web-push";
-import { dbKnex } from "../db/knex.js";
+import { dbKnex } from "../db/query.js";
 
 export function normalizeEnvSecret(value) {
   const raw = String(value ?? "").trim();

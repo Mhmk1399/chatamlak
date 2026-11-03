@@ -2,15 +2,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import {
-  listMessageFilesNeedingMetadata,
-  updateMessageFileMetadata,
-} from '../db.js'
 import { storageEncryption } from '../lib/storageEncryption.js'
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log('Usage: npm run db:backfill -- --limit=10000\nReads existing local media files and updates their MongoDB metadata. ffprobe enables video dimensions/duration.');
+  process.exit(0)
+}
+const { listMessageFilesNeedingMetadata, updateMessageFileMetadata, closeDatabase } = await import('../db.js')
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const serverDir = path.resolve(scriptDir, '..')
-const dataDir = path.resolve(serverDir, '..', 'data')
+const dataDir = path.resolve(process.env.DATA_DIR || path.join(serverDir, '..', 'data'))
 const uploadRootDir = path.join(dataDir, 'uploads', 'messages')
 
 function readUInt24LE(buffer, offset) {
@@ -252,3 +254,4 @@ console.log(`Skipped (non-media): ${skippedUnknown}`)
 if (!ffprobeAvailable) {
   console.log('ffprobe not found: video duration/size backfill was skipped for video files.')
 }
+await closeDatabase()

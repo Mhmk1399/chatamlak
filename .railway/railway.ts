@@ -2,7 +2,6 @@ import {
   bucket,
   defineRailway,
   group,
-  postgres,
   preserve,
   project,
   ref,
@@ -10,7 +9,6 @@ import {
 } from "railway/iac";
 
 export default defineRailway(() => {
-  const db = postgres("postgres");
   const uploads = bucket("storage", {
     region: "ams",
   });
@@ -51,9 +49,9 @@ export default defineRailway(() => {
       APP_ENV: "production",
       // "::" is dual-stack to support both IPv4 and IPv6.
       BIND_ADDRESS: "::",
-      DB_CLIENT: "postgres",
-      POSTGRES_URL: db.env.DATABASE_URL,
-      POSTGRES_SSL: "false",
+      DB_CLIENT: "mongodb",
+      MONGODB_URI: preserve(),
+      MONGODB_DATABASE: "ouj_chat",
       STORAGE_PROCESSING_MODE: "remote",
       WORKER_URL: "http://${{songbird-worker.RAILWAY_PRIVATE_DOMAIN}}:8080",
       WEBHOOK_SECRET: preserve(),
@@ -68,7 +66,7 @@ export default defineRailway(() => {
     },
   });
 
-  const songbirdGroup = group("songbird", [app, worker, db, uploads]);
+  const songbirdGroup = group("songbird", [app, worker, uploads]);
 
   return project("songbird", {
     resources: [songbirdGroup],

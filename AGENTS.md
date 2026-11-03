@@ -5,7 +5,7 @@ Songbird is a self-hosted real-time communication platform built as a Node.js/Re
 ## Workspace Architecture
 
 - **`client/`**: React 19 SPA (Vite, Tailwind CSS 4, Vitest + Playwright).
-- **`server/`**: Node.js Express 5 backend (SSE realtime updates, in-memory SQLite via `sql.js`, Vitest + Supertest).
+- **`server/`**: Node.js Express 5 backend (WebSocket/SSE realtime updates, native MongoDB driver, Vitest + Supertest).
 - **`docs/`**: Dual-language VitePress documentation (English & Persian/Farsi).
 
 ## Essential Commands
@@ -23,6 +23,7 @@ npm --prefix client run test # Client Vitest (unit + browser)
 npm --prefix client run test:unit    # Fast Node-only unit tests
 npm --prefix client run test:browser # Playwright browser component tests (Chromium + Firefox)
 npm --prefix server run test # Server Vitest (unit + Supertest API integration)
+npm --prefix server run test:mongo # Real MongoDB replica-set integration tests
 
 # Docs
 npm run docs:dev             # VitePress dev server
@@ -33,9 +34,9 @@ npm run docs:build           # Build documentation site
 
 - **Design & Styling (`DESIGN.md`)**: Respect and follow [`DESIGN.md`](./DESIGN.md) for all frontend styling, UI component design, typography, color system, accessibility, and UI patterns.
 - **Node Requirement**: Requires Node `>=24.18.0` and npm `>=11.18.0`.
-- **Database (`server/db.js`)**: `sql.js` runs in-memory with debounced disk persistence (`DB_SAVE_DEBOUNCE_MS`). All SQL queries **must** reside inside `server/db.js`. Never write inline SQL queries elsewhere.
-- **Server Test Isolation**: `server/db.js` and `server/index.js` initialize WASM and disk state on module load and **cannot** be imported in tests. Server API integration tests must use `makeApp` from `server/test/helpers/makeApp.js` to inject stubbed dependencies.
-- **Realtime SSE**: Real-time events are dispatched via `server/lib/sse.js` (`emitChatEvent`). API mutations must invoke SSE broadcast handlers to notify connected clients.
+- **Database (`server/db.js`)**: The active database is MongoDB 8 through the native Node.js driver 7; a replica set is required for transactions. Keep MongoDB queries and collection/index definitions in `server/db/` (including `mongoRepository.js` and `mongoSchema.js`), exposed through the `server/db.js` facade, and inject its operations into routes/services. Preserve public UUIDs and existing API field names. Store messages separately rather than embedding unbounded message arrays. SQL engines are legacy read-only import sources, not runtime fallback modes. SQL access is restricted to `server/db/legacyReader.js` and historical import/migration material; do not add SQL to active routes or services. `MONGODB_URI` must be explicitly configured; keep its value empty in `.env.example` and use `MONGODB_DATABASE=ouj_chat`.
+- **Server Test Isolation**: `server/db.js` and `server/index.js` initialize live database/application state and must not be imported by isolated unit/API tests. API integration tests use `makeApp` from `server/test/helpers/makeApp.js` with injected dependencies. Run `test:mongo` for real transactional database coverage: `MONGODB_TEST_URI`, if supplied, must explicitly name a dedicated database containing `test` or `e2e`; otherwise the suite starts a temporary real replica set with `mongodb-memory-server`. Never point tests at application data.
+- **Realtime & Durability**: Dispatch live events through `server/lib/sse.js` (`emitChatEvent`) and the WebSocket gateway. Persist covered source mutations and their replay-journal records in the same MongoDB transaction; a successful live broadcast is not durable event recovery. Uploaded-file metadata lives in MongoDB, while file bytes remain in the configured local/S3 storage provider and require separate backups.
 - **Client Routing & API**: No React Router library. SPA navigation is managed manually in `client/src/App.jsx` via `window.history`. All client HTTP calls **must** use `apiFetch` in `client/src/api/chatApi.js` (`credentials: "include"`).
 - **Documentation Updates**: Any update to documentation under `docs/` must update both English (`docs/*.md`) and Persian (`docs/fa/*.md`) documents, matching the structure in `docs/.vitepress/config.mjs`. Call the `documentor` subagent to update docs when you implant a new feature.
 

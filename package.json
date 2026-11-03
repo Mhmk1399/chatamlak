@@ -16,7 +16,7 @@
     "test:coverage": "concurrently \"npm --prefix client run test:coverage\" \"npm --prefix server run test:coverage\" \"npm --prefix worker run test:coverage\"",
     "test:bench": "concurrently \"npm --prefix client run test:bench\" \"npm --prefix server run test:bench\" \"npm --prefix worker run test:bench\"",
     "test:scripts": "bats scripts/test/",
-    "start": "concurrently \"npm --prefix client run start\" \"npm --prefix server run start\" \"npm --prefix worker run start\"",
+    "start": "npm --prefix server run start",
     "build": "npm --prefix client run build",
     "preview": "npm --prefix client run preview",
     "remote:configure": "npm --prefix server run remote:configure",
