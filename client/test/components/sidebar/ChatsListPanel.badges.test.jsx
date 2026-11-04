@@ -7,10 +7,14 @@
  *   - Badge order
  *   - Correct users get the right badges
  */
-import { describe, test, expect, vi } from "vitest";
+import { afterEach, describe, test, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import ChatsListPanel from "../../../src/components/sidebar/list/ChatsListPanel.jsx";
+import { setLocale, t } from "../../../src/i18n/locale.js";
+import "../../../src/index.css";
+
+afterEach(() => setLocale("en"));
 
 const ME = { id: 1, username: "alice", nickname: "Alice", color: "#10b981" };
 
@@ -124,7 +128,7 @@ const BASE_PROPS = {
   user: ME,
   editMode: false,
   activeChatId: null,
-  selectedChats: new Set(),
+  selectedChats: [],
   formatChatTimestamp: () => "",
   requestDeleteChats: vi.fn(),
   toggleSelectChat: vi.fn(),
@@ -150,6 +154,49 @@ const BASE_PROPS = {
   onOpenUserContextMenu: vi.fn(),
   onOpenChatContextMenu: vi.fn(),
 };
+
+describe("ChatsListPanel — numeric false flags", () => {
+  for (const locale of ["fa", "en"]) {
+    test(`zero verification and mute flags add no text to chat titles in ${locale}`, async () => {
+      setLocale(locale);
+      const chats = [
+        makeDmChat(makeDmPeer({ user_verified: 0 }), { _muted: 0 }),
+        makeGroupChat({ verified: 0, _muted: 0 }),
+        makeGroupChat({ id: 30, type: "channel", name: "Test Channel", verified: 0, _muted: 0 }),
+        makeGroupChat({ id: 40, type: "saved", name: "Saved messages", verified: 0, _muted: 0 }),
+      ];
+      await render(<ChatsListPanel {...BASE_PROPS} visibleChats={chats} />);
+      for (const name of ["Bob", "Test Group", "Test Channel", "Saved messages"]) {
+        const title = page.getByText(name, { exact: true });
+        await expect.element(title.element().parentElement).toHaveTextContent(name);
+        await expect.element(title.element().parentElement).not.toHaveTextContent("0");
+      }
+      await expect.element(page.getByLabelText(t("Verified"), { exact: true })).not.toBeInTheDocument();
+      await expect.element(page.getByLabelText(t("Muted chat"), { exact: true })).not.toBeInTheDocument();
+    });
+
+    test(`zero membership flags add no text to discovered communities in ${locale}`, async () => {
+      setLocale(locale);
+      await render(<ChatsListPanel {...BASE_PROPS} visibleChats={[]} chatsSearchFocused chatsSearchQuery="Public"
+        discoverGroups={[makeDiscoverGroup({ name: "Public Group", verified: 0, isMember: 0 })]}
+        discoverChannels={[makeDiscoverGroup({ id: 22, name: "Public Channel", verified: 0, isMember: 0, type: "channel" })]} discoverSaved={0} />);
+      for (const name of ["Public Group", "Public Channel"]) {
+        await expect.element(page.getByRole("button", { name: new RegExp(name) })).toBeVisible();
+      }
+      await expect.element(page.getByText("0", { exact: true })).not.toBeInTheDocument();
+      await expect.element(page.getByText(t("Joined"), { exact: true })).not.toBeInTheDocument();
+    });
+
+    test(`keeps real zeros in names and messages and positive unread counts in ${locale}`, async () => {
+      setLocale(locale);
+      await render(<ChatsListPanel {...BASE_PROPS} visibleChats={[makeGroupChat({ name: "Room 0", verified: 0, _muted: 0, unread_count: 3, last_message: "0" })]} />);
+      const title = page.getByText("Room 0", { exact: true });
+      await expect.element(title.element().parentElement).toHaveTextContent("Room 0");
+      await expect.element(page.getByText("0", { exact: true })).toBeVisible();
+      await expect.element(page.getByLabelText(t("{count} unread messages", { count: 3 }), { exact: true })).toBeVisible();
+    });
+  }
+});
 
 // ─── DM chat list card badges ─────────────────────────────────────────────────
 

@@ -7,6 +7,8 @@ import {
   Pencil,
   File,
   ImageIcon,
+  Camera,
+  Video,
   Mic,
   Paperclip,
   Phone,
@@ -17,6 +19,7 @@ import {
   Lock,
   Pause,
   Trash,
+  SmilePlus,
 } from "../../../icons/lucide.js";
 import { hasPersian } from "../../../utils/fontUtils.js";
 import { renderMarkdownInlinePlain } from "../../../utils/markdown.js";
@@ -34,8 +37,15 @@ import { useHoldToRecord } from "../../../hooks/useHoldToRecord.js";
 import { useVoiceRecording } from "../../../hooks/chat/useVoiceRecording.js";
 import { useContextMenuTrigger } from "../../../hooks/useContextMenuTrigger.js";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
+import { insertEmojiAtSelection } from "../../../utils/emojiPreferences.js";
 
 const ScheduleMessageDialog = lazy(() => import("../tools/ScheduleMessageDialog.jsx"));
+let emojiPickerPromise;
+const loadEmojiPicker = () => emojiPickerPromise ||= import("./EmojiPickerPopover.jsx").catch((error) => { emojiPickerPromise = null; throw error; });
+const CAMERA_PICKERS = [
+  { kind: "photo", label: "Take photo", Icon: Camera, accept: "image/*" },
+  { kind: "video", label: "Record video", Icon: Video, accept: "video/*" },
+];
 
 function applyTextareaSize({
   textareaEl,
@@ -102,9 +112,20 @@ export function MessageComposer({
   mentionCandidates = [],
   maxVideoNoteBytes,
 }) {
-  useLocale();
+  const locale = useLocale();
   const composerRef = useRef(null);
   const uploadButtonRef = useRef(null);
+  const emojiButtonRef = useRef(null);
+  const emojiSelectionRef = useRef(null);
+  const emojiContextRef = useRef(null);
+  const emojiPickerId = useId();
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [EmojiPicker, setEmojiPicker] = useState(null);
+  const [emojiLoading, setEmojiLoading] = useState(false);
+  const [emojiError, setEmojiError] = useState("");
+  const photoCaptureRef = useRef(null);
+  const videoCaptureRef = useRef(null);
+  const pendingCaptureContextRef = useRef(null);
   const uploadMenuId = useId();
   const [focusUploadMenu, setFocusUploadMenu] = useState(true);
   const closeUploadMenu = useCallback((restoreFocus = true) => {
@@ -134,9 +155,14 @@ export function MessageComposer({
   const activeComposerContext = useRef(null);
   useLayoutEffect(() => {
     activeComposerContext.current = recordingContext;
-    return () => { activeComposerContext.current = null; };
+    pendingCaptureContextRef.current = null;
+    return () => {
+      activeComposerContext.current = null;
+      pendingCaptureContextRef.current = null;
+    };
   }, [recordingContext]);
   useEffect(() => { setScheduleDraft(null); setScheduledNotice(false); }, [recordingContext]);
+  useEffect(() => { setEmojiOpen(false); setEmojiLoading(false); setEmojiError(""); emojiContextRef.current = null; }, [recordingContext]);
   const voice = useVoiceRecording({ contextKey: recordingContext, maxBytes: maxVideoNoteBytes,
     onSend: sendRecordedMessage, onReview: onVoiceRecorded, onComplete: () => gesture.reset() });
   const isRecording = voice.status !== "idle";
@@ -145,6 +171,7 @@ export function MessageComposer({
     disabled: uploadBusy || submitting || !fileUploadEnabled || Boolean(editTarget) || Boolean(pendingVoiceMessage) || Boolean(pendingUploadFiles?.length),
     onTap: () => setRecordingMode((mode) => mode === "voice" ? "video" : "voice"),
     onStart: () => {
+      setEmojiOpen(false);
       messageInputRef.current?.blur(); setShowUploadMenu(false);
       if (recordingMode === "video") { setVideoCommand("hold"); setVideoRecorderOpen(activeChatId); return true; }
       return voice.start();
@@ -287,6 +314,7 @@ export function MessageComposer({
     setScheduleDraft({ body: messageValue, chatId: activeChatId, contextKey: recordingContext,
       replyToMessageId: replyTarget?.id || null, topicId: messaging?.topic || null });
     setMentionTerm(null); setShowUploadMenu?.(false);
+    setEmojiOpen(false);
   };
   const scheduleTrigger = useContextMenuTrigger({ disabled: !canSchedule, contextKey: recordingContext,
     isMobile: !isDesktop, holdOnMouse: true, holdDelayMs: 450, onOpen: openScheduling });
@@ -413,6 +441,70 @@ export function MessageComposer({
     if (document.activeElement === messageInputRef.current) {
       keepFocusRef.current = true;
     }
+  };
+
+  const openCameraPicker = (inputRef) => {
+    pendingCaptureContextRef.current = recordingContext;
+    // Keep the native picker inside the user's click gesture, including on iOS.
+    openFilePicker(inputRef);
+    setShowUploadMenu(false);
+  };
+
+  const handleCameraSelection = (event) => {
+    const files = Array.from(event.currentTarget.files || []);
+    const captureContext = pendingCaptureContextRef.current;
+    pendingCaptureContextRef.current = null;
+    // Snapshot FileList before clearing it so the same capture can be selected again.
+    event.currentTarget.value = "";
+    if (
+      files.length && !uploadBusy && fileUploadEnabled &&
+      captureContext === activeComposerContext.current
+    ) {
+      onUploadFilesSelected(files, "media", pendingUploadType === "media");
+    }
+    restoreComposerFocus();
+  };
+
+  const cancelCameraSelection = () => {
+    pendingCaptureContextRef.current = null;
+    restoreComposerFocus();
+  };
+
+  const toggleEmojiPicker = async () => {
+    if (emojiOpen) { setEmojiOpen(false); return; }
+    const input = messageInputRef.current;
+    emojiSelectionRef.current = { start: input?.selectionStart ?? messageValue.length, end: input?.selectionEnd ?? messageValue.length };
+    emojiContextRef.current = recordingContext;
+    setShowUploadMenu?.(false); setMentionTerm(null); setEmojiError(""); setEmojiOpen(true);
+    input?.blur();
+    emojiButtonRef.current?.focus({ preventScroll: true });
+    if (EmojiPicker) return;
+    setEmojiLoading(true);
+    try {
+      const module = await loadEmojiPicker();
+      if (activeComposerContext.current === recordingContext) setEmojiPicker(() => module.default);
+    } catch {
+      if (activeComposerContext.current === recordingContext) { setEmojiOpen(false); setEmojiError("Could not load emojis. Try again."); }
+    } finally {
+      if (activeComposerContext.current === recordingContext) setEmojiLoading(false);
+    }
+  };
+
+  const selectEmoji = (emoji) => {
+    if (emojiContextRef.current !== activeComposerContext.current || submitting || scheduleDraft) return false;
+    const result = insertEmojiAtSelection(messageValue, emoji, emojiSelectionRef.current, messageMaxChars);
+    setEmojiOpen(false);
+    if (!result) { setEmojiError("This emoji exceeds the message length limit."); emojiButtonRef.current?.focus({ preventScroll: true }); return false; }
+    setMessageValue(result.value); setMentionTerm(null); setScheduledNotice(false); setEmojiError("");
+    if (!editTarget) setDraftError(!saveChatDraft(draftOwner, activeChatId, result.value, replyTarget));
+    onMessageInput?.(result.value);
+    requestAnimationFrame(() => {
+      if (activeComposerContext.current !== recordingContext) return;
+      const input = messageInputRef.current;
+      focusElementPreventScroll(input); input?.setSelectionRange(result.caret, result.caret);
+      applyTextareaSize({ textareaEl: input, maxTextareaHeight, composerEl: composerRef.current, onComposerResize, onComposerHeightChange });
+    });
+    return true;
   };
 
   useEffect(() => {
@@ -852,6 +944,7 @@ export function MessageComposer({
           {localizeError(uploadError)}
         </p>
       ) : null}
+      {emojiError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{t(emojiError)}</p>}
       {activeUploadProgress !== null ? (
         <div className="rounded-xl border border-brand-200/70 bg-brand-50/60 px-3 py-2 dark:border-brand-500/30 dark:bg-slate-950/70">
           <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-brand-700 dark:text-brand-200">
@@ -912,6 +1005,20 @@ export function MessageComposer({
                     className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                   >
                     <ImageIcon size={18} className="shrink-0 text-brand-500 icon-anim-sway" />{t("Photo or Video")}</button>
+                  {CAMERA_PICKERS.map(({ kind, label, Icon }) => (
+                    <button
+                      key={label}
+                      type="button" role="menuitem"
+                      onPointerDown={(event) => {
+                        captureComposerFocus();
+                        if (!isDesktop) event.preventDefault();
+                      }}
+                      onClick={() => openCameraPicker(kind === "photo" ? photoCaptureRef : videoCaptureRef)}
+                      className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
+                    >
+                      <Icon size={18} className="shrink-0 text-brand-500" />{t(label)}
+                    </button>
+                  ))}
                   <button
                     type="button" role="menuitem"
                     onPointerDown={(event) => {
@@ -927,6 +1034,21 @@ export function MessageComposer({
                     <File size={18} className="shrink-0 text-brand-500 icon-anim-lift" />{t("Document")}</button>
                 </AnchoredMenu>
               ) : null}
+              {CAMERA_PICKERS.map(({ kind, label, accept }) => (
+                <input
+                  key={label}
+                  ref={kind === "photo" ? photoCaptureRef : videoCaptureRef}
+                  type="file"
+                  accept={accept}
+                  capture="environment"
+                  aria-label={t(label)}
+                  tabIndex={-1}
+                  className="sr-only"
+                  disabled={uploadBusy}
+                  onChange={handleCameraSelection}
+                  onCancel={cancelCameraSelection}
+                />
+              ))}
               <input
                 ref={mediaInputRef}
                 type="file"
@@ -961,6 +1083,7 @@ export function MessageComposer({
                 }}
               />
             </div>
+            <div className="relative min-w-0 flex-1">
             <textarea
               ref={messageInputRef}
               name="message"
@@ -1028,7 +1151,7 @@ export function MessageComposer({
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
               }}
-              className={`chat-scroll min-w-0 flex-1 resize-none rounded-2xl border border-brand-200 bg-white px-4 py-2 text-start text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+              className={`chat-scroll block w-full min-w-0 resize-none rounded-2xl border border-brand-200 bg-white py-2 text-start text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${locale === "fa" ? "pl-12 pr-4" : "pl-4 pr-12"} ${
                 composerHasPersian ? "font-fa" : ""
               }`}
               style={{
@@ -1041,6 +1164,18 @@ export function MessageComposer({
                 overflowX: "hidden",
               }}
             />
+            <button ref={emojiButtonRef} type="button" aria-label={t("Choose emoji")} title={t("Choose emoji")}
+              aria-haspopup="dialog" aria-expanded={emojiOpen} aria-controls={emojiOpen && EmojiPicker ? emojiPickerId : undefined}
+              aria-busy={emojiLoading || undefined} disabled={submitting || !!scheduleDraft}
+              onPointerDown={(event) => event.preventDefault()} onClick={toggleEmojiPicker}
+              onKeyDown={(event) => { if (event.key === "Escape" && emojiOpen) { event.preventDefault(); event.stopPropagation(); setEmojiOpen(false); } }}
+              className="absolute end-1 bottom-1 flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-brand-50 hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400 dark:hover:bg-brand-500/10 dark:hover:text-brand-200">
+              <SmilePlus size={21} className={emojiLoading ? "animate-pulse" : undefined} />
+            </button>
+            {emojiLoading && emojiOpen && <span role="status" className="sr-only">{t("Loading emojis…")}</span>}
+            {emojiOpen && EmojiPicker && <EmojiPicker key={recordingContext} id={emojiPickerId} anchorRef={emojiButtonRef}
+              owner={draftOwner} isDesktop={isDesktop} onClose={() => setEmojiOpen(false)} onSelect={selectEmoji} />}
+            </div>
           </>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-brand-200 bg-white px-3 py-2 text-sm text-brand-700 dark:border-brand-500/30 dark:bg-slate-900 dark:text-brand-200">

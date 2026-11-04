@@ -216,8 +216,8 @@ describe("ChatsListPanel — row layout & dividers", () => {
     const cardElements = document.querySelectorAll(".rounded-2xl");
     expect(cardElements.length).toBe(0);
 
-    // Intermediate divider on first user, omitted on last user
+    // Discovery rows use the same trailing divider as conversation rows.
     const borders = document.querySelectorAll(".border-b");
-    expect(borders.length).toBe(1);
+    expect(borders.length).toBe(2);
   });
 });

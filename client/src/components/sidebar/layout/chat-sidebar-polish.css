@@ -7,6 +7,7 @@
 
 .ouj-sidebar-filter-scroll {
   scrollbar-width: none;
+  scrollbar-color: inherit;
   -ms-overflow-style: none;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -18,6 +19,7 @@
 
 .ouj-sidebar-list-scroll {
   scrollbar-width: thin;
+  scrollbar-color: inherit;
   scrollbar-gutter: stable;
   overflow-anchor: auto;
   -webkit-overflow-scrolling: touch;

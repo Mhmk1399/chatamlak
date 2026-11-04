@@ -1,0 +1,238 @@
+/* OUJ_CHATPAGE_REWRITE_PRESENTATION_ONLY */
+/* Portable CSS Module: use from Next.js or Vite; only .page is locally scoped. */
+/*
+ * Scoped ChatPage polish. No JavaScript business logic is touched.
+ * Enhances spacing, focus and chat clarity with OUJ's existing purple palette.
+ * Avoids transforms/size constraints on the virtualized timeline, swipe gestures,
+ * upload previews, the calls screen, and anchored context menus.
+ */
+
+.page {
+  --ouj-chat-stroke: rgba(102, 48, 141, 0.12);
+  --ouj-chat-shadow: 0 4px 20px rgba(42, 27, 58, 0.055);
+  --ouj-chat-hover-shadow: 0 8px 26px rgba(58, 30, 81, 0.1);
+  --ouj-chat-focus: rgba(102, 48, 141, 0.25);
+}
+
+.page:global(.dark) {
+  --ouj-chat-stroke: rgba(181, 132, 220, 0.17);
+  --ouj-chat-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  --ouj-chat-hover-shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
+  --ouj-chat-focus: rgba(181, 132, 220, 0.35);
+}
+
+/* Header & search: quieter borders, higher quality light/dark glass. */
+.page :global(.ouj-glass) {
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  backdrop-filter: saturate(1.2) blur(14px);
+  border-bottom-color: var(--ouj-chat-stroke);
+}
+
+.page :global(.ouj-glass input[type="text"]),
+.page :global(.ouj-glass input[aria-label]) {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.page :global(.ouj-glass input:focus-visible),
+.page :global(.ouj-glass button:focus-visible) {
+  outline: 2px solid var(--ouj-chat-focus);
+  outline-offset: 2px;
+}
+
+/* Chat timeline. Let the existing virtualization own height and positioning. */
+.page :global(.chat-scroll[role="log"]) {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 5.75rem;
+  scrollbar-width: thin;
+}
+
+.page :global(.chat-scroll[role="log"] [data-message-bubble]) {
+  border: 1px solid var(--ouj-chat-stroke);
+  box-shadow: var(--ouj-chat-shadow);
+  line-height: 1.52;
+  overflow-wrap: anywhere;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.page
+  :global(
+    .chat-scroll[role="log"]
+      [data-message-bubble]:not(.ouj-voice-bubble):not(.ouj-video-bubble)
+  ) {
+  border-radius: 1.125rem;
+}
+
+/* Logical corners: outgoing and incoming tails remain correct for RTL. */
+.page
+  :global(
+    .chat-scroll[role="log"]
+      [data-message-bubble].rounded-br-md:not(.ouj-voice-bubble):not(
+        .ouj-video-bubble
+      )
+  ) {
+  border-end-end-radius: 0.4rem;
+}
+.page
+  :global(
+    .chat-scroll[role="log"]
+      [data-message-bubble].rounded-bl-md:not(.ouj-voice-bubble):not(
+        .ouj-video-bubble
+      )
+  ) {
+  border-end-start-radius: 0.4rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .page :global(.chat-scroll[role="log"] [data-message-bubble]:hover) {
+    box-shadow: var(--ouj-chat-hover-shadow);
+  }
+}
+
+.page :global(.chat-scroll[role="log"] [data-message-bubble] .sb-markdown) {
+  min-width: 0;
+  line-height: 1.56;
+  overflow-wrap: anywhere;
+}
+.page
+  :global(
+    .chat-scroll[role="log"] [data-message-bubble] .sb-markdown > :first-child
+  ) {
+  margin-block-start: 0;
+}
+.page
+  :global(
+    .chat-scroll[role="log"] [data-message-bubble] .sb-markdown > :last-child
+  ) {
+  margin-block-end: 0;
+}
+.page :global(.chat-scroll[role="log"] [data-message-bubble] .sb-markdown pre) {
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 0.7rem;
+  scrollbar-width: thin;
+}
+.page
+  :global(
+    .chat-scroll[role="log"] [data-message-bubble] .sb-markdown :is(img, video)
+  ) {
+  max-width: 100%;
+}
+
+.page :global(.chat-scroll[role="log"] .ouj-message-meta) {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.005em;
+  line-height: 1.35;
+}
+
+/* Reply previews: a Telegram-like edge accent, retaining original semantics. */
+.page
+  :global(
+    .chat-scroll[role="log"]
+      [data-message-bubble]
+      button[aria-label^="Reply to"]
+  ) {
+  border-inline-start-width: 3px;
+  border-inline-start-color: rgba(102, 48, 141, 0.55);
+  border-radius: 0.7rem;
+}
+
+.page
+  :global(
+    .chat-scroll[role="log"] [id^="unread-divider-"] > span:nth-child(2)
+  ) {
+  box-shadow: var(--ouj-chat-shadow);
+  letter-spacing: 0.01em;
+}
+
+/* Composer controls: gentle lift and consistent focus behavior, no new gestures. */
+.page :global(form:has(textarea[name="message"])) {
+  border-top-color: var(--ouj-chat-stroke);
+}
+.page :global(form:has(textarea[name="message"]) textarea[name="message"]) {
+  line-height: 1.55;
+  scrollbar-width: thin;
+  caret-color: currentColor;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+.page
+  :global(
+    form:has(textarea[name="message"]) textarea[name="message"]:focus-visible
+  ) {
+  box-shadow: 0 0 0 3px var(--ouj-chat-focus);
+}
+.page :global(form:has(textarea[name="message"]) button[type="submit"]) {
+  box-shadow: 0 6px 16px rgba(102, 48, 141, 0.19);
+  transition:
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    opacity 180ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .page
+    :global(
+      form:has(textarea[name="message"])
+        button[type="submit"]:not(:disabled):hover
+    ) {
+    box-shadow: 0 10px 23px rgba(102, 48, 141, 0.25);
+  }
+}
+
+.page :global(form:has(textarea[name="message"]) button:focus-visible) {
+  outline: 2px solid var(--ouj-chat-focus);
+  outline-offset: 3px;
+}
+
+@media (max-width: 767px) {
+  .page :global(.chat-scroll[role="log"]) {
+    scroll-padding-top: 5rem;
+    scrollbar-width: none;
+    scrollbar-color: inherit;
+  }
+  .page :global(.chat-scroll[role="log"])::-webkit-scrollbar {
+    width: 0;
+  }
+  .page
+    :global(
+      .chat-scroll[role="log"]
+        [data-message-bubble]:not(.ouj-voice-bubble):not(.ouj-video-bubble)
+    ) {
+    border-radius: 1.05rem;
+  }
+  .page :global(form:has(textarea[name="message"]) textarea[name="message"]) {
+    font-size: 16px; /* iOS: avoid auto-zoom when focusing composer */
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page :global(.chat-scroll[role="log"] [data-message-bubble]),
+  .page :global(form:has(textarea[name="message"]) textarea[name="message"]),
+  .page :global(form:has(textarea[name="message"]) button[type="submit"]) {
+    transition: none !important;
+  }
+}
+
+/* Sidebar remains anchored while search and filters update. */
+.page :global(.ouj-chat-sidebar) {
+  -webkit-tap-highlight-color: transparent;
+}
+.page :global(.ouj-chat-sidebar input:focus-visible),
+.page :global(.ouj-chat-sidebar button:focus-visible) {
+  outline: 2px solid var(--ouj-chat-focus);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page :global(.ouj-chat-sidebar *) {
+    scroll-behavior: auto !important;
+  }
+}

@@ -66,7 +66,7 @@ for (const locale of ["fa", "en"]) {
   });
   test(`sidebar search placeholder stays at the ${expected} edge before and after focus`, async () => {
     setLocale(locale); await render(<SidebarSearch />);
-    const search = page.getByRole("textbox", { name: t("Search"), exact: true });
+    const search = page.getByRole("searchbox", { name: t("Search"), exact: true });
     expect(alignment(search.element())).toBe(expected);
     expect(getComputedStyle(search.element(), "::placeholder").color).not.toBe("rgba(0, 0, 0, 0)");
     await search.click(); expect(alignment(search.element())).toBe(expected);

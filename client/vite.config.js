@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
               { name: "react-core", test: /\/node_modules\/(?:react|react-dom|scheduler)\//, priority: 40 },
               { name: "date-controls", test: /\/node_modules\/(?:react-aria(?:-components)?|react-stately|@react-aria|@react-stately|@react-types|@internationalized)\//, priority: 30 },
               { name: "icons", test: /\/node_modules\/lucide-react\//, priority: 20 },
+              { name: "emoji-picker", test: /\/node_modules\/(?:emoji-picker-react|shipstyles)\//, priority: 20 },
               { name: "markdown", test: /\/node_modules\/(?:marked|dompurify|highlight.js)\//, priority: 20 },
               { name: "vendor", test: /\/node_modules\//, priority: 0 },
             ],

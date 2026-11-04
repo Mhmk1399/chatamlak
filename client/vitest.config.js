@@ -40,6 +40,8 @@ const browserInstances = isCoverage
 // forever. Listing them here forces a single up-front optimize pass.
 const browserOptimizeInclude = [
   "lucide-react",
+  "emoji-picker-react",
+  "emoji-picker-react/data/emojis-en",
   "react-aria-components",
   "@internationalized/date",
   "vitest-browser-react",

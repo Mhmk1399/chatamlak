@@ -108,7 +108,7 @@ The playback-position control also supports the keyboard: focus it with **Tab**,
 
 ## Circular video messages
 
-A video message is a short circular recording, distinct from an ordinary attached video. Sending a regular video file keeps its normal rectangular presentation; it does not automatically become a circular video message.
+A video message is a short circular recording, distinct from an ordinary attached video. Sending a regular video file, including one recorded from the paperclip menu, keeps its normal rectangular presentation; it does not automatically become a circular video message.
 
 ### Record and send
 
@@ -137,6 +137,18 @@ Use the selected conversation's three-dot menu for **Pin chat** and **Archive**.
 
 These preferences belong to your account and are saved on the server. Archiving does not delete messages or remove you from a group.
 
+## Emoji in messages
+
+Open **Choose emoji** inside the composer to browse categories, search with English or Persian keywords, and select an available skin tone. Choosing an emoji inserts native Unicode text at the caret or replaces the selected text. If the whole emoji would exceed the existing message-length limit, it is rejected rather than cut in half.
+
+Selecting an emoji does not send the message. Choose **Send** explicitly; the usual draft, reply, edit and persistent-queue rules still apply. Skin-tone preferences and up to **24 recently used choices** are saved separately for each account in this browser. They are not synchronized to the server or another device, and clearing browser data removes them.
+
+The panel follows Persian/English direction and the light/dark theme on mobile and desktop. Close it with **Escape**, its close button or a click outside. It loads on demand from this site and uses native glyphs without a CDN; searches and message text are not sent to a third-party emoji service. First use may need a connection. After loading, offline reopening depends on the browser retaining the required cached assets.
+
+The bundled `emoji-picker-react` **5.1.4** catalog contains **1,906 base entries** and **3,931 entries including variations**, covering Unicode versions up to **16**. Native appearance and support depend on the operating system and font; the picker filters unsupported glyphs. English/Persian search includes vendored Unicode CLDR annotations with their pinned source and Unicode-3.0 license retained in the repository.
+
+Check search, skin tones, insertion position and on-screen keyboard layout on the target phone/browser; desktop checks alone do not establish native rendering on every device.
+
 ## Reactions, pinned messages and mentions
 
 Use the controls beside a message to add or remove a supported emoji reaction. Reaction counts update for participants. Group and channel owners or administrators can pin a message; pinned messages appear above the history and can be opened from there.
@@ -144,6 +156,12 @@ Use the controls beside a message to add or remove a supported emoji reaction. R
 When writing a message, type `@` followed by part of a member's username to see mention suggestions. Selecting a suggestion inserts the username into the composer.
 
 ## Shared media
+
+Open the composer's **paperclip menu → Take photo / Record video** to capture an ordinary media attachment. These actions request the rear/environment camera through the browser's native file-capture controls. The operating system and browser manage the camera interface and permissions, and may show a file picker instead, especially on desktop. Opening the attachment menu alone does not start a camera stream or recording.
+
+Captured files pass through the existing type, size and attachment-count checks, then appear in the attachment preview with the current caption and reply context. Choose **Send** explicitly to use the normal upload, persistent queue and retry flow; capture does not publish a message automatically. Cancelling keeps the text draft and pending attachments. Results returned after the account or conversation changes are ignored.
+
+Verify camera opening, cancellation, preview and sending on each target phone/browser. Desktop file-picker or automated upload checks cover file handling and do not establish that the phone's native camera interface works.
 
 Open **three-dot menu → Media** to browse a conversation's attachments. Filter by images, video, voice/audio, or documents. The list is paginated; use **Load more** or **Previous** to browse older files. Opening an attachment uses the normal authenticated file route.
 

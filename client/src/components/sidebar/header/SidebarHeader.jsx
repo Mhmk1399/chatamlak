@@ -187,8 +187,9 @@ export default function SidebarHeader({
       : null;
 
   const createAction = (callback) => {
-    // Do not restore focus here: the action may open a modal or new screen.
     setShowCreateMenu(false);
+    // Restore before the action so a newly opened dialog can take focus next.
+    createButtonRef.current?.focus({ preventScroll: true });
     callback?.();
   };
 

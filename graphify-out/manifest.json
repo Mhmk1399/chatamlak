@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "client/package.json": {
-    "mtime": 1793722541.4216106,
-    "ast_hash": "f227786034fcefe1d9be8b35fdb66e9d",
+    "mtime": 1793795662.3636036,
+    "ast_hash": "e664feedae7faf63d5fd424bd007e545",
     "semantic_hash": ""
   },
   "client/postcss.config.js": {
@@ -105,7 +105,7 @@
     "semantic_hash": ""
   },
   "client/src/components/admin/UsersTab.jsx": {
-    "mtime": 1793690327.468595,
+    "mtime": 1793784321.5692444,
     "ast_hash": "a1e613714125de2758f519f139068239",
     "semantic_hash": ""
   },
@@ -145,7 +145,7 @@
     "semantic_hash": ""
   },
   "client/src/components/call/CallScreen.jsx": {
-    "mtime": 1793690327.4746954,
+    "mtime": 1793794795.659808,
     "ast_hash": "b2aa19498751ca10c59a0172a47ba95c",
     "semantic_hash": ""
   },
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/messages/MessageComposer.jsx": {
-    "mtime": 1793784010.4739883,
-    "ast_hash": "33b0e1c4d2e18488a236b316629fb4c8",
+    "mtime": 1793796599.0044034,
+    "ast_hash": "14c0cd3d7331d8476a4eaf0c67f857b2",
     "semantic_hash": ""
   },
   "client/src/components/chat/messages/MessageItem.jsx": {
@@ -425,13 +425,13 @@
     "semantic_hash": ""
   },
   "client/src/components/sidebar/header/SidebarHeader.jsx": {
-    "mtime": 1793784011.4004943,
-    "ast_hash": "2010ad868035b18275e92d1e202f8c2d",
+    "mtime": 1793795334.8801348,
+    "ast_hash": "8deb8879a07a9112a0315638dd1af610",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/header/UserMenuButton.jsx": {
-    "mtime": 1793782107.1391945,
-    "ast_hash": "0c70e7952f0da052fa019471b7f716e3",
+    "mtime": 1793786474.1764295,
+    "ast_hash": "9a72668fecc6bd05324fd50fe11a0dc6",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/index.js": {
@@ -440,13 +440,13 @@
     "semantic_hash": ""
   },
   "client/src/components/sidebar/layout/ChatSidebar.jsx": {
-    "mtime": 1793781952.140644,
-    "ast_hash": "2e790d413c6a54624a8293432550de95",
+    "mtime": 1793785960.3300092,
+    "ast_hash": "6b3732fd60b467b5c7c47921328424a7",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/list/ChatsListPanel.jsx": {
-    "mtime": 1793690327.5667813,
-    "ast_hash": "b7b5173d9155683cc71e7600c1a91d71",
+    "mtime": 1793798005.8843994,
+    "ast_hash": "9444a1c6cd418006ee13e9c35b0f9014",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useActiveChatState.js": {
@@ -600,8 +600,8 @@
     "semantic_hash": ""
   },
   "client/src/icons/lucide.js": {
-    "mtime": 1793781952.1348164,
-    "ast_hash": "301aa39f02d52a63ba19d75cf21694c5",
+    "mtime": 1793794827.5420537,
+    "ast_hash": "aac8110b42e44a3c468e818359033ddc",
     "semantic_hash": ""
   },
   "client/src/main.jsx": {
@@ -620,8 +620,8 @@
     "semantic_hash": ""
   },
   "client/src/pages/ChatPage.jsx": {
-    "mtime": 1793782107.0538394,
-    "ast_hash": "091c3ae7d07e9fb6430f87cf75b1c9a9",
+    "mtime": 1793797048.946738,
+    "ast_hash": "1384c0e934844dd323b27fbf90dc02a6",
     "semantic_hash": ""
   },
   "client/src/pages/InvitePage.jsx": {
@@ -975,13 +975,13 @@
     "semantic_hash": ""
   },
   "client/test/components/sidebar/ChatsListPanel.badges.test.jsx": {
-    "mtime": 1793612233.5672219,
-    "ast_hash": "7fdef21c3d02cd61e99ebbc1c3748e90",
+    "mtime": 1793798235.7464955,
+    "ast_hash": "17fa6bc65bcb2c3216ef604085c6a3f5",
     "semantic_hash": ""
   },
   "client/test/components/sidebar/ChatsListPanel.rows.test.jsx": {
-    "mtime": 1793689777.8847396,
-    "ast_hash": "9f665d6fa6e86aecc6387ba32d16c842",
+    "mtime": 1793798235.7464955,
+    "ast_hash": "be423148364e23d6873627867e453d78",
     "semantic_hash": ""
   },
   "client/test/components/sidebar/MobileSettingsPanel.badges.test.jsx": {
@@ -1200,13 +1200,13 @@
     "semantic_hash": ""
   },
   "client/vite.config.js": {
-    "mtime": 1793723725.8567111,
-    "ast_hash": "3f19007ad080278b3d1f95a2837972e8",
+    "mtime": 1793796753.3880148,
+    "ast_hash": "0f613e7276dd049858f9b70c01f485eb",
     "semantic_hash": ""
   },
   "client/vitest.config.js": {
-    "mtime": 1793722998.7288005,
-    "ast_hash": "fa0d4dfcd51628718449f1384fc51772",
+    "mtime": 1793796222.300434,
+    "ast_hash": "95297463333e7ab5a6890c06534ab527",
     "semantic_hash": ""
   },
   "docs/.vitepress/.temp/AGENTS.md.js": {
@@ -2890,8 +2890,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1793697987.2113283,
-    "ast_hash": "cbf5d908ba5c08a8e3c9b0e363220027",
+    "mtime": 1793787308.721824,
+    "ast_hash": "0148928935b4363bdc1f72fc3076d06e",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
@@ -2910,8 +2910,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1793784010.47841,
-    "ast_hash": "35b94d8412b9b66554b837f1191ccfed",
+    "mtime": 1793796845.5965102,
+    "ast_hash": "0d0c09a7ede1f68efd35e1f9f2d333c2",
     "semantic_hash": ""
   },
   "README.fa_IR.md": {
@@ -2930,8 +2930,8 @@
     "semantic_hash": ""
   },
   "UX-CONTRACT.md": {
-    "mtime": 1793784011.4025252,
-    "ast_hash": "b6507ec58ca706eeb84c57328b9f0297",
+    "mtime": 1793797657.3216548,
+    "ast_hash": "a0e0f875428f4821bf755ab9e576d6e0",
     "semantic_hash": ""
   },
   "client/AGENTS.md": {
@@ -2965,8 +2965,8 @@
     "semantic_hash": ""
   },
   "docs/Chat-Features.md": {
-    "mtime": 1793782508.2678463,
-    "ast_hash": "44166742f97a0f00a077c302dc62ae7f",
+    "mtime": 1793796395.3368008,
+    "ast_hash": "66308765d99f3878220fe776354bfb6b",
     "semantic_hash": ""
   },
   "docs/Cloud-Deployment.md": {
@@ -3060,8 +3060,8 @@
     "semantic_hash": ""
   },
   "docs/fa/Chat-Features.md": {
-    "mtime": 1793782508.2688925,
-    "ast_hash": "cf97867ea43102ec10836cb4546e17a9",
+    "mtime": 1793796395.3388023,
+    "ast_hash": "85d8861b926fa89e1f4a8fbc1748a2cf",
     "semantic_hash": ""
   },
   "docs/fa/Cloud-Deployment.md": {
@@ -3410,8 +3410,8 @@
     "semantic_hash": ""
   },
   "client/src/i18n/fa-ui.js": {
-    "mtime": 1793782274.9686048,
-    "ast_hash": "ec830859e69a52b6820a5cc6a6172194",
+    "mtime": 1793796368.268267,
+    "ast_hash": "e2bab26f7a74aa6733519702433e5ada",
     "semantic_hash": ""
   },
   "client/test/e2e/ouj-brand-flow.mjs": {
@@ -3680,8 +3680,8 @@
     "semantic_hash": ""
   },
   "client/src/components/common/AnchoredMenu.jsx": {
-    "mtime": 1793782015.380587,
-    "ast_hash": "4882ef7300e9fd298a3ea078e3070f88",
+    "mtime": 1793786474.1786427,
+    "ast_hash": "5bb205d2f60b0289b2cbc8d09350d6c7",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useVoiceRecording.js": {
@@ -3820,8 +3820,8 @@
     "semantic_hash": ""
   },
   "client/test/components/chat/MessageComposer.uploadMenu.test.jsx": {
-    "mtime": 1793722142.4678006,
-    "ast_hash": "809058de42d01e64fc3ca86f0a946c96",
+    "mtime": 1793794924.8686922,
+    "ast_hash": "4ddffd93e1b453b2b3b98a7098f480b1",
     "semantic_hash": ""
   },
   "client/src/components/common/PersianDateTimeField.jsx": {
@@ -3915,8 +3915,8 @@
     "semantic_hash": ""
   },
   "client/test/components/sidebar/UserMenuButton.layers.test.jsx": {
-    "mtime": 1793781426.8248398,
-    "ast_hash": "5f73c982451ab288615e1b36cfa94a62",
+    "mtime": 1793795097.146271,
+    "ast_hash": "f2350bc2965cef346501fc4290e5a825",
     "semantic_hash": ""
   },
   "client/src/components/chat/ChatHeaderActions.jsx": {
@@ -3930,8 +3930,8 @@
     "semantic_hash": ""
   },
   "client/src/components/sidebar/navigation/ConversationFilters.jsx": {
-    "mtime": 1793782975.892018,
-    "ast_hash": "5277bb9248390e3238d513b9cb5b258b",
+    "mtime": 1793786006.4090936,
+    "ast_hash": "05bc962ff89c072e4df8998582d0e1e5",
     "semantic_hash": ""
   },
   "client/test/components/chat/ChatHeaderActions.test.jsx": {
@@ -3955,8 +3955,48 @@
     "semantic_hash": ""
   },
   "client/test/components/common/PlaceholderAlignment.test.jsx": {
-    "mtime": 1793784201.6277301,
-    "ast_hash": "568176fb259d0f8eb7a3c27c9513e23a",
+    "mtime": 1793795097.1474237,
+    "ast_hash": "82a83a603b8f47165c2641ad817d9e9e",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/messages/EmojiPickerPopover.jsx": {
+    "mtime": 1793797657.3206103,
+    "ast_hash": "7569af7593f03d142a9c9036ed923c8a",
+    "semantic_hash": ""
+  },
+  "client/src/i18n/emoji-fa.json": {
+    "mtime": 1793795897.7939117,
+    "ast_hash": "ff72908255f4302e277d0ab75bdaea73",
+    "semantic_hash": ""
+  },
+  "client/src/utils/emojiLocale.js": {
+    "mtime": 1793796060.7006419,
+    "ast_hash": "9ff4fbd7d96c58e709fd97b67a09913b",
+    "semantic_hash": ""
+  },
+  "client/src/utils/emojiPreferences.js": {
+    "mtime": 1793796060.6993768,
+    "ast_hash": "5a9f0dcec9c2cd9b9f5a1ef4a88124ac",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/MessageComposer.emoji.test.jsx": {
+    "mtime": 1793797546.9809124,
+    "ast_hash": "91cb5753ce7214a14b0aa867ff3b032d",
+    "semantic_hash": ""
+  },
+  "client/test/utils/emojiPreferences.test.js": {
+    "mtime": 1793796329.8409839,
+    "ast_hash": "38ac3d486caf3972a5f97dac2bf75210",
+    "semantic_hash": ""
+  },
+  "client/public/licenses/unicode.txt": {
+    "mtime": 1793795898.498948,
+    "ast_hash": "3049f4ad14be1ebf8c80a93d9d32b2d6",
+    "semantic_hash": ""
+  },
+  "client/public/licenses/emoji-picker.txt": {
+    "mtime": 1793797314.1523752,
+    "ast_hash": "1dd3908eb72cfc25d9855e82766b0ff6",
     "semantic_hash": ""
   }
 }

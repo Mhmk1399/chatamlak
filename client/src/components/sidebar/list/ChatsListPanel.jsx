@@ -282,14 +282,14 @@ const ChatRow = memo(function ChatRow({
                     {name}
                   </span>
                 </Tooltip>
-                {chat.type === "dm" && !isDeletedDm && other?.user_verified && (
+                {chat.type === "dm" && !isDeletedDm && Boolean(other?.user_verified) && (
                   <VerifiedBadge size={15} />
                 )}
                 {chat.type === "dm" && !isDeletedDm && other && (
                   <UserRoleBadge role={other.user_role} size={15} />
                 )}
-                {chat.type !== "dm" && chat.verified && <VerifiedBadge size={15} />}
-                {chat._muted && (
+                {chat.type !== "dm" && Boolean(chat.verified) && <VerifiedBadge size={15} />}
+                {Boolean(chat._muted) && (
                   <VolumeX size={15} className="shrink-0 text-slate-400 dark:text-slate-500" aria-label={localize("Muted chat")} />
                 )}
               </div>
@@ -480,7 +480,7 @@ const DiscoveredCommunityRow = memo(function DiscoveredCommunityRow({
               {item.username ? `@${item.username} · ` : ""}{countString} {localize(type === "channel" ? "subscribers" : "members")}
             </span>
           </span>
-          {item.isMember && (
+          {Boolean(item.isMember) && (
             <span className="shrink-0 rounded-full bg-brand-50 px-2 py-1 text-[11px] font-semibold text-brand-700 dark:bg-brand-500/10 dark:text-brand-200">
               {localize("Joined")}
             </span>
@@ -768,7 +768,7 @@ export default function ChatsListPanel({
               ))}
             </section>
           )}
-          {discoverSaved && (
+          {Boolean(discoverSaved) && (
             <section aria-label={localize("Saved Messages")}>
               <SectionHeading>{localize("Saved Messages")}</SectionHeading>
               <SavedMessagesRow active={isSavedChatActive} onOpen={onOpenSavedMessages} />

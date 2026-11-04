@@ -17,7 +17,7 @@ async function setup(width = 390, height = 720) {
   await render(<aside className="fixed top-2 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white dark:bg-slate-900"
     style={{ insetInlineStart: 8, width: Math.min(380, width - 16), height: height - 16, transform: "translateZ(0)" }}>
     {width >= 768
-      ? <SidebarHeader user={user} displayName="Hos" isConnected hasChats chatsSearchQuery="" onNavigateCalls={navigate} />
+      ? <SidebarHeader user={user} displayName="Hos" isConnected hasChats showAccountMenu chatsSearchQuery="" onNavigateCalls={navigate} />
       : <div className="ouj-glass border-b px-5 py-5"><UserMenuButton user={user} displayName="Hos" onNavigateCalls={navigate} /></div>}
     <div className="min-h-0 flex-1 overflow-y-auto">
       <ChatsListPanel loadingChats={false} visibleChats={[chat]} user={user} activeChatId={chat.id} selectedChats={[]}
