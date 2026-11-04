@@ -1,8 +1,9 @@
 .ouj-date-field { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .ouj-date-label { font-size: 12px; font-weight: 500; color: var(--color-slate-700); }
 .dark .ouj-date-label { color: var(--color-slate-200); }
-.ouj-date-control { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 2px 5px; border: 1px solid var(--color-slate-300); border-radius: 14px; background: var(--ouj-surface); color: var(--color-slate-900); }
+.ouj-date-control { display: flex; align-items: center; gap: 2px; min-height: 48px; padding: 2px 5px; border: 1px solid var(--color-slate-300); border-radius: 14px; background: var(--ouj-surface); color: var(--color-slate-900); cursor: pointer; }
 .dark .ouj-date-control { border-color: var(--color-slate-700); color: var(--color-slate-100); }
+.ouj-date-control[data-hovered] { border-color: var(--color-brand-400); }
 .ouj-date-control:focus-within { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 .ouj-date-field[data-invalid] .ouj-date-control { border-color: var(--color-rose-500); }
 .ouj-date-segments { display: flex; direction: ltr; align-items: center; flex: 1; min-width: 0; padding-inline: 6px; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -34,6 +35,8 @@
 .dark .ouj-calendar-footer { border-color: var(--color-slate-700); }
 .ouj-date-text-button { min-height: 40px; padding: 6px 10px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--color-brand-700); cursor: pointer; }
 .dark .ouj-date-text-button { color: var(--color-brand-200); }
+.ouj-date-text-button.ouj-date-primary-button { background: var(--color-brand-600); color: white; }
+.ouj-date-text-button.ouj-date-primary-button[data-hovered], .ouj-date-text-button.ouj-date-primary-button[data-pressed] { background: var(--color-brand-700); }
 .ouj-calendar-caption, .ouj-date-description { font-size: 11px; color: var(--color-slate-500); }
 .dark :is(.ouj-calendar-caption, .ouj-date-description) { color: var(--color-slate-400); }
 .ouj-clock-title { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; padding: 6px 2px; }

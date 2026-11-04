@@ -155,7 +155,7 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/ChatWindowPanel.jsx": {
-    "mtime": 1793783103.7493443,
+    "mtime": 1793800087.3324437,
     "ast_hash": "76ca8876cb2a74f503f9101e0276d9b7",
     "semantic_hash": ""
   },
@@ -2910,8 +2910,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1793796845.5965102,
-    "ast_hash": "0d0c09a7ede1f68efd35e1f9f2d333c2",
+    "mtime": 1793800922.8587966,
+    "ast_hash": "c2166a226d8170ea5eb4bf4db2b0ee88",
     "semantic_hash": ""
   },
   "README.fa_IR.md": {
@@ -2930,8 +2930,8 @@
     "semantic_hash": ""
   },
   "UX-CONTRACT.md": {
-    "mtime": 1793797657.3216548,
-    "ast_hash": "a0e0f875428f4821bf755ab9e576d6e0",
+    "mtime": 1793800922.8607962,
+    "ast_hash": "c87471b7d21200a55d2c5edac1958a1b",
     "semantic_hash": ""
   },
   "client/AGENTS.md": {
@@ -2965,8 +2965,8 @@
     "semantic_hash": ""
   },
   "docs/Chat-Features.md": {
-    "mtime": 1793796395.3368008,
-    "ast_hash": "66308765d99f3878220fe776354bfb6b",
+    "mtime": 1793800814.2986212,
+    "ast_hash": "06f6d3b64285f5ffa45c30805b7ddd4f",
     "semantic_hash": ""
   },
   "docs/Cloud-Deployment.md": {
@@ -3060,8 +3060,8 @@
     "semantic_hash": ""
   },
   "docs/fa/Chat-Features.md": {
-    "mtime": 1793796395.3388023,
-    "ast_hash": "85d8861b926fa89e1f4a8fbc1748a2cf",
+    "mtime": 1793800814.299792,
+    "ast_hash": "78e87f20a7e8bf3324a207312a8f846b",
     "semantic_hash": ""
   },
   "docs/fa/Cloud-Deployment.md": {
@@ -3825,8 +3825,8 @@
     "semantic_hash": ""
   },
   "client/src/components/common/PersianDateTimeField.jsx": {
-    "mtime": 1793724431.0763211,
-    "ast_hash": "3510889b5d76160505d0528de552bf5c",
+    "mtime": 1793800744.731697,
+    "ast_hash": "d170bae26af880e2e6f152a408d24fe7",
     "semantic_hash": ""
   },
   "client/src/utils/persianDateTime.js": {
@@ -3835,8 +3835,8 @@
     "semantic_hash": ""
   },
   "client/test/components/chat/PersianDateTimeField.test.jsx": {
-    "mtime": 1793724492.3590412,
-    "ast_hash": "f6d181e745c84c11ef624f0d87661eb7",
+    "mtime": 1793800922.8564637,
+    "ast_hash": "add7ea7b87b462e50ceb11f2ab0fae3a",
     "semantic_hash": ""
   },
   "client/test/components/chat/ToolsDateTime.test.jsx": {
@@ -3865,13 +3865,13 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/ScheduleMessageDialog.jsx": {
-    "mtime": 1793726284.5356956,
-    "ast_hash": "8dc3dbebcccc777154a99c79b49f36f3",
+    "mtime": 1793800125.062579,
+    "ast_hash": "9a8d16739aabe398e84431f46a58a1ff",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/ScheduleMessageForm.jsx": {
-    "mtime": 1793726284.5356956,
-    "ast_hash": "d840eec2b771bdcddf2b957f7e0fd6a4",
+    "mtime": 1793800205.5922942,
+    "ast_hash": "8ca3a355cc979a4f8efe7dc599e77ce7",
     "semantic_hash": ""
   },
   "client/src/components/pwa/DevicePermissionsSetup.jsx": {

@@ -44,6 +44,7 @@ The approved identity is a quiet neutral chat surface with restrained purple and
 - Global CSS applies `:lang(fa)` and `[lang="fa"]` rules automatically to enforce Vazirmatn.
 - Standard form inputs (`input`, `textarea`, `select`) must enforce `font-size: 16px !important;` to prevent unwanted iOS Safari auto-zooming on focus.
 - Date and time entry use the shared `PersianDateTimeField.jsx` controls built on React Aria's accessible date/calendar/time primitives. These are loaded with chat tools or the composer's scheduling dialog, styled with Ouj tokens, and replace browser-native date/time popups. Date segments, month/day names and numerals always use the Persian/Jalali calendar, including in the English interface; field labels, actions and validation follow the application language. Weeks start on Saturday. Time entry is 24-hour and always interpreted in `Asia/Tehran`, independent of the device timezone; APIs continue to receive UTC ISO instants. Search bounds include the complete selected Tehran calendar days. Other date/number presentation continues to follow the application locale unless the surface explicitly displays a scheduled Tehran instant.
+- Date and clock icons share the field's logical end edge: left in Persian, right in English. Clicking or tapping the field's blank area or numeric segments opens its picker. Preserve keyboard segment editing and independent Clear/trigger actions; ignore events from portaled popup content when handling field activation.
 
 ---
 

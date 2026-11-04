@@ -167,9 +167,11 @@ Open **three-dot menu → Media** to browse a conversation's attachments. Filter
 
 ## Dates, times and the Persian calendar
 
-Product date/time inputs use shared, keyboard-accessible controls with the Persian calendar (`fa-IR-u-ca-persian`), including when the interface language is English. Weeks start on **Saturday**. Type into the date and time segments or open the app's calendar to navigate months, jump to today, or clear the selection. Time uses the **24-hour** clock.
+Product date/time inputs use shared, keyboard-accessible controls with the Persian calendar (`fa-IR-u-ca-persian`) and Persian numerals in both interface languages. Weeks start on **Saturday**, and time uses the **24-hour** clock.
 
 The calendar popup belongs to Ouj Chat and follows its light/dark styling and responsive layout. Field labels follow your selected Persian or English interface language; changing that language does not switch the calendar to Gregorian.
+
+Calendar and clock icons sit at the end of the interface's writing direction: **left in Persian, right in English**. Click or tap anywhere inside a field, including empty space or numeric segments, to open its picker. The icon buttons remain keyboard accessible, and you can edit the date/time segments directly with the keyboard. **Clear** only clears the value and does not open the picker. Inside the calendar, navigate months or jump to today; use the popup's selection, **Done** and **Close** controls.
 
 Business dates and times use **Asia/Tehran**, regardless of the browser's local timezone. Scheduling converts the selected Tehran wall date/time to a UTC ISO timestamp for the API. The existing API and MongoDB date fields keep their current format.
 
