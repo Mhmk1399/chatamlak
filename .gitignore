@@ -25,6 +25,13 @@ test-results/
 /docs/.vitepress/cache/
 /graphify-out/cache/
 
+# Local tooling caches and operating-system metadata
+.cache/
+.eslintcache
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
 # Runtime logs
 logs/
 *.log

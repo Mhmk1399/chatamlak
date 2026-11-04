@@ -1,6 +1,6 @@
 # Ouj Chat Features
 
-**Ouj Chat / گفتگوی اوج** is the dedicated messenger for **املاک اوج** at `oujamlak.ir`. It includes conversation organization, message search, polls, topics, group controls, and group calls. Open **Chat tools** above the conversation to reach the available panels. Some panels appear only after selecting a conversation or when your role permits the action.
+**Ouj Chat / گفتگوی اوج** is the dedicated messenger for **املاک اوج** at `oujamlak.ir`. It includes conversation organization, message search, polls, topics, group controls, and group calls. Open the selected conversation's **three-dot menu → Chat tools** to reach its panels; global **Chat tools** is also available in the account menu. Some panels appear only after selecting a conversation or when your role permits the action.
 
 Ouj Chat builds on the open-source Songbird project. The product branding preserves Songbird's upstream license, copyright notices and attribution.
 
@@ -8,15 +8,37 @@ Ouj Chat builds on the open-source Songbird project. The product branding preser
 
 The Ouj identity uses primary purple **`#66308d`** for selected states and primary actions, with secondary teal **`#01ae9b`** for restrained accents and positive status. Most of the interface remains neutral in both light and dark themes so long conversations remain comfortable to read.
 
-Use the light/dark theme button beside the language control in the conversation header or Admin Panel header to change the appearance. Its accessible label names the mode the button will activate. The choice is remembered in this browser.
+Use the app's light/dark theme control to change the appearance; the Admin Panel also provides it in its header. Its accessible label names the mode the button will activate. The choice is remembered in this browser.
 
 Selected shell and overlay surfaces use a subtle shared glass treatment. If reduced transparency is requested or backdrop filtering is unavailable, those surfaces remain opaque and readable. Reduced-motion preferences suppress decorative effects while keeping controls and status feedback available. Theme and language changes do not modify the text of your messages.
 
 New default avatar colors use restrained tones that fit the Ouj palette. Existing saved user colors are preserved.
 
+## Chat backgrounds
+
+Open **Settings → Chat background** to choose from eight subtle built-in vector patterns or **Plain**. The live sample previews your selection; choose **Apply** to save it. A failed save keeps the pending selection available so you can retry.
+
+If the browser's signed-in account changes in another tab, saving is rejected and you must sign in again, protecting the other account's background.
+
+The saved background is private to your account and applies to all your direct messages, groups, channels and saved messages. It does not change another participant's background. Each pattern adapts automatically to the current light or dark theme and remains static, without animation.
+
+The preference is stored in MongoDB as `users.chat_appearance`, with `wallpaperId`, `revision` and `updatedAt`. It travels with the existing account/session snapshot and `/api/me` response, without a separate wallpaper request at startup. An unchanged appearance revision does not trigger another appearance-cache write. Updating it changes the appearance/session cache while preserving messages, media, queued sends and text drafts.
+
+Saving uses the authenticated `PUT /api/profile/appearance` endpoint and checks the submitted revision. A stale edit is rejected with HTTP `409` instead of silently replacing a newer saved choice. Own-account live events and journal recovery synchronize the accepted setting across devices as they connect or reconnect.
+
 ## Start a conversation
 
 Open the **+** menu beside the conversation list to choose **New direct message**, **New group**, or **New channel**. The menu appears beside its button above the surrounding interface, follows the current right-to-left or left-to-right layout, and shifts or opens on the other side when needed to stay within the viewport. Use the arrow keys to move between choices and **Escape** to close it.
+
+## Responsive conversation layout
+
+At widths of **768 px and above**, a **76 px** navigation rail sits beside the resizable conversation list. Drag the separator between the list and the conversation to resize it. Your preferred list width is remembered in this browser and constrained by the space available for the conversation.
+
+With the separator focused, **ArrowLeft/ArrowRight** change the width in **16 px** steps according to the current RTL/LTR layout. **Home** selects the **280 px** minimum; **End** selects up to **560 px**, limited by available space. **Enter** or a double-click resets the preferred width to **360 px**.
+
+Desktop filters form a vertical rail for **All**, **Unread**, **Groups**, **Channels**, **Archived** and your server-saved folders. On mobile, the list or open conversation uses the full width, and filters occupy one horizontally scrollable row. Counts use existing conversation data; custom folder names remain exactly as you entered them in either interface language.
+
+The conversation uses one **72 px** header: mobile Back, avatar/title/status at the start of the current writing direction, then Search, voice/group-call controls and the three-dot menu as available. Video, media, pin/archive, folder assignment, profile, mute, wallpaper, delete and **Chat tools** are reached through that menu according to the conversation and your permissions. Deleting still requires the existing confirmation. Topic and pinned-message strips appear only when relevant content exists, keeping general actions in the header menu.
 
 ## Drafts
 
@@ -107,11 +129,11 @@ Received video messages play inline in a circular frame. Use play/pause, the see
 
 ## Conversation organization
 
-Use **Pin chat**, **Archive**, and **Folder** above the selected conversation:
+Use the selected conversation's three-dot menu for **Pin chat** and **Archive**. To assign a folder, open **Chat tools → Folder**:
 
 - Pinned conversations are prioritized in your list.
 - Archived conversations are available through the **Archived** filter. Use **Unarchive** to return them to the ordinary list.
-- Enter a folder name to group a conversation with others. The sidebar offers each folder alongside **All**, **Unread**, **Groups**, and **Channels**.
+- Enter a folder name in the Folder panel to group a conversation with others; save an empty name to remove its folder assignment. The filter rail or mobile filter row offers your saved folders alongside the built-in filters.
 
 These preferences belong to your account and are saved on the server. Archiving does not delete messages or remove you from a group.
 
@@ -123,11 +145,21 @@ When writing a message, type `@` followed by part of a member's username to see 
 
 ## Shared media
 
-Open **Media** to browse a conversation's attachments. Filter by images, video, voice/audio, or documents. The list is paginated; use **Load more** or **Previous** to browse older files. Opening an attachment uses the normal authenticated file route.
+Open **three-dot menu → Media** to browse a conversation's attachments. Filter by images, video, voice/audio, or documents. The list is paginated; use **Load more** or **Previous** to browse older files. Opening an attachment uses the normal authenticated file route.
+
+## Dates, times and the Persian calendar
+
+Product date/time inputs use shared, keyboard-accessible controls with the Persian calendar (`fa-IR-u-ca-persian`), including when the interface language is English. Weeks start on **Saturday**. Type into the date and time segments or open the app's calendar to navigate months, jump to today, or clear the selection. Time uses the **24-hour** clock.
+
+The calendar popup belongs to Ouj Chat and follows its light/dark styling and responsive layout. Field labels follow your selected Persian or English interface language; changing that language does not switch the calendar to Gregorian.
+
+Business dates and times use **Asia/Tehran**, regardless of the browser's local timezone. Scheduling converts the selected Tehran wall date/time to a UTC ISO timestamp for the API. The existing API and MongoDB date fields keep their current format.
 
 ## Message search
 
-Open **Search** and choose **This chat** or **All chats**. You can also restrict results by sender username and a date range. Open a result to navigate to its conversation and message.
+Use **Search** in the conversation header and choose **This chat** or **All chats**. You can also restrict results by sender username and a date range. Open a result to navigate to its conversation and message.
+
+Select the date range with the shared Persian-calendar controls. The selected dates include the full corresponding days in **Asia/Tehran**, from the beginning of the first day through the end of the last day, even if your device uses another timezone.
 
 Search covers messages you are currently allowed to see, including text that is stored encrypted on the server. The server decrypts bounded pages of eligible messages for matching instead of creating a plaintext search index. Use **Load more** to continue through older pages; a page without matches can still have more history to scan.
 
@@ -145,11 +177,19 @@ Open **Chat tools → Devices** to inspect your account's sessions, their browse
 
 ## Scheduled messages
 
-Open **Chat tools → Schedule**, enter a text message and a future date/time, and choose **Schedule message**. The entered time uses your browser's local timezone and is sent to the server as an absolute time. Scheduling accepts times between ten seconds and one year ahead.
+Hold **Send** with a mouse or touch for about **450 ms** to open a themed scheduling dialog for the current text draft. Use the Send button's context menu or **Alt+ArrowDown** for alternative access. A short click or **Enter** still sends immediately. The Send icon is on the left in Persian and on the right in English.
+
+Choose a future Persian/Jalali date and 24-hour time, then confirm **Schedule message**. The calendar stays Persian in both interface languages; **Asia/Tehran** wall time is converted to a UTC ISO timestamp for the server. Scheduling accepts times between ten seconds and one year ahead.
+
+Scheduling currently supports new text messages only. Editing, pending media uploads and voice keep their existing immediate-send behavior; attachments cannot be scheduled. Cancelling or a failed save preserves the draft. A successful server save clears only the submitted draft.
+
+Text scheduled from Send retains its original reply target and selected topic; dispatch still checks the current conversation permissions.
 
 Scheduled messages are saved on the server, so you can close the browser. **The Ouj Chat server must be running to dispatch them.** If it is stopped at the due time, pending work is handled after it starts again. Sending rechecks membership, account state, and posting permissions. An item that fails those checks is shown with an error rather than bypassing the current rules.
 
-Use the schedule list to cancel an item that is still eligible for cancellation. This interface schedules text; it does not schedule attachments.
+**Chat tools → Schedule** remains an alternative way to create a scheduled text message, inspect the list and cancel an item that is still eligible for cancellation.
+
+If a scheduling or chat-tool request fails, including an empty or malformed HTTP response, the interface shows a readable error in the selected language and retains the form values for correction or retry. Raw JSON parser errors are not shown as user-facing failure messages.
 
 ## Polls
 
@@ -179,13 +219,36 @@ Use HTTPS outside localhost. Configure TURN for participants on restrictive or m
 
 Persian is the default when this browser has no saved language preference. Use the global **فارسی / English** control to select either language on sign-in, invitation, chat and administration screens. The choice is remembered in this browser, including an explicitly selected English preference.
 
-Application-owned labels, dialogs, validation, status messages, human-readable errors and accessibility labels follow the selected language. Persian mode uses right-to-left application layout and localized date/number formatting. User-written messages, names, usernames, links, code snippets, identifiers and technical configuration keys retain their original content and direction where appropriate.
+Application-owned labels, dialogs, validation, status messages, human-readable errors and accessibility labels follow the selected language. Persian mode uses right-to-left application layout and localized date/number formatting. Date/time inputs retain the Persian calendar and Tehran business timezone in both languages. User-written messages, names, usernames, links, code snippets, identifiers and technical configuration keys retain their original content and direction where appropriate.
 
 ## Installation and background notifications
 
 Where the browser offers installation, Ouj Chat uses Persian/RTL installation metadata for Persian and English/LTR metadata for English. Both manifests use square 192×192 and 512×512 icons derived from the original Ouj logo. Select your preferred language before opening the browser's install action; installed-app presentation is controlled by the browser and operating system.
 
-With notification permission enabled, the background worker keeps the selected language locally for application-owned notification wording, including generic message text and call prompts. Sender names and message-preview content are preserved as received, rather than translated. Notification delivery and installation remain subject to the browser, platform and permission settings.
+### Optional device setup
+
+After signup, sign in through the existing login flow. Your first authenticated chat offers an optional setup guide in the selected Persian or English language. The guide can also appear once on first use of the installed PWA, and you can reopen it from **Settings → Notifications**.
+
+Choose notifications, microphone and camera separately with their explicit buttons. Opening the guide never requests browser permissions automatically. Microphone/camera checks immediately stop the streams they acquire; they do not leave a recording running. Notification setup reports enabled only after the server has saved this device's push subscription. Use the test-notification button to check delivery.
+
+Your message-preview preference is preserved. The background worker remembers the selected language for application-owned notification wording, including generic message text and call prompts. Sender names and any permitted message preview retain their received content rather than being translated.
+
+### Background delivery and platform support
+
+Web Push can reach the service worker while the app interface is closed. It requires HTTPS, stable VAPID keys, a reachable server and push service, browser/OS notification permission and network access. Force-stopping the browser or app, battery restrictions and other OS policies can prevent delivery; closing the interface alone is different from forcing the application to stop.
+
+Accepted message pushes display a visible notification even while this device is focused on the app; focused-device message notifications request no sound. The explicit test notification keeps its normal alert behavior. WebKit requires a visible notification for each processed push; updating a badge alone is insufficient. See [WebKit's visible-push requirements](https://webkit.org/blog/16535/).
+
+SSE avoids creating a duplicate notification when Web Push is registered. Activity on another device does not suppress pushes to this device. A call-end or dismissal push replaces the incoming-call notice with a quiet **Call ended** notification.
+
+- **iPhone/iPad:** iOS/iPadOS **16.4 or later** requires the app to be added to the Home Screen and notification permission requested from that installed app. See [WebKit's Web Push guidance](https://webkit.org/blog/13878/).
+- **Android:** supported browsers can opt into Web Push. Icon badges depend on the browser, operating system and launcher; a numeric unread badge is not guaranteed on every Android device. See [MDN's badge support guide](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/How_to/Display_badge_on_app_icon).
+
+### Badges and account privacy
+
+Where supported, the service worker updates or clears the installed app's badge and opens the target conversation when you select a notification. Returning to the foreground reconciles unread counts, excluding muted conversations. A badge may be a number, a dot or unavailable. On iOS/iPadOS, badge display also depends on notification permission and system settings; see [WebKit's Home Screen badge guidance](https://webkit.org/blog/14112/badging-for-home-screen-web-apps/).
+
+Signing out clears this app's badge and notifications and removes the device subscription. Account-ownership checks reject stale pushes belonging to a previous account, so a device shared between accounts does not reuse another account's notification ownership.
 
 ## Long histories and performance
 

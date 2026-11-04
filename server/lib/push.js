@@ -44,10 +44,11 @@ export function createPushService({
   }
 
   async function sendPushNotificationToUsers(userIds = [], payload = {}) {
-    if (!PUSH_ENABLED) return;
+    if (!PUSH_ENABLED) return { sent: 0, failed: 0, disabled: true };
     const rawTargets = listPushSubscriptionsByUserIds(userIds);
     const targets = (rawTargets && typeof rawTargets.then === "function" ? await rawTargets : rawTargets) || [];
-    if (!targets.length) return;
+    if (!targets.length) return { sent: 0, failed: 0 };
+    const report = { sent: 0, failed: 0 };
 
     const badgeByUserId = {};
     for (const sub of targets) {
@@ -69,11 +70,11 @@ export function createPushService({
 
     await Promise.all(
       targets.map(async (sub) => {
-        const badge = badgeByUserId[sub.user_id] ?? 1;
+        const badge = Math.max(0, Math.floor(Number(badgeByUserId[sub.user_id]) || 0));
         const showPreview = sub.message_preview !== 0;
         const perUserPayload = showPreview
-          ? { ...payload, badge }
-          : { ...payload, body: "New message", badge };
+          ? { ...payload, badge, accountId: sub.user_id, locale: sub.locale || "fa" }
+          : { ...payload, body: "New message", previewHidden: true, badge, accountId: sub.user_id, locale: sub.locale || "fa" };
         const perUserBody = JSON.stringify(perUserPayload);
         try {
           const sendOptions = { urgency: "high", TTL: 86400 };
@@ -89,7 +90,9 @@ export function createPushService({
             perUserBody,
             sendOptions,
           );
+          report.sent += 1;
         } catch (error) {
+          report.failed += 1;
           const status = Number(error?.statusCode || 0);
           const errBody = String(error?.body || "");
           
@@ -122,6 +125,7 @@ export function createPushService({
         }
       }),
     );
+    return report;
   }
 
   return {

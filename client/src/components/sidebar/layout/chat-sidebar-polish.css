@@ -1,0 +1,156 @@
+/* Layout and interaction refinements only: no OUJ theme colors are replaced. */
+
+.ouj-folder-rail {
+  min-width: 76px;
+  width: 76px;
+}
+
+.ouj-sidebar-filter-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ouj-sidebar-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.ouj-sidebar-list-scroll {
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overflow-anchor: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .ouj-folder-rail {
+    display: none;
+  }
+
+  .ouj-sidebar-list-scroll {
+    scrollbar-width: none;
+    scrollbar-gutter: auto;
+  }
+
+  .ouj-sidebar-list-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ouj-chat-sidebar *,
+  .ouj-folder-rail *,
+  .ouj-chat-sidebar *::before,
+  .ouj-chat-sidebar *::after,
+  .ouj-folder-rail *::before,
+  .ouj-folder-rail *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+/* Layout and interaction refinements only: no OUJ theme colors are replaced. */
+
+.ouj-folder-rail {
+  min-width: 76px;
+  width: 76px;
+}
+
+.ouj-sidebar-filter-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ouj-sidebar-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.ouj-sidebar-list-scroll {
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overflow-anchor: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .ouj-folder-rail {
+    display: none;
+  }
+
+  .ouj-sidebar-list-scroll {
+    scrollbar-width: none;
+    scrollbar-gutter: auto;
+  }
+
+  .ouj-sidebar-list-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ouj-chat-sidebar *,
+  .ouj-folder-rail *,
+  .ouj-chat-sidebar *::before,
+  .ouj-chat-sidebar *::after,
+  .ouj-folder-rail *::before,
+  .ouj-folder-rail *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Header and list polish. Palette remains controlled by OUJ Tailwind classes. */
+.ouj-sidebar-header {
+  isolation: isolate;
+}
+
+.ouj-sidebar-search-input {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ouj-sidebar-search-input::-webkit-search-cancel-button,
+.ouj-sidebar-search-input::-webkit-search-decoration {
+  display: none;
+}
+
+.ouj-sidebar-icon-button,
+.ouj-sidebar-search button,
+.ouj-chat-list-button,
+.ouj-chat-list-row button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.ouj-chat-preview,
+.ouj-chat-preview > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ouj-chat-preview a {
+  color: inherit;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+/* Prevent incoming HTML inline markup from pushing the row taller. */
+.ouj-chat-preview p,
+.ouj-chat-preview div {
+  display: inline;
+  margin: 0;
+}
+
+@media (hover: none) {
+  .ouj-chat-list-button,
+  .ouj-sidebar-icon-button {
+    touch-action: manipulation;
+  }
+}

@@ -61,6 +61,13 @@ describe("messagePublicationService", () => {
     expect(res.sseEvents.length).toBe(1);
     expect(res.pushRecipients).toContain(BOB_ID);
   });
+  test("keeps push delivery to another device when the recipient is online elsewhere", () => {
+    const db = createMockDb();
+    const result = createMessagePublicationService(db).publishTextMessage({ chatId: CHAT_ID_1, userId: ALICE_ID, body: "Report", isUserConnectedFn: () => true });
+    expect(result.pushRecipients).toContain(BOB_ID);
+    db.listMutedUserIdsForChat.mockReturnValue([BOB_ID]);
+    expect(createMessagePublicationService(db).publishTextMessage({ chatId: CHAT_ID_1, userId: ALICE_ID, body: "Muted report", isUserConnectedFn: () => true }).pushRecipients).not.toContain(BOB_ID);
+  });
 
   test("publishTextMessage marks as read for saved chat", () => {
     const db = createMockDb();

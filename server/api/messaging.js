@@ -176,7 +176,14 @@ export function registerMessagingRoutes(app, deps) {
     const body = text(req.body.body, Number(deps.getSetting("MESSAGE_MAX_CHARS") || 4000));
     const due = Date.parse(req.body.dueAt);
     if (!body || !Number.isFinite(due) || due < Date.now() + 10000 || due > Date.now() + 366 * 86400000) throw fail(400, "Choose a message and a time between 10 seconds and one year from now.");
-    return res.status(201).json(await db.schedule(user.id, req.params.chatId, body, new Date(due).toISOString()));
+    const context = {};
+    if (req.body.replyToMessageId) { await message(req.params.chatId, req.body.replyToMessageId, user); context.replyToMessageId = req.body.replyToMessageId; }
+    if (req.body.topicId) {
+      const topic = isValidUuid(String(req.body.topicId)) && await db.topic(req.body.topicId);
+      if (!topic || topic.chat_id !== req.params.chatId || Number(topic.closed)) throw fail(400, "Topic unavailable.");
+      context.topicId = topic.id;
+    }
+    return res.status(201).json(await db.schedule(user.id, req.params.chatId, body, new Date(due).toISOString(), context));
   }));
   app.delete("/api/messaging/scheduled/:id", wrap(async (req, res, user) => {
     if (!await db.cancelSchedule(user.id, req.params.id)) throw fail(404, "Scheduled message no longer available.");

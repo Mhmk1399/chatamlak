@@ -282,7 +282,7 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
         )
       ).map((row) => ({ ...row, body: encryption.decryptText(row.body) }));
     },
-    async schedule(userId, chatId, body, dueAt) {
+    async schedule(userId, chatId, body, dueAt, context = {}) {
       return {
         id: (
           await s.insert("scheduled_messages", {
@@ -292,6 +292,8 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
             body: encryption.encryptText(body),
             due_at: dueAt,
             status: "pending",
+            ...(context.replyToMessageId ? { reply_to_message_id: context.replyToMessageId } : {}),
+            ...(context.topicId ? { topic_id: context.topicId } : {}),
           })
         ).id,
       };
@@ -482,8 +484,10 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
         "chat_event_log",
         {
           id: { $gt: Number(after) },
-          chat_id: { $in: memberships.map((row) => row.chat_id) },
-          $or: [{ viewer_user_id: null }, { viewer_user_id: userId }],
+          $and: [
+            { $or: [{ chat_id: { $in: memberships.map((row) => row.chat_id) } }, { chat_id: null, viewer_user_id: userId }] },
+            { $or: [{ viewer_user_id: null }, { viewer_user_id: userId }] },
+          ],
         },
         { sort: { id: 1 }, limit: 201 },
       );

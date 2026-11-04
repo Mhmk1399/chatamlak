@@ -20,7 +20,8 @@ describe("ChatWindowPanel call buttons", () => {
     render(<ChatWindowPanel {...BASE_PROPS} isInCall={false} />);
 
     const voiceBtn = page.getByRole("button", { name: "Voice call" });
-    const videoBtn = page.getByRole("button", { name: "Video call" });
+    await page.getByRole("button", { name: "More chat actions", exact: true }).click();
+    const videoBtn = page.getByRole("menuitem", { name: "Video call" });
     await expect.element(voiceBtn).toBeInTheDocument();
     await expect.element(videoBtn).toBeInTheDocument();
     await expect.element(voiceBtn).not.toBeDisabled();
@@ -31,7 +32,8 @@ describe("ChatWindowPanel call buttons", () => {
     render(<ChatWindowPanel {...BASE_PROPS} isInCall={true} />);
 
     const voiceBtn = page.getByRole("button", { name: "Voice call" });
-    const videoBtn = page.getByRole("button", { name: "Video call" });
+    await page.getByRole("button", { name: "More chat actions", exact: true }).click();
+    const videoBtn = page.getByRole("menuitem", { name: "Video call" });
     await expect.element(voiceBtn).toBeInTheDocument();
     await expect.element(videoBtn).toBeInTheDocument();
     await expect.element(voiceBtn).toBeDisabled();

@@ -8,6 +8,10 @@ const withCredentials = (options = {}) => ({
 });
 
 export const apiFetch = (url, options = {}) => fetch(url, withCredentials(options));
+export const updateChatAppearance = (wallpaperId, revision, accountId, signal) => apiFetch(`${API_BASE}/api/profile/appearance`, {
+  method: "PUT", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ wallpaperId, revision, accountId }), signal,
+});
 
 export const fetchHealth = () => apiFetch(`${API_BASE}/api/health`);
 
@@ -30,11 +34,11 @@ export const resolveMentions = ({ username, mentions }) =>
 
 export const fetchPushPublicKey = () => apiFetch(`${API_BASE}/api/push/public-key`);
 
-export const subscribePush = ({ username, subscription, messagePreview }) =>
+export const subscribePush = ({ username, subscription, messagePreview, locale }) =>
   apiFetch(`${API_BASE}/api/push/subscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, subscription, messagePreview }),
+    body: JSON.stringify({ username, subscription, messagePreview, locale }),
   });
 
 export const unsubscribePush = ({ username, endpoint }) =>

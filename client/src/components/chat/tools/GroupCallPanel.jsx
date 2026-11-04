@@ -2,7 +2,7 @@ import { tError as localizeError } from "../../../i18n/locale.js";
 import { useEffect, useRef, useState } from "react";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { t, useLocale } from "../../../i18n/locale.js";
-import { toolButton } from "./ToolDialog.jsx";
+import { toolButton } from "./toolStyles.js";
 
 function StreamMedia({ stream, audioOnly = false }) {
   useLocale();

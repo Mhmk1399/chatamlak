@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { t, tError, useLocale } from "../../i18n/locale.js";
 import { NOTIFICATIONS_ENABLED_KEY, NOTIFICATION_MESSAGE_PREVIEW_KEY } from "../../utils/chatPageConstants.js";
 
 const PUSH_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const PUSH_RESUBSCRIBE_DEBOUNCE_MS = 2 * 60 * 1000;
 const PUSH_SUB_CREATED_KEY = "sb-push-sub-ts";
-const PUSH_SUB_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const toBase64 = (value) =>
   String(value || "")
@@ -39,6 +39,7 @@ export function useChatNotifications({
   unsubscribePush,
   sendPushTest,
 }) {
+  const locale = useLocale();
   const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
   const [testNotificationSent, setTestNotificationSent] = useState(false);
   const [pushSwReady, setPushSwReady] = useState(false);
@@ -79,13 +80,13 @@ export function useChatNotifications({
     typeof window !== "undefined" && Boolean(window.isSecureContext);
   const hasNotificationApi =
     typeof window !== "undefined" && "Notification" in window;
-  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(uaString);
-  const mobileRequiresStandalone = isMobileUa && !isStandaloneDisplay;
+  const isIOS = /iPhone|iPad|iPod/i.test(uaString) || (/Macintosh/i.test(uaString) && navigator.maxTouchPoints > 1);
+  const mobileRequiresStandalone = isIOS && !isStandaloneDisplay;
   const notificationsSupported =
-    hasNotificationApi && isSecureContext && !mobileRequiresStandalone;
+    hasNotificationApi && isSecureContext && !mobileRequiresStandalone && "serviceWorker" in navigator && "PushManager" in window;
   const notificationsAllowed = notificationPermission === "granted";
-  const notificationsActive = notificationsEnabled && notificationsAllowed;
-  const notificationStatusLabel = !isSecureContext
+  const notificationsActive = notificationsEnabled && notificationsAllowed && pushSubscribeStatus === "ok";
+  const notificationStatusLabel = t(!isSecureContext
     ? "Connection is not secure."
     : mobileRequiresStandalone
       ? "Require Home screen installation."
@@ -93,7 +94,7 @@ export function useChatNotifications({
         ? "Not supported in this browser."
         : notificationPermission === "denied"
           ? "Blocked in browser settings."
-          : "";
+          : !notificationsSupported ? "Not supported in this browser." : "");
   const notificationsDisabled = Boolean(notificationStatusLabel);
   const notificationsDebugLine = `secure:${isSecureContext ? "yes" : "no"} | support:${
     notificationsSupported ? "yes" : "no"
@@ -105,6 +106,7 @@ export function useChatNotifications({
 
   const pushRegistrationRef = useRef(null);
   const lastPushRefreshRef = useRef(0);
+  const subscriptionTask = useRef(null);
 
   const persistNotificationsEnabled = useCallback((value) => {
     setNotificationsEnabled(value);
@@ -132,7 +134,7 @@ export function useChatNotifications({
     }
   }, [getCurrentPermission, notificationsSupported]);
 
-  const ensurePushSubscription = useCallback(async ({ messagePreview } = {}) => {
+  const performPushSubscription = useCallback(async ({ messagePreview } = {}) => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) {
       setPushSubscribeStatus("no-sw");
@@ -191,12 +193,10 @@ export function useChatNotifications({
       };
       try {
         const existing = await reg.pushManager.getSubscription();
-        const lastCreated = Number(
-          window.localStorage.getItem(PUSH_SUB_CREATED_KEY) || 0,
-        );
-        const isStale =
-          !lastCreated || Date.now() - lastCreated > PUSH_SUB_MAX_AGE_MS;
-        if (existing && isStale) {
+        const existingKey = existing?.options?.applicationServerKey;
+        const wrongKey = existingKey && String(new Uint8Array(existingKey)) !== String(applicationServerKey);
+        const expired = existing?.expirationTime && existing.expirationTime <= Date.now();
+        if (existing && (wrongKey || expired)) {
           await cleanupExistingSubscription(reg);
           return freshSubscribe();
         }
@@ -211,7 +211,7 @@ export function useChatNotifications({
       }
     };
     try {
-      setPushSubscribeStatus("...");
+      setPushSubscribeStatus(current => current === "ok" ? current : "...");
       setPushSubscribeError("");
       const reg =
         pushRegistrationRef.current || (await navigator.serviceWorker.ready);
@@ -227,7 +227,7 @@ export function useChatNotifications({
       }
       const applicationServerKey = urlBase64ToUint8Array(keyData.publicKey);
       setPushVapidLength(getVapidKeyLength(keyData.publicKey));
-      if (!applicationServerKey || applicationServerKey.length < 1) {
+      if (!applicationServerKey || applicationServerKey.length !== 65) {
         setPushSubscribeStatus("bad-key");
         return null;
       }
@@ -240,7 +240,7 @@ export function useChatNotifications({
       const res = await subscribePush({
         username: user?.username,
         subscription: json,
-        messagePreview: effectiveMessagePreview,
+        messagePreview: effectiveMessagePreview, locale,
       });
       if (!res.ok) {
         setPushSubscribeStatus("err");
@@ -257,6 +257,7 @@ export function useChatNotifications({
     }
   }, [
     fetchPushPublicKey,
+    locale,
     getCurrentPermission,
     messagePreviewEnabled,
     notificationPermission,
@@ -265,6 +266,19 @@ export function useChatNotifications({
     unsubscribePush,
     user,
   ]);
+
+  const ensurePushSubscription = useCallback((options = {}) => {
+    const key = `${user?.id}:${locale}:${options.messagePreview ?? messagePreviewEnabled}`;
+    const run = () => {
+      const pending = subscriptionTask.current;
+      if (pending) return pending.key === key ? pending.promise : pending.promise.catch(() => {}).then(run);
+      const task = { key };
+      task.promise = performPushSubscription(options).finally(() => { if (subscriptionTask.current === task) subscriptionTask.current = null; });
+      subscriptionTask.current = task;
+      return task.promise;
+    };
+    return run();
+  }, [performPushSubscription, user?.id, locale, messagePreviewEnabled]);
 
   const maybeRefreshPushSubscription = useCallback(
     async (reason = "resume") => {
@@ -293,8 +307,8 @@ export function useChatNotifications({
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
     try {
-      const reg =
-        pushRegistrationRef.current || (await navigator.serviceWorker.ready);
+      const reg = pushRegistrationRef.current || await navigator.serviceWorker.getRegistration?.();
+      if (!reg?.pushManager) return;
       const subscription = await reg.pushManager.getSubscription();
       if (!subscription) return;
       const endpoint = subscription.endpoint;
@@ -353,62 +367,29 @@ export function useChatNotifications({
     persistMessagePreviewEnabled,
   ]);
 
+  const enableNotifications = useCallback(async () => {
+    if (!notificationsSupported || getCurrentPermission() === "denied") return false;
+    persistNotificationsEnabled(true);
+    const permission = getCurrentPermission() === "granted" ? "granted" : await requestNotificationPermission();
+    if (permission !== "granted") return false;
+    return Boolean(await ensurePushSubscription());
+  }, [ensurePushSubscription, getCurrentPermission, notificationsSupported, persistNotificationsEnabled, requestNotificationPermission]);
+
   const handleTestPush = useCallback(async () => {
-    if (!notificationsSupported) return;
-    setTestNotificationSent(true);
-    window.setTimeout(() => setTestNotificationSent(false), 12000);
-    let permission = notificationPermission;
-    if (permission !== "granted") {
-      permission = await requestNotificationPermission();
-    }
-    if (permission !== "granted") return;
-    await ensurePushSubscription();
+    setTestNotificationSent(false);
+    if (!await enableNotifications()) return false;
     try {
-      let res = await sendPushTest({ username: user?.username });
-      let data = await res.json();
-      if (
-        !res.ok &&
-        String(data?.error || "")
-          .toLowerCase()
-          .includes("no push subscription")
-      ) {
-        await ensurePushSubscription();
-        res = await sendPushTest({ username: user?.username });
-        data = await res.json();
-      }
-      if (!res.ok) {
-        if (typeof window !== "undefined") {
-          window.alert(data?.error || "Unable to send test notification.");
-        }
-        return;
-      }
-      try {
-        const reg =
-          pushRegistrationRef.current || (await navigator.serviceWorker.ready);
-        if (reg?.showNotification) {
-          await reg.showNotification("Songbird", {
-            body: "Test notification",
-            badge: "/icons/icon-192.png",
-            icon: "/icons/icon-192.png",
-            data: { url: "/" },
-          });
-        }
-      } catch {
-        // ignore local test notification failures
-      }
-    } catch {
-      if (typeof window !== "undefined") {
-        window.alert("Unable to send test notification.");
-      }
-    }
-  }, [
-    ensurePushSubscription,
-    notificationPermission,
-    notificationsSupported,
-    requestNotificationPermission,
-    sendPushTest,
-    user,
-  ]);
+      const response = await sendPushTest({ username: user?.username });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Unable to send test notification.");
+      setTestNotificationSent(true); return true;
+    } catch (error) { setPushSubscribeError(tError(error)); return false; }
+  }, [enableNotifications, sendPushTest, user]);
+
+  const clearPushForLogout = useCallback(async () => {
+    navigator.serviceWorker?.controller?.postMessage({ type: "OUJ_ACCOUNT", accountId: null });
+    try { await Promise.race([removePushSubscription(), new Promise(resolve => setTimeout(resolve, 2000))]); } catch { /* Logout remains available. */ }
+  }, [removePushSubscription]);
 
   useEffect(() => {
     if (!notificationsSupported) return;
@@ -425,15 +406,15 @@ export function useChatNotifications({
   }, [notificationsSupported]);
 
   useEffect(() => {
-    if (typeof navigator === "undefined") return;
-    if (!("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.ready
-      .then((reg) => {
-        pushRegistrationRef.current = reg;
-        setPushSwReady(true);
-      })
-      .catch(() => null);
-  }, []);
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    let active = true;
+    navigator.serviceWorker.ready.then((reg) => {
+      if (!active) return;
+      pushRegistrationRef.current = reg; setPushSwReady(true);
+      reg.active?.postMessage({ type: "OUJ_ACCOUNT", accountId: user?.id || null });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!notificationsModalOpen && settingsPanel !== "notifications") return;
@@ -519,6 +500,6 @@ export function useChatNotifications({
     messagePreviewEnabled,
     handleToggleNotifications,
     handleToggleMessagePreview,
-    handleTestPush,
+    handleTestPush, enableNotifications, clearPushForLogout,
   };
 }

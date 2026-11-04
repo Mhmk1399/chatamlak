@@ -38,10 +38,12 @@ The approved identity is a quiet neutral chat surface with restrained purple and
 - With no stored preference, render Persian application chrome with `lang="fa"`, `dir="rtl"` and the Persian font. Restore an explicitly saved English preference before first paint where possible.
 - Keep one shared language control available outside authenticated chat too. Its name and accessible label must make the available language choice clear in both modes.
 - All application-owned headings, actions, tooltips, placeholders, validation, loading/empty/error text, confirmations, document titles and accessibility labels follow the current locale. Translate human-readable explanations, including server-error presentation, through the shared locale owner.
+- Empty native input/textarea placeholders align right in Persian and left in English, including technical examples and password hints. `index.css` owns this through `:placeholder-shown` and the root direction; placeholder font follows the UI locale. Do not mask native hints with centered text overlays or override their alignment inline. Filled message/technical values keep their own automatic or explicit direction; changing UI language must preserve entered content.
 - Never translate or rewrite user messages, nicknames, usernames, code snippets, URLs, identifiers, environment-variable keys or secret values. Message direction follows the content independently of application layout.
 - Use `hasPersian()` from `client/src/utils/fontUtils.js` to dynamically apply the `.font-fa` utility when user-generated content (messages, user names, avatar initials) contains Persian characters.
 - Global CSS applies `:lang(fa)` and `[lang="fa"]` rules automatically to enforce Vazirmatn.
 - Standard form inputs (`input`, `textarea`, `select`) must enforce `font-size: 16px !important;` to prevent unwanted iOS Safari auto-zooming on focus.
+- Date and time entry use the shared `PersianDateTimeField.jsx` controls built on React Aria's accessible date/calendar/time primitives. These are loaded with chat tools or the composer's scheduling dialog, styled with Ouj tokens, and replace browser-native date/time popups. Date segments, month/day names and numerals always use the Persian/Jalali calendar, including in the English interface; field labels, actions and validation follow the application language. Weeks start on Saturday. Time entry is 24-hour and always interpreted in `Asia/Tehran`, independent of the device timezone; APIs continue to receive UTC ISO instants. Search bounds include the complete selected Tehran calendar days. Other date/number presentation continues to follow the application locale unless the surface explicitly displays a scheduled Tehran instant.
 
 ---
 
@@ -81,6 +83,7 @@ Use `slate-*` runtime neutral tokens for surrounding text/borders and semantic s
   - Text Secondary: `slate-400` / `slate-300`.
 
 ### Selection, Surfaces & Motion
+- Account-selected chat wallpapers use the shared `ChatWallpaper.jsx` surface and eight small repeating vector masks in `client/src/assets/wallpapers/`; plain remains available. Architectural arches, courtyard geometry and restrained organic/line motifs complement Ouj's identity without reducing message contrast. Patterns are static and never apply blur to the timeline. `brand.css` owns their theme mapping: brand-700 at 13% opacity in light mode, brand-200 at 11% in dark mode, over `--ouj-chat-canvas`; forced colors removes the decorative mask. Keep this mapping in the shared surface, including settings thumbnails and preview.
 - Selection and focus use a small, legible brand-purple treatment. Maintain sufficient text contrast and communicate state with labels/icons as well as color.
 - Prefer a subtle boundary or short elevation change on hover. Avoid persistent neon glows, saturated full-screen gradients and animated decorative backgrounds.
 - `ouj-glass` is the shared, restrained glass surface for selected shell/header/overlay surfaces. Keep its neutral fill sufficiently opaque for readable text and use a modest backdrop blur. Do not apply blur to message text, every card, every bubble or every scrolling row.
@@ -92,7 +95,14 @@ Use `slate-*` runtime neutral tokens for surrounding text/borders and semantic s
 
 ## 5. Component Patterns & Styling Conventions
 
+### Conversation layout and navigation
+- `ChatLayout.jsx` owns the responsive shell. At 768px and wider, a separate 76px folder rail precedes the chat list at the logical start edge; the conversation fills the remaining width. Keep these surfaces contiguous, without outer card gaps. The Ouj neutral/brand tokens retain the product identity.
+- The chat list starts at 360px, supports pointer and keyboard resizing from 280px to 560px, and reserves at least 360px for the conversation where space allows. Save the preferred width locally, clamp the displayed width on smaller screens, and restore the preference when space returns. The separator mirrors pointer/arrow direction in Persian; Home/End set bounds and Enter/double-click reset. Below 768px, use full-width panels and hide the separator.
+- `ConversationFilters.jsx` owns both folder presentations. Desktop uses the separate vertical rail. Mobile uses one non-wrapping row with horizontal scrolling, selected-state indication and unread counts derived from existing data. Custom folder names remain user content. Long desktop labels wrap to at most two lines; the rail scrolls independently.
+- The conversation has one 72px header with back navigation on mobile, avatar/title/status at logical start, and Search, voice/group-call and More actions at logical end. `ChatHeaderActions.jsx` uses the shared portaled `AnchoredMenu.jsx` conversation variant for secondary actions. Video call, media, pin/archive/folder, profile, mute, appearance and delete retain their existing authorization and confirmation paths. Only populated topic and pinned-message strips remain below the header. Global Chat tools stays reachable from the account menu.
+
 ### Modal & Dialog Windows
+- Shared anchored action menus scroll vertically within the viewport. Their inner wrappers fill the available content width without a second fixed width or independent viewport constraint; long profile text truncates, and horizontal scrolling is disabled at the shared menu surface.
 1. **Portals**: Always render modals into `document.body` using React `createPortal`.
 2. **Focus Management**: Wrap modal root refs with `useFocusTrap(dialogRef, open)` for keyboard accessibility.
 3. **Semantics**: Root element must have `role="dialog"` and `aria-modal="true"`.

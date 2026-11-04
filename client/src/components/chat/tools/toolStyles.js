@@ -1,0 +1,3 @@
+// Keep toolbar styles independent of the lazily loaded modal and calendar runtime.
+export const toolButton = "inline-flex min-h-9 items-center justify-center gap-1 rounded-full border border-brand-200 px-3 py-1 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-brand-500/30 dark:text-brand-200 dark:hover:bg-brand-500/10";
+export const toolInput = "min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-base text-slate-900 focus:border-brand-500 focus:outline-2 focus:outline-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";

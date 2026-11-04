@@ -77,7 +77,8 @@ try {
   await workspace.getByRole("log").getByText("گزارش امروز: بازدید ملک انجام شد و فایل آمادهٔ بررسی سرپرست است.", { exact: true }).waitFor();
   await screenshot(workspace, "chat-light-fa");
   await workspace.getByRole("button", { name: "زبان", exact: true }).first().click();
-  await workspace.getByRole("button", { name: "Chat tools", exact: true }).click();
+  await workspace.getByRole("button", { name: "More chat actions", exact: true }).click();
+  await workspace.getByRole("menuitem", { name: "Chat tools", exact: true }).click();
   await workspace.getByRole("button", { name: "Devices", exact: true }).waitFor();
   await workspace.getByRole("button", { name: "Close", exact: true }).click();
   await workspace.getByRole("button", { name: "Language", exact: true }).first().click();

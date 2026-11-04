@@ -8,12 +8,13 @@ import { createAdminRepository } from "./mongoAdmin.js";
 import { createMessagingRepository } from "./mongoMessaging.js";
 import { createDocumentExecutor } from "./query.js";
 import { createMongoMaintenance } from "./mongoMaintenance.js";
+import { createAppearanceRepository } from "./mongoAppearance.js";
 
 const now = () => new Date().toISOString();
 const time = (value) => { if (!value) return null; const parsed = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(String(value)) ? value : `${String(value).replace(" ", "T")}Z`); return Number.isFinite(+parsed) ? parsed.toISOString() : null; };
 const unique = (values) => [...new Set((values || []).filter((value) => value != null && value !== ""))];
 const regex = (value) => new RegExp(String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-const publicUser = (row) => { if (!row) return null; const { password_hash, ...user } = row; return user; };
+const publicUser = (row) => { if (!row) return null; const { password_hash, chat_appearance, ...user } = row; return user; };
 const and = (...filters) => {
   const clauses = filters.filter((filter) => filter && Object.keys(filter).length);
   return clauses.length ? { $and: clauses } : {};
@@ -266,13 +267,13 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     async hideChatsForUser(userId, ids) { for (const chatId of unique(ids)) await s.ignore("hidden_chats", { user_id: userId, chat_id: chatId }, { user_id: userId, chat_id: chatId }); },
     unhideChat: (userId, chatId) => s.remove("hidden_chats", { user_id: userId, chat_id: chatId }),
     setChatMuted: (userId, chatId, muted) => s.upsert("chat_mutes", { user_id: userId, chat_id: chatId }, { muted: Number(Boolean(muted)) }),
-    async getTotalUnreadCount(userId) { return (await R.listChatsForUser(userId)).reduce((total, row) => total + Number(row.unread_count || 0), 0); },
+    async getTotalUnreadCount(userId) { return (await R.listChatsForUser(userId)).reduce((total, row) => total + (Number(row.muted) ? 0 : Number(row.unread_count || 0)), 0); },
     async listMutedUserIdsForChat(chatId) { return (await s.many("chat_mutes", { chat_id: chatId, muted: 1 })).map((row) => row.user_id); },
-    upsertPushSubscription: (userId, endpoint, p256dh, auth, messagePreview = 1) => s.upsert("push_subscriptions", { endpoint }, { user_id: userId, p256dh, auth, message_preview: Number(messagePreview) }),
-    deletePushSubscription: (endpoint) => s.remove("push_subscriptions", { endpoint }),
+    upsertPushSubscription: (userId, endpoint, p256dh, auth, messagePreview = 1, locale = "fa") => s.upsert("push_subscriptions", { endpoint }, { user_id: userId, p256dh, auth, message_preview: Number(messagePreview), locale: locale === "en" ? "en" : "fa" }),
+    deletePushSubscription: (endpoint, userId) => s.remove("push_subscriptions", { endpoint, ...(userId ? { user_id: userId } : {}) }),
     listPushSubscriptionsByUserIds: (ids = []) => s.many("push_subscriptions", { user_id: { $in: unique(ids) } }),
     createSession: (userId, token) => s.insert("sessions", { id: crypto.randomUUID(), user_id: userId, token, last_seen: now() }),
-    async getSession(token) { const session = token ? await s.one("sessions", { token }) : null; if (!session) return null; const user = await R.findUserById(session.user_id); return user && !user.banned ? { ...publicUser(user), session_id: session.id, token: session.token } : null; },
+    async getSession(token) { const session = token ? await s.one("sessions", { token }) : null; if (!session) return null; const user = await R.findUserById(session.user_id); return user && !user.banned ? { ...publicUser(user), chat_appearance: user.chat_appearance, session_id: session.id, token: session.token } : null; },
     touchSession: (token) => s.update("sessions", { token }, { last_seen: now() }),
     deleteSession: (token) => s.remove("sessions", { token }),
     deleteSessionsByUserId: (userId) => s.remove("sessions", { user_id: userId }),
@@ -365,5 +366,6 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
   Object.assign(R, createAdminRepository(s, R));
   R.messagingDb = createMessagingRepository(s, R, encryption, visibleFilter);
   Object.assign(R, createMongoMaintenance(s));
+  Object.assign(R, createAppearanceRepository(s));
   return R;
 }

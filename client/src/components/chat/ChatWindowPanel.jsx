@@ -1,5 +1,7 @@
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import MessagingToolbar from "./tools/MessagingToolbar.jsx";
+import ChatHeaderActions from "./ChatHeaderActions.jsx";
+import ChatWallpaper from "../common/ChatWallpaper.jsx";
 import MessageEngagement from "./tools/MessageEngagement.jsx";
 import {
   useCallback,
@@ -14,8 +16,6 @@ import {
   Copy,
   Ghost,
   LoaderCircle,
-  Phone,
-  Video,
 } from "../../icons/lucide.js";
 import { getAvatarStyle } from "../../utils/avatarColor.js";
 import { hasPersian } from "../../utils/fontUtils.js";
@@ -80,7 +80,6 @@ export default function ChatWindowPanel({
   isConnected,
   isOffline = false,
   sseConnected = true,
-  isDark,
   pendingUploadFiles,
   pendingUploadType,
   pendingVoiceMessage,
@@ -703,16 +702,6 @@ export default function ChatWindowPanel({
   }, []);
 
   useEffect(() => {
-    if (!showUploadMenu) return;
-    const handleOutside = (event) => {
-      if (uploadMenuRef.current?.contains(event.target)) return;
-      setShowUploadMenu(false);
-    };
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [showUploadMenu]);
-
-  useEffect(() => {
     if (!uploadBusy) return;
     setShowUploadMenu(false);
   }, [uploadBusy]);
@@ -907,14 +896,10 @@ export default function ChatWindowPanel({
 
   const chatScrollStaticStyle = useMemo(
     () => ({
-      backgroundImage: isDark
-        ? "radial-gradient(ellipse at top right, rgba(102,48,141,0.035), transparent 65%)"
-        : "radial-gradient(ellipse at top right, rgba(102,48,141,0.025), transparent 65%)",
-      backgroundColor: "var(--ouj-chat-canvas)",
       scrollbarGutter: "stable both-edges",
       overflowAnchor: "none",
     }),
-    [isDark],
+    [],
   );
 
   const chatScrollStyle = useMemo(
@@ -1138,7 +1123,7 @@ export default function ChatWindowPanel({
   return (
     <section
       ref={sectionRef}
-      className="fixed inset-0 top-0 md:relative md:inset-auto md:top-auto flex h-full flex-1 flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-xl shadow-brand-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:w-[65%] md:shadow-2xl md:shadow-brand-500/15 transition-transform duration-300 ease-out will-change-transform"
+      className="ouj-chat-window min-w-0 fixed inset-0 top-0 md:relative md:inset-auto md:top-auto flex h-full flex-1 flex-col overflow-hidden border-x border-slate-300/80 bg-white shadow-xl shadow-brand-500/10 dark:border-white/5 dark:bg-slate-900 md:border md:shadow-2xl md:shadow-brand-500/15 transition-transform duration-300 ease-out will-change-transform"
       style={{
         top: "0px",
         height: isDesktop
@@ -1156,7 +1141,7 @@ export default function ChatWindowPanel({
         <>
           <div className="sticky top-0 z-30 shrink-0">
             <div
-              className="ouj-glass flex h-[72px] items-center justify-between gap-3 border-b border-slate-300/80 bg-white px-6 py-4 dark:border-brand-500/20 dark:bg-slate-900"
+              className="ouj-glass flex h-[72px] items-center justify-between gap-2 border-b border-slate-300/80 bg-white px-3 py-4 text-slate-900 dark:border-brand-500/20 dark:bg-slate-900 dark:text-slate-100"
               style={{
                 position: "relative",
               }}
@@ -1165,90 +1150,22 @@ export default function ChatWindowPanel({
               <button
                 type="button"
                 onClick={closeChat}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition hover:border-brand-300 hover:shadow-md dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
-                  isDmChat && (onStartVoiceCall || onStartVideoCall)
-                    ? "md:hidden"
-                    : "md:invisible md:pointer-events-none"
-                }`}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-brand-50 dark:text-slate-300 md:hidden"
                 aria-label={localize("Back to chats")}
               >
                 <ArrowLeft size={18} />
               </button>
-              {isDmChat && (onStartVoiceCall || onStartVideoCall) ? (
-                <div className="hidden md:flex items-center gap-2">
-                  {onStartVoiceCall ? (
-                    <Tooltip
-                      label={
-                        callsDisabled
-                          ? localize("Calls are disabled by the server")
-                          : isDeletedPeer
-                            ? localize("Calls unavailable for deleted account")
-                            : !callSupported
-                              ? localize("Calls require a secure connection")
-                              : isInCall
-                                ? localize("Already in a call")
-                                : localize("Voice call")
-                      }
-                      placement="bottom"
-                    >
-                      <button
-                        type="button"
-                        onClick={isVoiceCallDisabled ? undefined : onStartVoiceCall}
-                        disabled={isVoiceCallDisabled}
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
-                          isVoiceCallDisabled
-                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-brand-200 dark:hover:border-brand-500/30"
-                            : "hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] cursor-pointer"
-                        }`}
-                        aria-label={localize("Voice call")}
-                      >
-                        <Phone size={20} className={isVoiceCallDisabled ? "" : "icon-anim-pop"} />
-                      </button>
-                    </Tooltip>
-                  ) : null}
-                  {onStartVideoCall ? (
-                    <Tooltip
-                      label={
-                        videoCallsDisabled
-                          ? localize("Video calls are disabled by the server")
-                          : isDeletedPeer
-                            ? localize("Calls unavailable for deleted account")
-                            : !callSupported
-                              ? localize("Calls require a secure connection")
-                              : isInCall
-                                ? localize("Already in a call")
-                                : localize("Video call")
-                      }
-                      placement="bottom"
-                    >
-                      <button
-                        type="button"
-                        onClick={isVideoCallDisabled ? undefined : onStartVideoCall}
-                        disabled={isVideoCallDisabled}
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 transition dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 ${
-                          isVideoCallDisabled
-                            ? "opacity-40 cursor-not-allowed hover:shadow-none hover:border-brand-200 dark:hover:border-brand-500/30"
-                            : "hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.22)] cursor-pointer"
-                        }`}
-                        aria-label={localize("Video call")}
-                      >
-                        <Video size={20} className={isVideoCallDisabled ? "" : "icon-anim-pop"} />
-                      </button>
-                    </Tooltip>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
             <ContextMenuSurface
               as="div"
-              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1"
+              className="order-2 flex min-w-0 flex-1 flex-col items-start justify-center gap-1"
               contextMenu={headerPrimaryContextMenu}
             >
               <>
                 {activeHeaderPeer?.isDeleted ? (
                   <Tooltip label={activeFallbackTitle} placement="bottom" asChild>
                     <span
-                      className={`block min-w-0 max-w-[60vw] truncate text-center text-lg font-semibold text-slate-500 dark:text-slate-400 sm:max-w-[40vw] md:max-w-[28vw] ${
+                      className={`block min-w-0 max-w-full truncate text-start text-lg font-semibold text-slate-500 dark:text-slate-400 ${
                         hasPersian(activeFallbackTitle) ? "font-fa" : ""
                       }`}
                       dir="auto"
@@ -1262,7 +1179,7 @@ export default function ChatWindowPanel({
                     <button
                       type="button"
                       onClick={onOpenHeaderProfile}
-                      className="inline-flex min-w-0 max-w-[60vw] items-center gap-0.5 text-center text-lg font-semibold transition hover:text-brand-600 dark:hover:text-brand-300 sm:max-w-[40vw] md:max-w-[28vw]"
+                      className="inline-flex min-w-0 max-w-full items-center gap-0.5 text-start text-lg font-semibold transition hover:text-brand-600 dark:hover:text-brand-300"
                       dir="ltr"
                     >
                       <span
@@ -1279,7 +1196,7 @@ export default function ChatWindowPanel({
                 ) : (
                   <Tooltip label={activeFallbackTitle} placement="bottom" asChild>
                     <span
-                      className="inline-flex min-w-0 max-w-[60vw] items-center gap-0.5 truncate text-center text-lg font-semibold text-slate-700 dark:text-slate-100 sm:max-w-[40vw] md:max-w-[28vw]"
+                      className="inline-flex min-w-0 max-w-full items-center gap-0.5 truncate text-start text-lg font-semibold text-slate-700 dark:text-slate-100"
                       dir="ltr"
                     >
                       <span className={`truncate ${hasPersian(activeFallbackTitle) ? "font-fa" : ""}`} dir="auto">{activeFallbackTitle}</span>
@@ -1290,7 +1207,7 @@ export default function ChatWindowPanel({
                   </Tooltip>
                 )}
                 {showStatus ? (
-                  <p className="flex min-w-0 max-w-[70vw] items-center gap-2 text-xs text-slate-500 dark:text-slate-400 sm:max-w-[42vw] md:max-w-[30vw]">
+                  <p className="flex min-w-0 max-w-full items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                     {!isConnected ? (
                       <>
                         <LoaderCircle className="h-4 w-4 animate-spin text-brand-500" />{localize("Connecting...")}</>
@@ -1356,6 +1273,7 @@ export default function ChatWindowPanel({
                 ) : null}
               </>
             </ContextMenuSurface>
+            <div className="order-1 shrink-0">
             {headerAvatarIcon ? (
               <ContextMenuSurface
                 as="div"
@@ -1478,12 +1396,17 @@ export default function ChatWindowPanel({
               </ContextMenuSurface>
             )}
             </div>
+            <div className="order-3 shrink-0"><ChatHeaderActions
+              onVoiceCall={isDmChat ? onStartVoiceCall : undefined} onVideoCall={isDmChat ? onStartVideoCall : undefined}
+              voiceDisabled={isVoiceCallDisabled} videoDisabled={isVideoCallDisabled} groupCallDisabled={callsDisabled} onOpenProfile={canOpenHeaderProfile ? onOpenHeaderProfile : undefined}
+              voiceHint={localize(callsDisabled ? "Calls are disabled by the server" : isDeletedPeer ? "Calls unavailable for deleted account" : !callSupported ? "Calls require a secure connection" : isInCall ? "Already in a call" : "Voice call")}
+              videoHint={localize(callsDisabled ? "Calls are disabled by the server" : videoCallsDisabled ? "Video calls are disabled by the server" : isDeletedPeer ? "Calls unavailable for deleted account" : !callSupported ? "Calls require a secure connection" : isInCall ? "Already in a call" : "Video call")} /></div>
+            </div>
           </div>
         </>
       ) : null}
 
       <MessagingToolbar />
-      <div className="flex-1 min-h-0">
         {activeChatId && floatingDay.key && isTimelineScrollable ? (
           <div
             className="absolute left-1/2 z-3 -translate-x-1/2"
@@ -1513,6 +1436,8 @@ export default function ChatWindowPanel({
           </div>
         ) : null}
 
+      <div data-testid="conversation-canvas" className="relative isolate flex-1 min-h-0">
+        <ChatWallpaper wallpaperId={user?.chatAppearance?.wallpaperId} />
         {!activeChatId ? (
           <div
             ref={chatScrollRef}

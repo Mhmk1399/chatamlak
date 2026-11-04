@@ -219,6 +219,7 @@ export function useChatEvents({
           payload.type !== "chat_list_changed" &&
           payload.type !== "presence_update" &&
           payload.type !== "profile_updated" &&
+          payload.type !== "chat_appearance_updated" &&
           payload.type !== "chat_typing" &&
           payload.type !== "session_revoked" &&
           payload.type !== "remote_channel_queue" &&
@@ -232,6 +233,7 @@ export function useChatEvents({
           window.dispatchEvent(new CustomEvent("songbird:realtime-event", { detail: payload }));
         }
         if (["chat_tools_updated", "group_call_updated", "group_call_signal"].includes(payload.type)) return;
+        if (payload.type === "chat_appearance_updated") return;
         if (payload.type === "session_revoked") {
           onSessionRevokedRef.current?.(payload);
           return;

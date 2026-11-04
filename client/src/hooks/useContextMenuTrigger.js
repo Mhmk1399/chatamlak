@@ -30,6 +30,8 @@ export function useContextMenuTrigger({
   isMobile = false,
   holdDelayMs = DEFAULT_HOLD_DELAY_MS,
   moveTolerancePx = MOVE_TOLERANCE_PX,
+  holdOnMouse = false,
+  contextKey,
   onOpen,
 }) {
   const holdTimerRef = useRef(null);
@@ -54,17 +56,24 @@ export function useContextMenuTrigger({
   useEffect(() => clearHoldTimer, []);
 
   useEffect(() => {
-    if (!isMobile || disabled) return undefined;
+    clearHoldTimer(); pointerRef.current.active = false; suppressClickRef.current = false;
+  }, [disabled, contextKey]);
+
+  useEffect(() => {
+    if ((!isMobile && !holdOnMouse) || disabled) return undefined;
     const handleScroll = () => {
       if (!pointerRef.current.active) return;
       pointerRef.current.active = false;
       clearHoldTimer();
+      if (holdOnMouse) suppressClickRef.current = true;
     };
     document.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("blur", handleScroll);
     return () => {
       document.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("blur", handleScroll);
     };
-  }, [disabled, isMobile]);
+  }, [disabled, isMobile, holdOnMouse]);
 
   return useMemo(() => {
     if (disabled || typeof onOpen !== "function") {
@@ -82,13 +91,14 @@ export function useContextMenuTrigger({
     };
 
     const onContextMenu = (event) => {
-      if (isMobile) return;
+      if (isMobile && !holdOnMouse) return;
       event.preventDefault();
       openMenu(event, "desktop");
     };
 
     const onPointerDown = (event) => {
-      if (!isMobile || event.pointerType !== "touch") return;
+      if ((!isMobile || event.pointerType !== "touch") && !holdOnMouse) return;
+      if (event.button !== 0 || event.isPrimary === false) return;
       clearHoldTimer();
       suppressClickRef.current = false;
 
@@ -118,8 +128,8 @@ export function useContextMenuTrigger({
       }, holdDelayMs);
     };
 
-    const cancelPointer = (event) => {
-      if (!isMobile) return;
+    const cancelPointer = (event, blockClick = false) => {
+      if (!isMobile && !holdOnMouse) return;
       if (!pointerRef.current.active) return;
       if (
         pointerRef.current.pointerId !== null &&
@@ -129,12 +139,13 @@ export function useContextMenuTrigger({
       }
       pointerRef.current.active = false;
       clearHoldTimer();
+      if (blockClick && holdOnMouse) suppressClickRef.current = true;
     };
 
     const onPointerMove = (event) => {
-      if (!isMobile || !pointerRef.current.active) return;
+      if ((!isMobile && !holdOnMouse) || !pointerRef.current.active) return;
       if (event.defaultPrevented) {
-        cancelPointer(event);
+        cancelPointer(event, true);
         return;
       }
       const dx = Math.abs(
@@ -150,15 +161,15 @@ export function useContextMenuTrigger({
         Math.abs(scrollTop - Number(pointerRef.current.startScrollTop || 0)) > 0 ||
         Math.abs(scrollLeft - Number(pointerRef.current.startScrollLeft || 0)) > 0
       ) {
-        cancelPointer(event);
+        cancelPointer(event, true);
         return;
       }
       if (dy >= SCROLL_INTENT_PX && dy >= dx) {
-        cancelPointer(event);
+        cancelPointer(event, true);
         return;
       }
       if (dx > moveTolerancePx || dy > moveTolerancePx) {
-        cancelPointer(event);
+        cancelPointer(event, true);
       }
     };
 
@@ -174,8 +185,10 @@ export function useContextMenuTrigger({
       onPointerDown,
       onPointerMove,
       onPointerUp: cancelPointer,
-      onPointerCancel: cancelPointer,
+      onPointerCancel: (event) => cancelPointer(event, true),
+      onPointerLeave: holdOnMouse ? (event) => cancelPointer(event, true) : undefined,
+      onKeyDown: holdOnMouse ? (event) => { if (["Enter", " "].includes(event.key)) suppressClickRef.current = false; } : undefined,
       onClickCapture,
     };
-  }, [disabled, holdDelayMs, isMobile, moveTolerancePx, onOpen]);
+  }, [disabled, holdDelayMs, isMobile, moveTolerancePx, onOpen, holdOnMouse]);
 }

@@ -1,4 +1,5 @@
 import { normalizeUuid } from "./uuidUtils.js";
+import { normalizeChatAppearance } from "../../../shared/chatAppearance.js";
 
 export const SESSION_USER_KEY = "songbird-session-user";
 
@@ -21,6 +22,7 @@ export function normalizeSessionUser(data) {
     status: data.status || "online",
     role: data.role || "user",
     verified: Boolean(data.verified),
+    chatAppearance: normalizeChatAppearance(data.chatAppearance),
   };
 }
 
@@ -44,7 +46,8 @@ export function saveSessionUser(user) {
   if (!storage) return;
   try {
     if (user && typeof user === "object" && user.username) {
-      storage.setItem(SESSION_USER_KEY, JSON.stringify(user));
+      const serialized = JSON.stringify(user);
+      if (storage.getItem(SESSION_USER_KEY) !== serialized) storage.setItem(SESSION_USER_KEY, serialized);
     } else {
       storage.removeItem(SESSION_USER_KEY);
     }

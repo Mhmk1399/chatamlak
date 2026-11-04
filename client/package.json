@@ -28,12 +28,14 @@
     "test:bench": "vitest bench --run"
   },
   "dependencies": {
+    "@internationalized/date": "^3.12.4",
     "@tanstack/react-virtual": "^3.14.25",
     "dompurify": "^3.4.15",
     "highlight.js": "^11.12.0",
     "lucide-react": "^1.49.0",
     "marked": "^18.0.14",
     "react": "^19.3.0",
+    "react-aria-components": "^1.22.1",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {

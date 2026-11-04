@@ -58,7 +58,7 @@ describe("UserMenuButton Component", () => {
     await expect.element(button).toHaveAttribute("aria-expanded", "true");
 
     // Profile header
-    const profileItem = page.getByRole("button", { name: /John Doe/ });
+    const profileItem = page.getByRole("menuitem", { name: /John Doe/ });
     await expect.element(profileItem).toBeVisible();
 
     // In chats tab: Settings, Calls, Edit, Log out options

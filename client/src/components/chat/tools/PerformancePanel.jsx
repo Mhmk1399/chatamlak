@@ -2,7 +2,7 @@ import { useState } from "react";
 import { readPerfTelemetry } from "../../../hooks/chat/usePerfTelemetry.js";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { t, useLocale } from "../../../i18n/locale.js";
-import { toolButton } from "./ToolDialog.jsx";
+import { toolButton } from "./toolStyles.js";
 
 export default function PerformancePanel() {
   useLocale();

@@ -1,5 +1,9 @@
 import {
   Languages,
+  Archive,
+  Folder,
+  EllipsisVertical,
+  Pin,
   ArrowUpLeft,
   MessageSquare,
   Activity,
@@ -22,6 +26,7 @@ import {
   Boxes,
   BrushCleaning as Brush,
   Bug,
+  CalendarDays,
   Check,
   CheckCheck,
   ChevronDown,
@@ -126,6 +131,10 @@ import {
 } from "lucide-react";
 
 export {
+  Archive,
+  Folder,
+  EllipsisVertical,
+  Pin,
   Languages,
   ArrowUpLeft,
   MessageSquare,
@@ -149,6 +158,7 @@ export {
   Boxes,
   Brush,
   Bug,
+  CalendarDays,
   Chat,
   Check,
   CheckCheck,

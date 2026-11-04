@@ -1,5 +1,5 @@
 import { tError as localizeError } from "../../../i18n/locale.js";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { readChatDraft, saveChatDraft, clearChatDraft } from "../../../utils/chatDrafts.js";
 import { t, useLocale } from "../../../i18n/locale.js";
 import {
@@ -27,10 +27,15 @@ import {
 import VerifiedBadge from "../../common/VerifiedBadge.jsx";
 import UserRoleBadge from "../../common/UserRoleBadge.jsx";
 import Tooltip from "../../common/Tooltip.jsx";
+import AnchoredMenu from "../../common/AnchoredMenu.jsx";
 import VideoMessageRecorder from "../media/VideoMessageRecorder.jsx";
 import RecordingButton from "../media/RecordingButton.jsx";
 import { useHoldToRecord } from "../../../hooks/useHoldToRecord.js";
 import { useVoiceRecording } from "../../../hooks/chat/useVoiceRecording.js";
+import { useContextMenuTrigger } from "../../../hooks/useContextMenuTrigger.js";
+import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
+
+const ScheduleMessageDialog = lazy(() => import("../tools/ScheduleMessageDialog.jsx"));
 
 function applyTextareaSize({
   textareaEl,
@@ -99,6 +104,13 @@ export function MessageComposer({
 }) {
   useLocale();
   const composerRef = useRef(null);
+  const uploadButtonRef = useRef(null);
+  const uploadMenuId = useId();
+  const [focusUploadMenu, setFocusUploadMenu] = useState(true);
+  const closeUploadMenu = useCallback((restoreFocus = true) => {
+    setShowUploadMenu(false);
+    if (restoreFocus) uploadButtonRef.current?.focus({ preventScroll: true });
+  }, [setShowUploadMenu]);
   const draftOwner = draftAccountId || currentUsername;
   const composingRef = useRef(false);
   const lastDraftReplyRef = useRef(replyTarget);
@@ -116,6 +128,15 @@ export function MessageComposer({
   const [videoRecorderOpen, setVideoRecorderOpen] = useState(false);
   const [videoCommand, setVideoCommand] = useState("hold");
   const recordingContext = String(draftOwner) + ":" + String(activeChatId);
+  const messaging = useMessagingContext();
+  const [scheduleDraft, setScheduleDraft] = useState(null);
+  const [scheduledNotice, setScheduledNotice] = useState(false);
+  const activeComposerContext = useRef(null);
+  useLayoutEffect(() => {
+    activeComposerContext.current = recordingContext;
+    return () => { activeComposerContext.current = null; };
+  }, [recordingContext]);
+  useEffect(() => { setScheduleDraft(null); setScheduledNotice(false); }, [recordingContext]);
   const voice = useVoiceRecording({ contextKey: recordingContext, maxBytes: maxVideoNoteBytes,
     onSend: sendRecordedMessage, onReview: onVoiceRecorded, onComplete: () => gesture.reset() });
   const isRecording = voice.status !== "idle";
@@ -259,6 +280,17 @@ export function MessageComposer({
   const canSubmitMessage = isEditMode
     ? hasText
     : hasText || hasPendingUploads || hasPendingVoice;
+  const canSchedule = hasText && !isEditMode && !hasPendingUploads && !hasPendingVoice && !isRecording && !uploadBusy && !submitting;
+  const openScheduling = () => {
+    if (!canSchedule || scheduleDraft) return;
+    messageInputRef.current?.blur();
+    setScheduleDraft({ body: messageValue, chatId: activeChatId, contextKey: recordingContext,
+      replyToMessageId: replyTarget?.id || null, topicId: messaging?.topic || null });
+    setMentionTerm(null); setShowUploadMenu?.(false);
+  };
+  const scheduleTrigger = useContextMenuTrigger({ disabled: !canSchedule, contextKey: recordingContext,
+    isMobile: !isDesktop, holdOnMouse: true, holdDelayMs: 450, onOpen: openScheduling });
+  const scheduleHintId = useId();
 
   useEffect(() => {
     applyTextareaSize({
@@ -467,7 +499,7 @@ export function MessageComposer({
       }}
       onSubmit={async (event) => {
         event.preventDefault();
-        if (submitting) return;
+        if (submitting || scheduleDraft || uploadBusy) return;
         if (!canSubmitMessage) {
           event.preventDefault();
           return;
@@ -504,6 +536,22 @@ export function MessageComposer({
         event.currentTarget?.requestSubmit?.();
       }}
     >
+      {scheduleDraft && <Suspense fallback={<p role="status" className="text-xs text-slate-500">{t("Opening scheduling…")}</p>}>
+        <ScheduleMessageDialog draft={scheduleDraft} maxLength={messageMaxChars || 4000} onClose={() => setScheduleDraft(null)}
+          onScheduled={() => {
+            const snapshot = scheduleDraft;
+            const stored = readChatDraft(draftOwner, snapshot.chatId);
+            if (stored?.body === snapshot.body && String(stored?.replyTo?.id || "") === String(snapshot.replyToMessageId || "")) clearChatDraft(draftOwner, snapshot.chatId);
+            if (activeComposerContext.current !== snapshot.contextKey) return;
+            setScheduleDraft(null); setScheduledNotice(true);
+            if (messageInputRef.current?.value === snapshot.body) {
+              setMessageValue(""); onMessageInput?.("");
+              if (String(replyTarget?.id || "") === String(snapshot.replyToMessageId || "")) onClearReply?.();
+              requestAnimationFrame(() => applyTextareaSize({ textareaEl: messageInputRef.current, maxTextareaHeight, composerEl: composerRef.current, onComposerResize, onComposerHeightChange }));
+            }
+          }} />
+      </Suspense>}
+      {scheduledNotice && <p role="status" className="text-xs text-accent-700 dark:text-accent-300">{t("Message scheduled.")}</p>}
       {videoRecorderOpen === activeChatId && <VideoMessageRecorder key={activeChatId} maxBytes={maxVideoNoteBytes}
         gesture={gesture.locked ? "locked" : videoCommand}
         onGestureLock={gesture.lock}
@@ -824,13 +872,16 @@ export function MessageComposer({
             <div className="relative" ref={uploadMenuRef}>
               <button
                 type="button"
+                ref={uploadButtonRef}
                 disabled={uploadBusy}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") event.stopPropagation(); }}
                 onPointerDown={(event) => {
                   captureComposerFocus();
                   if (!isDesktop) event.preventDefault();
                 }}
-                onClick={() => {
+                onClick={(event) => {
                   if (uploadBusy) return;
+                  setFocusUploadMenu(isDesktop || event.detail === 0);
                   setShowUploadMenu((prev) => !prev);
                   restoreComposerFocus();
                 }}
@@ -840,13 +891,16 @@ export function MessageComposer({
                     : "cursor-not-allowed text-slate-400 dark:text-slate-500"
                 }`}
                 aria-label={t("Attach file")}
+                aria-haspopup="menu"
+                aria-expanded={Boolean(showUploadMenu && !uploadBusy)}
+                aria-controls={showUploadMenu && !uploadBusy ? uploadMenuId : undefined}
               >
                 <Paperclip size={18} className="icon-anim-sway" />
               </button>
               {showUploadMenu && !uploadBusy ? (
-                <div className="absolute bottom-12 left-0 z-40 w-44 overflow-hidden rounded-2xl border border-brand-200 bg-white p-1 text-sm font-semibold text-slate-700 shadow-xl shadow-brand-950/10 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100">
+                <AnchoredMenu anchorRef={uploadButtonRef} onClose={closeUploadMenu} id={uploadMenuId} label={t("Attach file")} placement="top" align="start" autoFocus={focusUploadMenu}>
                   <button
-                    type="button"
+                    type="button" role="menuitem"
                     onPointerDown={(event) => {
                       captureComposerFocus();
                       if (!isDesktop) event.preventDefault();
@@ -855,11 +909,11 @@ export function MessageComposer({
                       openFilePicker(mediaInputRef);
                       setShowUploadMenu(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
+                    className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                   >
                     <ImageIcon size={18} className="shrink-0 text-brand-500 icon-anim-sway" />{t("Photo or Video")}</button>
                   <button
-                    type="button"
+                    type="button" role="menuitem"
                     onPointerDown={(event) => {
                       captureComposerFocus();
                       if (!isDesktop) event.preventDefault();
@@ -868,10 +922,10 @@ export function MessageComposer({
                       openFilePicker(documentInputRef);
                       setShowUploadMenu(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
+                    className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                   >
                     <File size={18} className="shrink-0 text-brand-500 icon-anim-lift" />{t("Document")}</button>
-                </div>
+                </AnchoredMenu>
               ) : null}
               <input
                 ref={mediaInputRef}
@@ -920,7 +974,7 @@ export function MessageComposer({
                   : t("Type a message")
               }
               value={messageValue}
-              readOnly={submitting}
+                readOnly={submitting || !!scheduleDraft}
               maxLength={
                 Number.isFinite(Number(messageMaxChars))
                   ? messageMaxChars
@@ -934,6 +988,7 @@ export function MessageComposer({
               onCompositionEnd={(event) => { composingRef.current = false; if (!editTarget) setDraftError(!saveChatDraft(draftOwner, activeChatId, event.currentTarget.value, replyTarget)); }}
               onInput={(event) => {
                 const value = event.currentTarget.value || "";
+                setScheduledNotice(false);
                 setMessageValue(value);
                 if (!editTarget && !composingRef.current) setDraftError(!saveChatDraft(draftOwner, activeChatId, value, replyTarget));
                 const prefix = value.slice(0, event.currentTarget.selectionStart);
@@ -973,7 +1028,7 @@ export function MessageComposer({
                 event.preventDefault();
                 event.currentTarget.form?.requestSubmit();
               }}
-              className={`chat-scroll min-w-0 flex-1 resize-none rounded-2xl border border-brand-200 bg-white px-4 py-2 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+              className={`chat-scroll min-w-0 flex-1 resize-none rounded-2xl border border-brand-200 bg-white px-4 py-2 text-start text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                 composerHasPersian ? "font-fa" : ""
               }`}
               style={{
@@ -984,7 +1039,6 @@ export function MessageComposer({
                 wordBreak: "normal",
                 overflowWrap: "break-word",
                 overflowX: "hidden",
-                textAlign: "start",
               }}
             />
           </>
@@ -997,12 +1051,23 @@ export function MessageComposer({
           </div>
         )}
         {micMode || isRecording ? <RecordingButton mode={recordingMode} gesture={gesture} disabled={micDisabled} busy={isRecording && !gesture.active} onFocusCapture={captureComposerFocus} /> : <button
-          type="submit" onPointerDown={(event) => { captureComposerFocus(); if (!isDesktop) event.preventDefault(); }}
+          type="submit" {...scheduleTrigger}
+          onPointerDown={(event) => { captureComposerFocus(); scheduleTrigger.onPointerDown?.(event); if (!isDesktop) event.preventDefault(); }}
+          onKeyDown={(event) => {
+            scheduleTrigger.onKeyDown?.(event);
+            if (canSchedule && ((event.altKey && event.key === "ArrowDown") || (event.shiftKey && event.key === "F10") || event.key === "ContextMenu")) {
+              event.preventDefault(); event.stopPropagation(); openScheduling();
+            }
+          }}
           disabled={!canSubmitMessage || submitting || uploadBusy}
           aria-label={editTarget ? t("Save edit") : t("Send message")}
+          aria-haspopup={canSchedule ? "dialog" : undefined} aria-expanded={canSchedule ? !!scheduleDraft : undefined}
+          aria-keyshortcuts={canSchedule ? "Alt+ArrowDown" : undefined} aria-describedby={canSchedule ? scheduleHintId : undefined}
+          style={{ touchAction: "none", WebkitTouchCallout: "none", userSelect: "none" }}
           className="inline-flex h-11 items-center justify-center rounded-2xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-70">
           {editTarget ? <Check className="icon-anim-slide" /> : <Send className="icon-anim-slide" />}
         </button>}
+        {canSchedule && <span id={scheduleHintId} className="sr-only">{t("Hold to schedule. Keyboard: Alt + Down Arrow.")}</span>}
       </div>
     </form>
   );

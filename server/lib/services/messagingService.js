@@ -35,7 +35,16 @@ export function createMessagingService(deps) {
           if (!user || Number(user.banned)) throw new Error("Account unavailable.");
           const denied = await publicationError(row.chat_id, user.id, false, `scheduled:${row.id}`);
           if (denied) throw new Error(denied.error);
+          if (row.reply_to_message_id) {
+            const reply = await deps.findMessageById(row.reply_to_message_id);
+            if (!reply || reply.chat_id !== row.chat_id || reply.hidden_everyone_at) throw new Error("Message not available.");
+          }
+          if (row.topic_id) {
+            const topic = await db.topic(row.topic_id);
+            if (!topic || topic.chat_id !== row.chat_id || Number(topic.closed)) throw new Error("Topic unavailable.");
+          }
           const result = await publication.publishTextMessage({ chatId: row.chat_id, userId: user.id, body: row.body,
+            replyToMessageId: row.reply_to_message_id || null, topicId: row.topic_id || null,
             username: user.username, clientRequestId: `scheduled:${row.id}`, isUserConnectedFn: deps.isUserConnected });
           await db.finishSchedule(row.id, "sent");
           // Publication is already durable. Notification failures must not turn

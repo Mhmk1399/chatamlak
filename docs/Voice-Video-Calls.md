@@ -190,4 +190,4 @@ Restart your Songbird server to apply changes.
 - **Voice Calls:** Crystal clear audio calling with microphone mute/unmute control.
 - **Video Calls:** High-definition video calling with camera toggle and picture-in-picture local preview.
 - **In-Call Controls:** Real-time call duration timer, mute button, camera toggle, and immediate call hangup.
-- **Incoming Call Notifications:** In-app incoming call alerts with Accept and Decline buttons, plus a system push notification when the app is in the background.
+- **Incoming Call Notifications:** In-app alerts with Accept and Decline buttons, plus enabled system push notifications. A call-end or dismissal push replaces the incoming-call notice with a quiet **Call ended** notification.

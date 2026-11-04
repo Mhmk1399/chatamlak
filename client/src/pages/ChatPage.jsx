@@ -2,12 +2,16 @@ import { t as localize, useLocale as useAppLocale } from "../i18n/locale.js";
 import { useGroupCall } from "../hooks/chat/useGroupCall.js";
 import { GroupCallMedia } from "../components/chat/tools/GroupCallPanel.jsx";
 import { MessagingContext, useMessagingTools } from "../hooks/chat/useMessagingTools.js";
+import { ChatAppearanceContext, useChatAppearance } from "../hooks/chat/useChatAppearance.js";
 const ChatToolsDialog = lazy(() => import("../components/chat/tools/ChatToolsDialog.jsx"));
+const DevicePermissionsSetup = lazy(() => import("../components/pwa/DevicePermissionsSetup.jsx"));
+import { completePermissionSetup, INSTALL_GUIDE_EVENT, PERMISSION_SETUP_EVENT, permissionSetupPending } from "../utils/devicePermissions.js";
 import { saveOutboxMessage, readOutboxMessages, removeOutboxMessage } from "../utils/chatOutbox.js";
 import { readChatDraft } from "../utils/chatDrafts.js";
 import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import MobileTabMenu from "../components/navigation/MobileTabMenu.jsx";
 import ChatWindowPanel from "../components/chat/ChatWindowPanel.jsx";
+import ChatLayout from "../components/chat/ChatLayout.jsx";
 import { CallScreen } from "../components/call/CallScreen.jsx";
 import { ChatSidebar } from "../components/sidebar/index.js";
 import AppContextMenu from "../components/context-menu/AppContextMenu.jsx";
@@ -20,7 +24,6 @@ import { resolveReplyPreview, summarizeFiles, truncateText } from "../utils/mess
 import {
   formatBytesAsMb,
   formatChatCardTimestamp,
-  formatCompactCount,
   formatDayLabel,
   formatTime,
   parseServerDate,
@@ -339,7 +342,15 @@ const buildInviteLinkForChat = (chat) => {
 };
 
 export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme, adminPanelEnabled = true }) {
+  const chatAppearance = useChatAppearance(user, setUser);
   const appLocale = useAppLocale();
+  const [permissionSetupOpen, setPermissionSetupOpen] = useState(() => permissionSetupPending(user));
+  useEffect(() => {
+    setPermissionSetupOpen(permissionSetupPending({ id: user.id, username: user.username }));
+    const open = () => setPermissionSetupOpen(true);
+    window.addEventListener(PERMISSION_SETUP_EVENT, open);
+    return () => window.removeEventListener(PERMISSION_SETUP_EVENT, open);
+  }, [user.id, user.username]);
   const groupCall = useGroupCall();
   /* eslint-disable react-hooks/exhaustive-deps */
   const messageMaxChars = useMessageMaxChars();
@@ -570,6 +581,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     messagePreviewEnabled,
     handleToggleNotifications,
     handleToggleMessagePreview,
+    enableNotifications, handleTestPush, pushSubscribeStatus, clearPushForLogout,
   } = useChatNotifications({
     user,
     settingsPanel,
@@ -1706,17 +1718,17 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
   }, []);
 
   useEffect(() => {
+    if (loadingChats && !chats.length) return;
     const totalUnreadCount = chats.reduce(
       (sum, chat) =>
         sum + (chat?._muted ? 0 : Number(chat?.unread_count || 0)),
       0,
     );
-    const totalUnread = totalUnreadCount > 0 ? formatCompactCount(totalUnreadCount) : 0;
-
     document.title =
       totalUnreadCount > 0
-        ? `Songbird | ${totalUnread} new message${totalUnreadCount === 1 ? "" : "s"}`
-        : "Songbird";
+        ? `${localize("Ouj Chat")} | ${localize("{count} unread messages", { count: totalUnreadCount })}`
+        : localize("Ouj Chat");
+    navigator.serviceWorker?.controller?.postMessage({ type: "OUJ_BADGE", count: totalUnreadCount, accountId: user.id });
     if (navigator?.setAppBadge) {
       if (totalUnreadCount > 0) {
         navigator.setAppBadge(totalUnreadCount).catch(() => null);
@@ -1724,7 +1736,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         navigator.clearAppBadge().catch(() => null);
       }
     }
-  }, [chats]);
+  }, [chats, loadingChats, appLocale, notificationsActive, user.id]);
 
   const getNetworkBackoffMultiplier = () => {
     if (typeof navigator === "undefined") return 1;
@@ -3825,7 +3837,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         removeTypingUser(payloadChatId, sender);
       }
       if (typeof window === "undefined" || !("Notification" in window)) return;
-      if (!notificationsActive) return;
+      if (pushSubscribeStatus === "ok" || !notificationsEnabled || notificationPermission !== "granted") return;
       const rawBody = normalizeMessageBody(meta?.body ?? payload?.body).trim();
       if (/^\[\[(?:system|call):/i.test(rawBody)) return;
       const senderName = String(payload?.username || "").trim();
@@ -5853,8 +5865,9 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     }
   }
 
-  function handleLogout() {
-    logout().catch(() => null);
+  async function handleLogout() {
+    await clearPushForLogout?.();
+    await logout().catch(() => null);
     setUser(null);
     setShowSettings(false);
     setMobileTab("chats");
@@ -6869,7 +6882,11 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
       }));
     });
   }, [activeChatId, resultTarget]);
-  const messagingValue = { ...messaging, loadedMessageCount: messages.length, chat: activeChat, groupCall, isInCall: callState !== "idle", reloadChats: () => loadChats({ silent: true }),
+  const messagingValue = { ...messaging, chats, headerActions: {
+    toggleMute: () => toggleMuteChat(activeChatId),
+    deleteChat: () => requestDeleteChats([activeChatId]),
+    openAppearance: () => { if (window.matchMedia("(max-width: 767px)").matches) setMobileTab("settings"); setSettingsPanel("appearance"); },
+  }, loadedMessageCount: messages.length, chat: activeChat, groupCall, isInCall: callState !== "idle", reloadChats: () => loadChats({ silent: true }),
     retryQueued: async (message) => {
       outboxRetryStateRef.current.delete(message._clientId);
       const next = { ...message, _delivery: "sending", _attempts: 0, _nextAttemptAt: 0, _queuedAt: Date.now() };
@@ -6896,16 +6913,9 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
     },
   };
   return (
+    <ChatAppearanceContext.Provider value={chatAppearance}>
     <MessagingContext.Provider value={messagingValue}>
-    <div
-      className="ouj-desktop-shell flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden md:flex-row"
-      style={{
-        height: "100%",
-        paddingTop: "max(0px, env(safe-area-inset-top))",
-        paddingLeft: "max(0px, env(safe-area-inset-left))",
-        paddingRight: "max(0px, env(safe-area-inset-right))",
-      }}
-    >
+    <ChatLayout>
       <ChatSidebar
         mobileTab={mobileTab}
         isConnected={isConnected}
@@ -7508,7 +7518,7 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
         </Suspense>
       ) : null}
 
-      {whatsNewOpen ? (
+      {whatsNewOpen && !permissionSetupOpen ? (
         <Suspense fallback={null}>
           <WhatsNewModal
             open={whatsNewOpen}
@@ -7522,8 +7532,15 @@ export default function ChatPage({ user, setUser, isDark, setIsDark, toggleTheme
 
       <GroupCallMedia />
       {messaging.panel && <Suspense fallback={null}><ChatToolsDialog /></Suspense>}
+      {permissionSetupOpen && <Suspense fallback={null}><DevicePermissionsSetup
+        notificationsActive={notificationsActive} notificationsDisabled={notificationsDisabled} notificationStatusLabel={notificationStatusLabel}
+        pushSubscribeStatus={pushSubscribeStatus} onEnableNotifications={enableNotifications} onTestNotification={handleTestPush}
+        onClose={() => { completePermissionSetup(user); setPermissionSetupOpen(false); dismissPermissionsPrompt("notification"); dismissPermissionsPrompt("microphone"); }}
+        onInstall={() => { completePermissionSetup(user); setPermissionSetupOpen(false); window.dispatchEvent(new Event(INSTALL_GUIDE_EVENT)); }}
+      /></Suspense>}
       <AppContextMenu menu={contextMenu} onClose={closeContextMenu} />
-    </div>
+    </ChatLayout>
     </MessagingContext.Provider>
+    </ChatAppearanceContext.Provider>
   );
 }

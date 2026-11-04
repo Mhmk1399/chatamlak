@@ -163,6 +163,21 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
+/* Empty-field hints follow the interface locale. Filled values retain their
+   own direction/alignment, including auto-direction messages and LTR tokens. */
+html[dir='rtl'] :is(input, textarea)[placeholder]:placeholder-shown {
+  text-align: right;
+}
+html[dir='ltr'] :is(input, textarea)[placeholder]:placeholder-shown {
+  text-align: left;
+}
+html[dir='rtl'] :is(input, textarea)[placeholder]::placeholder {
+  font-family: var(--font-fa);
+}
+html[dir='ltr'] :is(input, textarea)[placeholder]::placeholder {
+  font-family: var(--font-body);
+}
+
 html,
 body,
 #root,

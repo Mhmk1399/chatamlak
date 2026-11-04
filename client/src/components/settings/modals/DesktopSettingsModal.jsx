@@ -8,6 +8,8 @@ import { USERNAME_INPUT_PATTERN, useNameLimits } from "../../../utils/nameLimits
 import { InlineError } from "../common/InlineError.jsx";
 import { AboutSettingsPanel } from "../panels/AboutSettingsPanel.jsx";
 import { DataSettingsPanel } from "../panels/DataSettingsPanel.jsx";
+import ChatBackgroundSettingsPanel from "../panels/ChatBackgroundSettingsPanel.jsx";
+import { useFocusTrap } from "../../../hooks/useFocusTrap.js";
 import ConfirmPasswordModal from "../../modals/ConfirmPasswordModal.jsx";
 import Avatar from "../../common/Avatar.jsx";
 
@@ -44,6 +46,8 @@ export function DesktopSettingsModal({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const profilePhotoInputRef = useRef(null);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, settingsPanel === "appearance");
   const handleClosePanel = useCallback(
     () => setSettingsPanel(null),
     [setSettingsPanel],
@@ -60,20 +64,21 @@ export function DesktopSettingsModal({
 
   return createPortal(
     <div className="fixed inset-0 z-140 flex items-center justify-center bg-black/40 px-6">
-      <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-100/70 bg-white shadow-xl dark:border-brand-500/30 dark:bg-slate-950">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="desktop-settings-title" className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-brand-100/70 bg-white shadow-xl dark:border-brand-500/30 dark:bg-slate-950" onKeyDown={(event) => { if (event.key === "Escape" && settingsPanel === "appearance") { event.preventDefault(); handleClosePanel(); } }}>
         <div className="flex items-center justify-between border-b border-brand-100/70 px-6 py-5 dark:border-brand-500/20">
-          <h3 className="text-lg font-semibold text-brand-700 dark:text-brand-200">
+          <h3 id="desktop-settings-title" className="text-lg font-semibold text-brand-700 dark:text-brand-200">
             {settingsPanel === "profile"
               ? localize("Edit profile")
               : settingsPanel === "security"
                 ? localize("Security")
                 : settingsPanel === "data"
                   ? localize("Data")
-                  : localize("About")}
+                  : settingsPanel === "appearance" ? localize("Chat background") : localize("About")}
           </h3>
           <button
             type="button"
             onClick={handleClosePanel}
+            aria-label={localize("Close settings")}
             className="flex items-center justify-center rounded-full border border-rose-200 p-2 text-rose-600 transition hover:border-rose-300 hover:bg-rose-50 hover:shadow-[0_0_16px_rgba(244,63,94,0.2)] dark:border-rose-500/30 dark:text-rose-200 dark:hover:bg-rose-500/10"
           >
             <Close size={18} className="icon-anim-pop" />
@@ -346,6 +351,7 @@ export function DesktopSettingsModal({
           </form>
         ) : null}
 
+        {settingsPanel === "appearance" && <div className="app-scroll min-h-0 flex-1 overflow-y-auto p-5"><ChatBackgroundSettingsPanel /></div>}
         {settingsPanel === "data" ? (
           <div className="app-scroll mt-4 min-h-0 flex-1 overflow-y-auto px-6 pb-6">
             <DataSettingsPanel

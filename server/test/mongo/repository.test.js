@@ -8,6 +8,35 @@ import { makeApp } from "../helpers/makeApp.js";
 import { R, db, alice, bob, group } from './helpers.js';
 
 describe("native MongoDB repositories on a real replica set", () => {
+  test("counts unread icon badges consistently with muted-chat preferences", async () => {
+    const chat = await group(); await R.createMessage(chat, bob, "Unread report");
+    expect(await R.getTotalUnreadCount(alice)).toBe(1);
+    await R.setChatMuted(alice, chat, true);
+    expect(await R.getTotalUnreadCount(alice)).toBe(0);
+  });
+  test("persists device subscriptions and prevents another account from removing them", async () => {
+    const endpoint = "https://push.example.test/device";
+    await R.upsertPushSubscription(alice, endpoint, "key", "auth", 0, "en");
+    expect((await R.listPushSubscriptionsByUserIds([alice]))[0]).toMatchObject({ user_id: alice, endpoint, message_preview: 0, locale: "en" });
+    await R.deletePushSubscription(endpoint, bob);
+    expect(await R.listPushSubscriptionsByUserIds([alice])).toHaveLength(1);
+    await R.upsertPushSubscription(bob, endpoint, "new-key", "new-auth", 1, "fa");
+    expect(await R.listPushSubscriptionsByUserIds([alice])).toHaveLength(0);
+    expect(await db.collection("push_subscriptions").countDocuments({ endpoint })).toBe(1);
+    await R.deletePushSubscription(endpoint, alice);
+    expect(await R.listPushSubscriptionsByUserIds([bob])).toHaveLength(1);
+    await R.deletePushSubscription(endpoint, bob);
+    expect(await R.listPushSubscriptionsByUserIds([bob])).toHaveLength(0);
+  });
+  test("stores scheduled reply/topic context alongside encrypted text", async () => {
+    const chat = await group(), reply = await R.createMessage(chat, bob, "Original report");
+    const topic = await R.messagingDb.createTopic(chat, alice, "Daily reports");
+    const result = await R.messagingDb.schedule(alice, chat, "Follow-up report", new Date(Date.now() + 60000).toISOString(), { replyToMessageId: reply, topicId: topic.id });
+    const stored = await db.collection("scheduled_messages").findOne({ id: result.id });
+    expect(stored).toMatchObject({ reply_to_message_id: reply, topic_id: topic.id });
+    expect(stored.body).not.toContain("Follow-up report");
+    expect((await R.messagingDb.schedules(alice, chat))[0].body).toBe("Follow-up report");
+  });
   test("enforces document validation and unique usernames", async () => {
     await expect(R.createUser("alice", "hash")).rejects.toMatchObject({ code: 11000 });
     await expect(db.collection("chat_messages").insertOne({ id: "bad", chat_id: null, body: "bad" })).rejects.toMatchObject({ code: 121 });

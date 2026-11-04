@@ -1,4 +1,5 @@
 import { userEvents } from "../lib/workers/autoAddWorker.js";
+import { normalizeChatAppearance } from "../../shared/chatAppearance.js";
 
 function registerAuthRoutes(app, deps) {
   const {
@@ -108,6 +109,7 @@ function registerAuthRoutes(app, deps) {
       avatarUrl: ensureAvatarExists(id, avatarUrl?.trim()) || null,
       color: assignedColor,
       status: "online",
+      chatAppearance: normalizeChatAppearance(null),
     });
   });
 
@@ -149,10 +151,12 @@ function registerAuthRoutes(app, deps) {
       avatarUrl: ensureAvatarExists(user.id, user.avatar_url) || null,
       color: user.color || USER_COLORS[0],
       status: user.status || "online",
+      chatAppearance: normalizeChatAppearance(user.chat_appearance),
     });
   });
 
   app.get("/api/me", async (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store");
     const rawSession = getSessionFromRequest(req);
     const session = rawSession && typeof rawSession.then === "function" ? await rawSession : rawSession;
     if (!session) {
@@ -168,6 +172,7 @@ function registerAuthRoutes(app, deps) {
       status: session.status || "online",
       role: session.role || "user",
       verified: Boolean(session.verified),
+      chatAppearance: normalizeChatAppearance(session.chat_appearance),
     });
   });
 

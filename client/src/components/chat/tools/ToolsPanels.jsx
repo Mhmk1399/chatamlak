@@ -4,8 +4,29 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { messagingRequest } from "../../../api/messagingApi.js";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { formatLocalDate, t, useLocale } from "../../../i18n/locale.js";
-import { toolButton, toolInput } from "./ToolDialog.jsx";
+import { toolButton, toolInput } from "./toolStyles.js";
 import { readOutboxMessages } from "../../../utils/chatOutbox.js";
+import { PersianDateField } from "../../common/PersianDateTimeField.jsx";
+import ScheduleMessageForm from "./ScheduleMessageForm.jsx";
+import { formatTehranDateTime, tehranDayBoundary } from "../../../utils/persianDateTime.js";
+
+export function FolderPanel() {
+  useLocale();
+  const context = useMessagingContext();
+  const [folder, setFolder] = useState(() => context.preferences.find(item => item.chat_id === context.activeChatId)?.folder || "");
+  const [saved, setSaved] = useState(false);
+  return <form noValidate className="space-y-3" onSubmit={async event => {
+    event.preventDefault();
+    if (context.busy) return;
+    setSaved(false);
+    if (await context.act(`/chats/${context.activeChatId}/preference`, { method: "PUT", body: { folder } })) setSaved(true);
+  }}>
+    <label className="block space-y-2 text-sm"><span>{t("Folder")}</span><input className={toolInput} value={folder} maxLength={60} dir="auto" onChange={event => { setFolder(event.target.value); setSaved(false); }} /></label>
+    <p className="text-xs text-slate-500 dark:text-slate-400">{t("Leave empty to remove this chat from its folder.")}</p>
+    <button type="submit" disabled={context.busy} className={toolButton}>{t(context.busy ? "Saving…" : "Save")}</button>
+    {saved && <p role="status" className="text-sm text-accent-700 dark:text-accent-300">{t("Saved")}</p>}
+  </form>;
+}
 
 export function OutboxPanel() {
   useLocale();
@@ -131,9 +152,10 @@ export function SearchPanel() {
   const params = new URLSearchParams({ q: committed, sender });
   if (scope === "chat" && context.activeChatId)
     params.set("chatId", context.activeChatId);
-  if (after) params.set("after", `${after} 00:00:00`);
-  if (before) params.set("before", `${before} 23:59:59`);
-  const path = committed ? `/search?${params}` : null;
+  if (after) params.set("after", tehranDayBoundary(after));
+  if (before) params.set("before", tehranDayBoundary(before, true));
+  const invalidRange = after && before && after > before;
+  const path = committed && !invalidRange ? `/search?${params}` : null;
   const remote = useToolData(path);
   const currentPathRef = useRef(path);
   const searchInputRef = useRef(null);
@@ -201,23 +223,10 @@ export function SearchPanel() {
               maxLength={100}
             />
           </Field>
-          <Field label={t("From date")}>
-            <input
-              type="date"
-              className={toolInput}
-              value={after}
-              onChange={(event) => setAfter(event.target.value)}
-            />
-          </Field>
-          <Field label={t("To date")}>
-            <input
-              type="date"
-              className={toolInput}
-              value={before}
-              onChange={(event) => setBefore(event.target.value)}
-            />
-          </Field>
+          <PersianDateField label={t("From date")} value={after} onChange={setAfter} maxValue={before} isInvalid={!!invalidRange} />
+          <PersianDateField label={t("To date")} value={before} onChange={setBefore} minValue={after} isInvalid={!!invalidRange} />
         </div>
+        {invalidRange && <p role="alert" className="text-sm text-rose-600 dark:text-rose-300">{t("The end date must be on or after the start date.")}</p>}
       </form>
       <RemoteStatus
         {...remote}
@@ -452,54 +461,10 @@ export function SchedulePanel() {
   useLocale();
   const context = useMessagingContext();
   const remote = useToolData(`/chats/${context.activeChatId}/scheduled`);
-  const [body, setBody] = useState("");
-  const [dueAt, setDueAt] = useState("");
   return (
     <div className="space-y-4">
-      <form
-        noValidate
-        className="space-y-3"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          if (!dueAt || !body.trim()) {
-            context.setError(t("Choose a message and a time."));
-            return;
-          }
-          const due = new Date(dueAt);
-          if (!Number.isFinite(due.getTime())) return;
-          if (
-            await context.act(`/chats/${context.activeChatId}/scheduled`, {
-              method: "POST",
-              body: { body, dueAt: due.toISOString() },
-            })
-          ) {
-            setBody("");
-            setDueAt("");
-            remote.reload();
-          }
-        }}
-      >
-        <Field label={t("Message")}>
-          <textarea
-            className={`${toolInput} min-h-24 resize-none`}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            maxLength={4000}
-            dir="auto"
-          />
-        </Field>
-        <Field label={t("Send at")}>
-          <input
-            type="datetime-local"
-            className={toolInput}
-            value={dueAt}
-            onChange={(event) => setDueAt(event.target.value)}
-          />
-        </Field>
-        <button type="submit" disabled={context.busy} className={toolButton}>
-          {t("Schedule message")}
-        </button>
-      </form>
+      <ScheduleMessageForm busy={context.busy} onScheduled={remote.reload}
+        onSchedule={(payload) => context.act(`/chats/${context.activeChatId}/scheduled`, { method: "POST", body: payload })} />
       <RemoteStatus
         {...remote}
         empty={remote.data && !remote.data.messages.length}
@@ -514,7 +479,7 @@ export function SchedulePanel() {
               {message.body}
             </p>
             <p className="text-xs text-slate-500">
-              {formatLocalDate(message.due_at)}
+              <span lang="fa" dir="rtl">{formatTehranDateTime(message.due_at)}</span> · {t("Tehran time")}
             </p>
             {message.error && (
               <p className="text-xs text-rose-600">{localizeError(message.error)}</p>

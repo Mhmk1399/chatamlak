@@ -2,8 +2,9 @@ import { tError as localizeError } from "../../../i18n/locale.js";
 import { useCallback } from "react";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { t, useLocale } from "../../../i18n/locale.js";
-import ToolDialog, { toolButton } from "./ToolDialog.jsx";
-import { DevicesPanel, GroupSettingsPanel, MediaPanel, OutboxPanel, PollsPanel, SchedulePanel, SearchPanel, TopicsPanel } from "./ToolsPanels.jsx";
+import ToolDialog from "./ToolDialog.jsx";
+import { toolButton } from "./toolStyles.js";
+import { DevicesPanel, FolderPanel, GroupSettingsPanel, MediaPanel, OutboxPanel, PollsPanel, SchedulePanel, SearchPanel, TopicsPanel } from "./ToolsPanels.jsx";
 import GroupCallPanel from "./GroupCallPanel.jsx";
 import PerformancePanel from "./PerformancePanel.jsx";
 
@@ -15,7 +16,7 @@ export default function ChatToolsDialog() {
   if (!context?.panel) return null;
   const role = context.chat?.members?.find((member) => member.id === context.user.id)?.role;
   const panels = { Search: SearchPanel, Devices: DevicesPanel, Outbox: OutboxPanel, Performance: PerformancePanel };
-  if (context.activeChatId) Object.assign(panels, { Media: MediaPanel, Schedule: SchedulePanel, Polls: PollsPanel });
+  if (context.activeChatId) Object.assign(panels, { Media: MediaPanel, Folder: FolderPanel, Schedule: SchedulePanel, Polls: PollsPanel });
   if (context.chat?.type === "group") {
     panels.Topics = TopicsPanel;
     panels["Group call"] = GroupCallPanel;

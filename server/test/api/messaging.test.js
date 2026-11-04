@@ -88,6 +88,20 @@ describe("messaging tools API boundaries", () => {
     expect(response.status).toBe(400);
     expect(db.schedule).not.toHaveBeenCalled();
   });
+  test("keeps reply and topic context when scheduling a composer draft", async () => {
+    db.topic = vi.fn(async () => ({ id: TARGET, chat_id: CHAT, closed: 0 }));
+    const dueAt = new Date(Date.now() + 60000).toISOString();
+    const response = await authenticated(request(app).post(`/api/messaging/chats/${CHAT}/scheduled`)).send({ body: "hello", dueAt, replyToMessageId: MESSAGE, topicId: TARGET });
+    expect(response.status).toBe(201);
+    expect(db.schedule).toHaveBeenCalledWith(USER, CHAT, "hello", dueAt, { replyToMessageId: MESSAGE, topicId: TARGET });
+  });
+  test("rejects scheduling a reply or topic from another conversation", async () => {
+    deps.findMessageById.mockResolvedValue({ id: MESSAGE, chat_id: OTHER });
+    expect((await authenticated(request(app).post(`/api/messaging/chats/${CHAT}/scheduled`)).send({ body: "hello", dueAt: new Date(Date.now() + 60000).toISOString(), replyToMessageId: MESSAGE })).status).toBe(404);
+    db.topic = vi.fn(async () => ({ id: TARGET, chat_id: OTHER }));
+    expect((await authenticated(request(app).post(`/api/messaging/chats/${CHAT}/scheduled`)).send({ body: "hello", dueAt: new Date(Date.now() + 60000).toISOString(), topicId: TARGET })).status).toBe(400);
+    expect(db.schedule).not.toHaveBeenCalled();
+  });
   test("validates poll choices and blocks voting after closure", async () => {
     expect((await authenticated(request(app).put(`/api/messaging/polls/${MESSAGE}/vote`)).send({ option: 2 })).status).toBe(400);
     db.poll.mockResolvedValue({ id: MESSAGE, chat_id: CHAT, message_id: MESSAGE, closed: 1 });

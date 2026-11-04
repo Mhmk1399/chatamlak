@@ -5,6 +5,7 @@ import {
   Database,
   Info,
   LogOut,
+  ImageIcon,
   Rocket,
   ShieldCheck,
   User,
@@ -97,6 +98,9 @@ export function SettingsMenuActions({
         setIsDark={setIsDark}
         thick={isMobile}
       />
+      <button type="button" onClick={() => setSettingsPanel("appearance")} className={`${buttonBase} ${accentHover}`}>
+        <ImageIcon size={18} className={iconCls} />{localize("Chat background")}
+      </button>
 
       {divider}
 

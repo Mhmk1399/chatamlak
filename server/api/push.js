@@ -22,8 +22,10 @@ function registerPushRoutes(app, deps) {
   app.post("/api/push/subscribe", async (req, res) => {
     const session = await requireSession(req, res);
     if (!session) return;
-    const { username, subscription, messagePreview } = req.body || {};
-    if (!username || !subscription?.endpoint) {
+    const { username, subscription, messagePreview, locale } = req.body || {};
+    let endpoint;
+    try { endpoint = new URL(subscription?.endpoint); } catch { /* Invalid native subscription. */ }
+    if (!username || !endpoint || endpoint.protocol !== "https:" || endpoint.username || endpoint.password || !subscription.keys?.p256dh || !subscription.keys?.auth) {
       return res
         .status(400)
         .json({ error: "Username and subscription are required." });
@@ -33,18 +35,19 @@ function registerPushRoutes(app, deps) {
     const user = rawUser && typeof rawUser.then === "function" ? await rawUser : rawUser;
     if (!user) return res.status(404).json({ error: "User not found." });
     try {
-      upsertPushSubscription(
+      await upsertPushSubscription(
         user.id,
         subscription.endpoint,
         subscription.keys?.p256dh,
         subscription.keys?.auth,
         messagePreview === false ? 0 : 1,
+        locale === "en" ? "en" : "fa",
       );
       return res.json({ ok: true });
     } catch (error) {
       return res
         .status(500)
-        .json({ error: error?.message || "Unable to save subscription." });
+        .json({ error: "Unable to save subscription." });
     }
   });
 
@@ -58,8 +61,10 @@ function registerPushRoutes(app, deps) {
         .json({ error: "Username and endpoint are required." });
     }
     if (!requireSessionUsernameMatch(res, session, username)) return;
-    deletePushSubscription(endpoint);
-    return res.json({ ok: true });
+    try {
+      await deletePushSubscription(endpoint, session.id);
+      return res.json({ ok: true });
+    } catch { return res.status(500).json({ error: "Unable to remove subscription." }); }
   });
 
   app.post("/api/push/test", async (req, res) => {
@@ -82,11 +87,12 @@ function registerPushRoutes(app, deps) {
       return res.status(400).json({ error: "No push subscription found." });
     }
     try {
-      await sendPushNotificationToUsers([user.id], {
-        title: "Songbird",
+      const report = await sendPushNotificationToUsers([user.id], {
+        title: "Ouj Chat", isTest: true,
         body: "Test notification",
-        data: { url: "/" },
+        data: { url: "/chat" },
       });
+      if (report?.sent === 0) return res.status(503).json({ error: "Unable to send test notification." });
       return res.json({ ok: true });
     } catch {
       return res

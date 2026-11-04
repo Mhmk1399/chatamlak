@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { t, useLocale } from "../../../i18n/locale.js";
 import { isValidUuid } from "../../../utils/uuidUtils.js";
-import { toolButton } from "./ToolDialog.jsx";
+import { toolButton } from "./toolStyles.js";
 
 export default function MessageEngagement({ message }) {
   useLocale();

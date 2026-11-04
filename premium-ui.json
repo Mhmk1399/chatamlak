@@ -5,7 +5,7 @@
   "canonicalMap": "UX-CONTRACT.md",
   "ownership": {
     "Select/Listbox": "native",
-    "Date": "native"
+    "Date": "authored"
   },
   "evidence": {
     "crudFullFlow": "client/test/e2e/messaging-flow.mjs",

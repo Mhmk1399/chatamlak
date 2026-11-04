@@ -73,11 +73,15 @@ export function useMessagingTools({ user, activeChatId, loadChatsRef, scheduleMe
         for (let page = 0; page < 10 && !stopped; page += 1) {
           const data = await messagingRequest(`/sync?after=${cursor}`);
           if (stopped) return;
-          if (data.events.length) {
+          for (const event of data.events) {
+            if (event.type === "chat_appearance_updated") window.dispatchEvent(new CustomEvent("songbird:realtime-event", { detail: event }));
+          }
+          const chatEvents = data.events.filter((event) => event.type !== "chat_appearance_updated");
+          if (chatEvents.length) {
             await loadChatsRef.current?.({ silent: true, preserveActiveUnread: true });
             const currentChat = activeRef.current;
-            const relevant = data.events.filter((event) => event.chatId === currentChat);
-            await invalidateHistoryRef.current?.([...new Set(data.events.map((event) => event.chatId))].filter((id) => id !== activeRef.current));
+            const relevant = chatEvents.filter((event) => event.chatId === currentChat);
+            await invalidateHistoryRef.current?.([...new Set(chatEvents.map((event) => event.chatId))].filter((id) => id !== activeRef.current));
             const deleted = new Set(relevant.filter((event) => event.type === "chat_message_deleted").flatMap((event) => event.messageIds || [event.messageId]));
             const affected = new Set(relevant.flatMap((event) => event.messageIds || [event.messageId]).filter(Boolean));
             const loaded = new Set((loadedMessagesRef.current || []).flatMap((message) => [message._serverId || message.id, message.replyTo?.id]).filter(Boolean));

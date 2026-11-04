@@ -24,7 +24,7 @@ export function createMessagePublicationService(dbApi) {
   /**
    * Helper to calculate push recipients for a chat.
    */
-  function calculatePushRecipients(chatId, senderUserId, isUserConnectedFn) {
+  function calculatePushRecipients(chatId, senderUserId) {
     const rawMembers = listChatMembers(chatId);
     const rawMutedRows = listMutedUserIdsForChat(chatId);
 
@@ -37,11 +37,8 @@ export function createMessagePublicationService(dbApi) {
 
       return memberList
         .filter((member) => member.id !== senderUserId)
-        .filter((member) =>
-          typeof isUserConnectedFn === "function"
-            ? !isUserConnectedFn(member.username)
-            : true,
-        )
+        // Presence on one device must not suppress push to the user's other devices.
+        // Each service worker handles focus on its own device.
         .map((member) => member.id)
         .filter(
           (memberId) => memberId && !mutedIds.has(memberId),

@@ -9,6 +9,9 @@ import { setNameLimits } from './utils/nameLimits.js'
 import { setChatPageConfig } from './settings/chatPageConfig.js'
 import InstallBar from './components/pwa/InstallBar.jsx'
 import InstallGuideModal from './components/pwa/InstallGuideModal.jsx'
+import { INSTALL_GUIDE_EVENT, PERMISSION_SETUP_EVENT, markSignupPermissionsPending } from './utils/devicePermissions.js'
+import { normalizeUuid } from './utils/uuidUtils.js'
+import { apiFetch } from './api/chatApi.js'
 import {
   getSavedSessionUser,
   saveSessionUser,
@@ -102,6 +105,15 @@ function isChunkLoadFailure(error) {
 
 export default function App() {
   const locale = useLocale()
+  useLayoutEffect(() => {
+    const url = new URL(window.location.href)
+    const requestedChat = url.pathname === '/chat' && normalizeUuid(url.searchParams.get('chatId'))
+    if (requestedChat) {
+      window.sessionStorage.setItem(OPEN_CHAT_ID_KEY, requestedChat)
+      url.searchParams.delete('chatId')
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash)
+    }
+  }, [])
   useEffect(() => { document.title = t('Ouj Chat') }, [locale])
   async function recoverFromStaleShell() {
     if (typeof window === 'undefined') return
@@ -419,6 +431,7 @@ export default function App() {
       setInstallDismissed(true)
       localStorage.setItem(PWA_INSTALL_DISMISS_KEY, '1')
       localStorage.setItem(PWA_PERMISSIONS_PROMPT_KEY, 'pending')
+      window.dispatchEvent(new Event(PERMISSION_SETUP_EVENT))
     }
     const handleHideInstall = () => setInstallForceHidden(true)
     const handleShowInstall = () => setInstallForceHidden(false)
@@ -593,36 +606,11 @@ export default function App() {
   }, [installBarHeight, installForceHidden, showInstallBar, routeChunkLoading])
 
   useEffect(() => {
-    if (!isStandaloneDisplay) return
-    if (typeof window === 'undefined') return
-    const flag = localStorage.getItem(PWA_PERMISSIONS_PROMPT_KEY)
-    if (flag !== 'pending') return
-    localStorage.setItem(PWA_PERMISSIONS_PROMPT_KEY, 'done')
-    const triggerPrompts = () => {
-      if (typeof Notification !== 'undefined') {
-        try {
-          if (
-            typeof Notification.requestPermission === 'function' &&
-            Notification.permission === 'default'
-          ) {
-            Notification.requestPermission().catch(() => {})
-          }
-        } catch {
-          // ignore
-        }
-      }
-      if (navigator.mediaDevices?.getUserMedia) {
-        navigator.mediaDevices
-          .getUserMedia({ audio: true })
-          .then((stream) => {
-            stream?.getTracks?.().forEach((track) => track.stop())
-          })
-          .catch(() => {})
-      }
-    }
-    const timer = window.setTimeout(triggerPrompts, 600)
-    return () => window.clearTimeout(timer)
-  }, [isStandaloneDisplay])
+    const openGuide = () => setShowInstallGuide(true)
+    window.addEventListener(INSTALL_GUIDE_EVENT, openGuide)
+    return () => window.removeEventListener(INSTALL_GUIDE_EVENT, openGuide)
+  }, [])
+
 
   useEffect(() => {
     const root = document.documentElement
@@ -810,7 +798,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/login`, {
+      const res = await apiFetch(`${API_BASE}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -874,7 +862,7 @@ export default function App() {
     }
 
     try {
-      const registerRes = await fetch(`${API_BASE}/api/register`, {
+      const registerRes = await apiFetch(`${API_BASE}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -893,6 +881,7 @@ export default function App() {
         throw new Error(registerData?.error || 'Unable to create account.')
       }
       // Signup creates the account only; user must explicitly sign in next.
+      markSignupPermissionsPending(payload.username)
       setUser(null)
       setAuthStatus('')
       navigate('/login', true)

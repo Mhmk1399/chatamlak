@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Info,
+  ImageIcon,
   LogOut,
   Moon,
   Pencil,
@@ -26,6 +27,7 @@ import { USERNAME_INPUT_PATTERN, useNameLimits } from "../../../utils/nameLimits
 import { InlineError } from "../common/InlineError.jsx";
 import { AboutSettingsPanel } from "./AboutSettingsPanel.jsx";
 import { DataSettingsPanel } from "./DataSettingsPanel.jsx";
+import ChatBackgroundSettingsPanel from "./ChatBackgroundSettingsPanel.jsx";
 import { NotificationsSettingsPanel } from "./NotificationsSettingsPanel.jsx";
 import ConfirmPasswordModal from "../../modals/ConfirmPasswordModal.jsx";
 import Avatar from "../../common/Avatar.jsx";
@@ -39,6 +41,7 @@ const DETAIL_TITLES = {
   data: "Data",
   notifications: "Notifications",
   about: "About",
+  appearance: "Chat background",
 };
 
 function MobileMenuRow({
@@ -486,6 +489,7 @@ export function MobileSettingsPanel({
   );
 
   const renderDetailPanel = () => {
+    if (settingsPanel === "appearance") return <div className="p-4"><ChatBackgroundSettingsPanel /></div>;
     if (settingsPanel === "profile") return renderProfilePanel();
     if (settingsPanel === "security") return renderSecurityPanel();
     if (settingsPanel === "data") {
@@ -647,6 +651,7 @@ export function MobileSettingsPanel({
                   icon={<ShieldCheck size={22} className="icon-anim-beat" />}
                   onClick={() => setSettingsPanel("security")}
                 />
+                <MobileMenuRow label={localize("Chat background")} icon={<ImageIcon size={22} />} onClick={() => setSettingsPanel("appearance")} />
                 <MobileMenuRow
                   label={localize("Data")}
                   icon={<Database size={22} className="icon-anim-bob" />}
@@ -719,7 +724,7 @@ export function MobileSettingsPanel({
             </button>
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center px-16">
               <h4 className="truncate text-base font-semibold text-slate-700 dark:text-slate-200">
-                {detailTitle}
+                {localize(detailTitle)}
               </h4>
             </span>
             <span className="ml-auto h-9 w-9 shrink-0" aria-hidden="true" />

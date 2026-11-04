@@ -40,6 +40,8 @@ const browserInstances = isCoverage
 // forever. Listing them here forces a single up-front optimize pass.
 const browserOptimizeInclude = [
   "lucide-react",
+  "react-aria-components",
+  "@internationalized/date",
   "vitest-browser-react",
   "react",
   "react/jsx-dev-runtime",

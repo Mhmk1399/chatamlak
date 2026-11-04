@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "client/package.json": {
-    "mtime": 1793617908.0966375,
-    "ast_hash": "8b6bf9ffabbe13d9d38b6ee2e934d4a1",
+    "mtime": 1793722541.4216106,
+    "ast_hash": "f227786034fcefe1d9be8b35fdb66e9d",
     "semantic_hash": ""
   },
   "client/postcss.config.js": {
@@ -20,13 +20,13 @@
     "semantic_hash": ""
   },
   "client/public/sw.js": {
-    "mtime": 1793694524.3318114,
-    "ast_hash": "b65ff1b4ccd5e8fbc32f407de5956dcd",
+    "mtime": 1793779517.3257792,
+    "ast_hash": "0e0f6fcd8038f7579600839ebe817d63",
     "semantic_hash": ""
   },
   "client/src/App.jsx": {
-    "mtime": 1793686933.9531133,
-    "ast_hash": "eea16f027ac7cb7c26816fa34c59cb46",
+    "mtime": 1793777091.4636343,
+    "ast_hash": "b486d12ed043dddb02c32c28fb290d4a",
     "semantic_hash": ""
   },
   "client/src/api/appMetaApi.js": {
@@ -35,13 +35,13 @@
     "semantic_hash": ""
   },
   "client/src/api/chatApi.js": {
-    "mtime": 1793612233.2638786,
-    "ast_hash": "bcfe84196fef1c4ad8e9f0eeb3a43792",
+    "mtime": 1793776180.188169,
+    "ast_hash": "a1a14bfa7e2bcc1e2934c34db70e889d",
     "semantic_hash": ""
   },
   "client/src/api/messagingApi.js": {
-    "mtime": 1793620667.8859482,
-    "ast_hash": "7a486724e3889294b28172fa700d1a43",
+    "mtime": 1793722998.7288005,
+    "ast_hash": "2ecc1cb30da59b8696553bee66f1dc9e",
     "semantic_hash": ""
   },
   "client/src/components/admin/ActionsTab.jsx": {
@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "client/src/components/admin/AdminCommon.jsx": {
-    "mtime": 1793690501.3280756,
-    "ast_hash": "61ccf498b6d204d9c09597b60b6b04cc",
+    "mtime": 1793784010.4749806,
+    "ast_hash": "13219235b72fe1b532565c2143674482",
     "semantic_hash": ""
   },
   "client/src/components/admin/AdminGroupModal.jsx": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/ChatWindowPanel.jsx": {
-    "mtime": 1793690327.4804287,
-    "ast_hash": "a1d6ed27ac6002260e2ebf03f571abde",
+    "mtime": 1793783103.7493443,
+    "ast_hash": "76ca8876cb2a74f503f9101e0276d9b7",
     "semantic_hash": ""
   },
   "client/src/components/chat/index.js": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/messages/MessageComposer.jsx": {
-    "mtime": 1793706126.3383539,
-    "ast_hash": "b89f11aa2ed10aff2da98386efd69cbe",
+    "mtime": 1793784010.4739883,
+    "ast_hash": "33b0e1c4d2e18488a236b316629fb4c8",
     "semantic_hash": ""
   },
   "client/src/components/chat/messages/MessageItem.jsx": {
@@ -200,38 +200,38 @@
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/ChatToolsDialog.jsx": {
-    "mtime": 1793687241.0328405,
-    "ast_hash": "29913bc0f21da657a7a0affddb0eb8d7",
+    "mtime": 1793782015.380587,
+    "ast_hash": "6b71f5b794e953166f9ee9735165e931",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/GroupCallPanel.jsx": {
-    "mtime": 1793687241.1499424,
-    "ast_hash": "517a431a3452b95b5596e511ac194c90",
+    "mtime": 1793724753.0834527,
+    "ast_hash": "bc3a5c5e572351b61c4eb8617d37ea98",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/MessageEngagement.jsx": {
-    "mtime": 1793687241.1576908,
-    "ast_hash": "012559dd11a4825325a8542ce9e59bcb",
+    "mtime": 1793724752.7151437,
+    "ast_hash": "5d4841dec4e230b20f60d724007ea946",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/MessagingToolbar.jsx": {
-    "mtime": 1793691849.8476875,
-    "ast_hash": "0811464827ce81e67acd71417005bf67",
+    "mtime": 1793782107.0379775,
+    "ast_hash": "23ef31ef3517acd7b67b7b163114a66f",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/PerformancePanel.jsx": {
-    "mtime": 1793620876.0393195,
-    "ast_hash": "08422af5e0fd9d550155a9fab05a7315",
+    "mtime": 1793724753.075474,
+    "ast_hash": "98604a6d1b824ee786cdd7a2b624d531",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/ToolDialog.jsx": {
-    "mtime": 1793686933.905164,
-    "ast_hash": "9a356c57ce703d03d89b558cb9de8afd",
+    "mtime": 1793780935.4738953,
+    "ast_hash": "b16c924c19fdda17baf9757413245eb7",
     "semantic_hash": ""
   },
   "client/src/components/chat/tools/ToolsPanels.jsx": {
-    "mtime": 1793687241.1888788,
-    "ast_hash": "06e8aeb4ea75f3fef0f58dcff8e0ebfa",
+    "mtime": 1793782015.385701,
+    "ast_hash": "1fa45d7aadfd51f546b5f2a0c824140c",
     "semantic_hash": ""
   },
   "client/src/components/common/Avatar.jsx": {
@@ -380,8 +380,8 @@
     "semantic_hash": ""
   },
   "client/src/components/settings/menus/SettingsMenuActions.jsx": {
-    "mtime": 1793687768.5619917,
-    "ast_hash": "958e4124de70aa19ce4dc3003a788cf3",
+    "mtime": 1793719675.524575,
+    "ast_hash": "a5960398a538d66537d1250929506199",
     "semantic_hash": ""
   },
   "client/src/components/settings/menus/SettingsMenuPopover.jsx": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "client/src/components/settings/modals/DesktopSettingsModal.jsx": {
-    "mtime": 1793690327.5498557,
-    "ast_hash": "dc48eff2811a856ba989a0e78fe3f100",
+    "mtime": 1793720755.2582445,
+    "ast_hash": "8ead3b8f516a40def7f2af2cd832a34e",
     "semantic_hash": ""
   },
   "client/src/components/settings/modals/NotificationsSettingsModal.jsx": {
@@ -410,13 +410,13 @@
     "semantic_hash": ""
   },
   "client/src/components/settings/panels/MobileSettingsPanel.jsx": {
-    "mtime": 1793690327.5582385,
-    "ast_hash": "63913ea003ddd40f6f7666b5bfcdc460",
+    "mtime": 1793720755.2568538,
+    "ast_hash": "0918d79055abc0f74cbd3b4c4e830168",
     "semantic_hash": ""
   },
   "client/src/components/settings/panels/NotificationsSettingsPanel.jsx": {
-    "mtime": 1793690327.559233,
-    "ast_hash": "0dbde1e20d430319d50d623a82bfa131",
+    "mtime": 1793777090.709015,
+    "ast_hash": "438f4ab6c3fe39da2aaf6f1d1747ed3b",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/footer/SidebarFooter.jsx": {
@@ -425,13 +425,13 @@
     "semantic_hash": ""
   },
   "client/src/components/sidebar/header/SidebarHeader.jsx": {
-    "mtime": 1793705037.2409353,
-    "ast_hash": "4a8368769d8ee0dacd9e8a3973459313",
+    "mtime": 1793784011.4004943,
+    "ast_hash": "2010ad868035b18275e92d1e202f8c2d",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/header/UserMenuButton.jsx": {
-    "mtime": 1793687769.6819017,
-    "ast_hash": "1b8f9000a3954ec448c9ae84f8ed51a9",
+    "mtime": 1793782107.1391945,
+    "ast_hash": "0c70e7952f0da052fa019471b7f716e3",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/index.js": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "client/src/components/sidebar/layout/ChatSidebar.jsx": {
-    "mtime": 1793689981.8925135,
-    "ast_hash": "3def2d238d558b49b179dac26a63175f",
+    "mtime": 1793781952.140644,
+    "ast_hash": "2e790d413c6a54624a8293432550de95",
     "semantic_hash": ""
   },
   "client/src/components/sidebar/list/ChatsListPanel.jsx": {
@@ -465,13 +465,13 @@
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useChatEvents.js": {
-    "mtime": 1793616279.2469287,
-    "ast_hash": "e259c90e5bf50376f7db8ae6fdabc502",
+    "mtime": 1793719505.2890553,
+    "ast_hash": "57927ac5d5a89bcb1aad50751624e5d1",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useChatNotifications.js": {
-    "mtime": 1793612233.4109862,
-    "ast_hash": "d670a6d8e4f296b674d4d17d8bca9b16",
+    "mtime": 1793779517.328465,
+    "ast_hash": "36905d42df390657cf2c8005bc4c9d32",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useChatScroll.js": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useMessagingTools.js": {
-    "mtime": 1793623370.8324888,
-    "ast_hash": "a36a0846418779253930065fbce84bfc",
+    "mtime": 1793719505.2910898,
+    "ast_hash": "89a81602be0854c9a8377d0a19d4bc1a",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useMobileViewport.js": {
@@ -570,18 +570,13 @@
     "semantic_hash": ""
   },
   "client/src/hooks/useContextMenuTrigger.js": {
-    "mtime": 1793612233.4930618,
-    "ast_hash": "9c8b7f06ebd0b42ac0615899d25ae916",
+    "mtime": 1793780010.5959606,
+    "ast_hash": "91e5766bff40d536efd724f1c87c51e7",
     "semantic_hash": ""
   },
   "client/src/hooks/useFocusTrap.js": {
     "mtime": 1793612233.4940999,
     "ast_hash": "47c59fc4b8dfd36ba00ea6b20a998cf4",
-    "semantic_hash": ""
-  },
-  "client/src/hooks/useMobileCacheOptimization.js": {
-    "mtime": 1776854738.9172702,
-    "ast_hash": "48b6e3df42ae0c44ead52c2d6deae525",
     "semantic_hash": ""
   },
   "client/src/i18n/fa.js": {
@@ -605,8 +600,8 @@
     "semantic_hash": ""
   },
   "client/src/icons/lucide.js": {
-    "mtime": 1793686933.8570828,
-    "ast_hash": "f5d96ab4d7bfc30555aa8fc09b960fb2",
+    "mtime": 1793781952.1348164,
+    "ast_hash": "301aa39f02d52a63ba19d75cf21694c5",
     "semantic_hash": ""
   },
   "client/src/main.jsx": {
@@ -625,8 +620,8 @@
     "semantic_hash": ""
   },
   "client/src/pages/ChatPage.jsx": {
-    "mtime": 1793708544.2099364,
-    "ast_hash": "5d3bba32963b5fbb7f5c476c153a8c7f",
+    "mtime": 1793782107.0538394,
+    "ast_hash": "091c3ae7d07e9fb6430f87cf75b1c9a9",
     "semantic_hash": ""
   },
   "client/src/pages/InvitePage.jsx": {
@@ -755,8 +750,8 @@
     "semantic_hash": ""
   },
   "client/src/utils/sessionStorage.js": {
-    "mtime": 1793612233.5206554,
-    "ast_hash": "0ba87750bde3b2ad3979f388a081ca06",
+    "mtime": 1793719505.2714329,
+    "ast_hash": "6bb7a5b8692f808631d3da31d16fd560",
     "semantic_hash": ""
   },
   "client/src/utils/uuidUtils.js": {
@@ -885,8 +880,8 @@
     "semantic_hash": ""
   },
   "client/test/components/chat/ChatWindowPanel.calls.test.jsx": {
-    "mtime": 1793612233.548821,
-    "ast_hash": "68a59cd6fec4f64c553a3b0be39eea69",
+    "mtime": 1793782274.9832952,
+    "ast_hash": "daa519469695d03ca378f15e774ebbac",
     "semantic_hash": ""
   },
   "client/test/components/chat/GroupCallLifecycle.test.jsx": {
@@ -1015,8 +1010,8 @@
     "semantic_hash": ""
   },
   "client/test/components/sidebar/UserMenuButton.test.jsx": {
-    "mtime": 1793612233.5734646,
-    "ast_hash": "7e4c71033e539f3ecee5b4eaed533e73",
+    "mtime": 1793781505.3972347,
+    "ast_hash": "baaa8ed70b7950f959b45d7584275a84",
     "semantic_hash": ""
   },
   "client/test/e2e/messaging-flow.mjs": {
@@ -1205,13 +1200,13 @@
     "semantic_hash": ""
   },
   "client/vite.config.js": {
-    "mtime": 1793612233.6115446,
-    "ast_hash": "e433aa8f2e948fa5cdb9e5a45aadd026",
+    "mtime": 1793723725.8567111,
+    "ast_hash": "3f19007ad080278b3d1f95a2837972e8",
     "semantic_hash": ""
   },
   "client/vitest.config.js": {
-    "mtime": 1793687542.9801385,
-    "ast_hash": "685b78eb5ea814860cbc5c8f12b205a6",
+    "mtime": 1793722998.7288005,
+    "ast_hash": "fa0d4dfcd51628718449f1384fc51772",
     "semantic_hash": ""
   },
   "docs/.vitepress/.temp/AGENTS.md.js": {
@@ -1500,8 +1495,8 @@
     "semantic_hash": ""
   },
   "server/api/auth.js": {
-    "mtime": 1793616202.5371985,
-    "ast_hash": "e3f3e2617d05ab4b9fab8a5ee90bbd8e",
+    "mtime": 1793719505.2714329,
+    "ast_hash": "d66a807c9da7816e0992369b3ac5a53d",
     "semantic_hash": ""
   },
   "server/api/calls.js": {
@@ -1520,8 +1515,8 @@
     "semantic_hash": ""
   },
   "server/api/index.js": {
-    "mtime": 1793616202.5308917,
-    "ast_hash": "312dff02ec9cc76ead59d89b63d7bdd9",
+    "mtime": 1793719482.881394,
+    "ast_hash": "0ef88d5cb78e600f73b0790e44e1e82d",
     "semantic_hash": ""
   },
   "server/api/messages.js": {
@@ -1530,8 +1525,8 @@
     "semantic_hash": ""
   },
   "server/api/messaging.js": {
-    "mtime": 1793620556.2098696,
-    "ast_hash": "6a82db8c337692ab34dece1e9e112da4",
+    "mtime": 1793776021.4480493,
+    "ast_hash": "74bef329f33b4b48ec37bb50f9592eb0",
     "semantic_hash": ""
   },
   "server/api/presence.js": {
@@ -1545,8 +1540,8 @@
     "semantic_hash": ""
   },
   "server/api/push.js": {
-    "mtime": 1793612233.6907966,
-    "ast_hash": "c8569320d6df6d497a106bee3d0080f7",
+    "mtime": 1793777424.5510666,
+    "ast_hash": "22458aa44954d333538b8ed070d4cba6",
     "semantic_hash": ""
   },
   "server/api/remoteChannelTick.js": {
@@ -1655,8 +1650,8 @@
     "semantic_hash": ""
   },
   "server/lib/push.js": {
-    "mtime": 1793612233.712098,
-    "ast_hash": "c3fa66556f6585f459f0916516d05e53",
+    "mtime": 1793776180.1841283,
+    "ast_hash": "75b3500d1256796b2672c66b2696906c",
     "semantic_hash": ""
   },
   "server/lib/redis.js": {
@@ -1710,13 +1705,13 @@
     "semantic_hash": ""
   },
   "server/lib/services/messagePublicationService.js": {
-    "mtime": 1793619892.451174,
-    "ast_hash": "60c6f080f8f76d24ee98a6bbd052150b",
+    "mtime": 1793779123.4178648,
+    "ast_hash": "ca618253f73bd6bfa8d029e9ab4dd75c",
     "semantic_hash": ""
   },
   "server/lib/services/messagingService.js": {
-    "mtime": 1793621782.9590273,
-    "ast_hash": "1af291f7204e6901e603b65432aea4da",
+    "mtime": 1793776021.452976,
+    "ast_hash": "153af179ed81af529094ad259beaf44e",
     "semantic_hash": ""
   },
   "server/lib/services/profileService.js": {
@@ -2340,8 +2335,8 @@
     "semantic_hash": ""
   },
   "server/test/api/messaging.test.js": {
-    "mtime": 1793618715.8546624,
-    "ast_hash": "1736d0cd206b9dae210b12c2a24c14f3",
+    "mtime": 1793775887.1415396,
+    "ast_hash": "e6611a3cd010eeb30e6d89df0aa63564",
     "semantic_hash": ""
   },
   "server/test/api/postgresChatMute.test.js": {
@@ -2620,13 +2615,13 @@
     "semantic_hash": ""
   },
   "server/test/lib/services/messagePublicationService.test.js": {
-    "mtime": 1793612233.8437378,
-    "ast_hash": "e914fde9e6eee73255468d30869e56bf",
+    "mtime": 1793777705.619241,
+    "ast_hash": "02da4579d527b3de16bbe8f77ba585ef",
     "semantic_hash": ""
   },
   "server/test/lib/services/messagingService.test.js": {
-    "mtime": 1793621747.4940202,
-    "ast_hash": "ae1f668c45e6483356d0a88556c757ab",
+    "mtime": 1793775887.1427681,
+    "ast_hash": "3ce03d6c10f2344233cb01f9470eedc7",
     "semantic_hash": ""
   },
   "server/test/lib/sessions.test.js": {
@@ -2915,8 +2910,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1793687002.7396894,
-    "ast_hash": "85c5c830478ca6f952065218dd1e015c",
+    "mtime": 1793784010.47841,
+    "ast_hash": "35b94d8412b9b66554b837f1191ccfed",
     "semantic_hash": ""
   },
   "README.fa_IR.md": {
@@ -2935,8 +2930,8 @@
     "semantic_hash": ""
   },
   "UX-CONTRACT.md": {
-    "mtime": 1793708706.109042,
-    "ast_hash": "fc0d126c749337819970946db59099ca",
+    "mtime": 1793784011.4025252,
+    "ast_hash": "b6507ec58ca706eeb84c57328b9f0297",
     "semantic_hash": ""
   },
   "client/AGENTS.md": {
@@ -2970,8 +2965,8 @@
     "semantic_hash": ""
   },
   "docs/Chat-Features.md": {
-    "mtime": 1793708640.5337684,
-    "ast_hash": "17c9f79972b25cc7a7ec3b3f02ff5642",
+    "mtime": 1793782508.2678463,
+    "ast_hash": "44166742f97a0f00a077c302dc62ae7f",
     "semantic_hash": ""
   },
   "docs/Cloud-Deployment.md": {
@@ -3050,8 +3045,8 @@
     "semantic_hash": ""
   },
   "docs/Voice-Video-Calls.md": {
-    "mtime": 1793612233.6322908,
-    "ast_hash": "59d0ba87597b69a896f3c0a2e069a6a7",
+    "mtime": 1793779788.7614486,
+    "ast_hash": "59d6a52775d7e9430453fdb7337f4322",
     "semantic_hash": ""
   },
   "docs/fa/Admin-Panel.md": {
@@ -3065,8 +3060,8 @@
     "semantic_hash": ""
   },
   "docs/fa/Chat-Features.md": {
-    "mtime": 1793708640.5337684,
-    "ast_hash": "b2031a00aca0c286cf32b3fece3762b6",
+    "mtime": 1793782508.2688925,
+    "ast_hash": "cf97867ea43102ec10836cb4546e17a9",
     "semantic_hash": ""
   },
   "docs/fa/Cloud-Deployment.md": {
@@ -3145,8 +3140,8 @@
     "semantic_hash": ""
   },
   "docs/fa/Voice-Video-Calls.md": {
-    "mtime": 1793612233.650976,
-    "ast_hash": "3949352b37cb98b9880394de0da8131d",
+    "mtime": 1793779788.7635756,
+    "ast_hash": "4bbb5f265385889e3d0aa32d3bd0d4b6",
     "semantic_hash": ""
   },
   "docs/fa/index.md": {
@@ -3334,16 +3329,6 @@
     "ast_hash": "a6fa73c4a5c2a0e4207774e10b210d51",
     "semantic_hash": ""
   },
-  "client/src/assets/songbird-logo.svg": {
-    "mtime": 1776854738.8055305,
-    "ast_hash": "a6fa73c4a5c2a0e4207774e10b210d51",
-    "semantic_hash": ""
-  },
-  "client/src/assets/songbird-website-icon.svg": {
-    "mtime": 1793612233.2638786,
-    "ast_hash": "58a0158d1c8530ace2aad9241663f94a",
-    "semantic_hash": ""
-  },
   "docs/.vitepress/.temp/songbird-hero.svg": {
     "mtime": 1793612233.6616545,
     "ast_hash": "6db55d21770e97bdcaeb7a202fb711b6",
@@ -3400,8 +3385,8 @@
     "semantic_hash": ""
   },
   "client/src/components/common/BrandIdentity.jsx": {
-    "mtime": 1793687767.51113,
-    "ast_hash": "132fb58c533f25ffea77dc98549d6e86",
+    "mtime": 1793719367.0642142,
+    "ast_hash": "c83e8d20da872b63e699c8189507dda3",
     "semantic_hash": ""
   },
   "client/src/components/common/LanguageSwitcher.jsx": {
@@ -3425,13 +3410,13 @@
     "semantic_hash": ""
   },
   "client/src/i18n/fa-ui.js": {
-    "mtime": 1793707026.3056223,
-    "ast_hash": "c983a935e7b6c226cc13e9a5d8bf0d58",
+    "mtime": 1793782274.9686048,
+    "ast_hash": "ec830859e69a52b6820a5cc6a6172194",
     "semantic_hash": ""
   },
   "client/test/e2e/ouj-brand-flow.mjs": {
-    "mtime": 1793689981.9028687,
-    "ast_hash": "f6fee441d0f5a4b1cfbef14f68739b9c",
+    "mtime": 1793782906.6223443,
+    "ast_hash": "031205decb1a2bd2e36a9ee228dfe497",
     "semantic_hash": ""
   },
   "client/test/setup-locale.js": {
@@ -3450,8 +3435,8 @@
     "semantic_hash": ""
   },
   "client/test/utils/notificationLocale.test.js": {
-    "mtime": 1793690803.137193,
-    "ast_hash": "f77494ba9c0550017a4f8a98d192134b",
+    "mtime": 1793779359.046979,
+    "ast_hash": "388d60e8e7b5997cf3be625e0935f58f",
     "semantic_hash": ""
   },
   "client/.vitest/attachments/2f26b06ea1092679eaff9806b32831240ec85dda.png": {
@@ -3510,8 +3495,8 @@
     "semantic_hash": ""
   },
   ".vscode/settings.json": {
-    "mtime": 1793692780.6342664,
-    "ast_hash": "4aa85c6acde752675b31b354987521ce",
+    "mtime": 1793773936.11755,
+    "ast_hash": "27f3bb404874061cba133f81ba725366",
     "semantic_hash": ""
   },
   "client/src/components/chat/media/VideoMessageRecorder.jsx": {
@@ -3545,8 +3530,8 @@
     "semantic_hash": ""
   },
   "premium-ui.json": {
-    "mtime": 1793700260.2456834,
-    "ast_hash": "61cd2defa63de0272e4c4d64a3369a9e",
+    "mtime": 1793723143.6786325,
+    "ast_hash": "18394b0d733b08485ddc12821172afe3",
     "semantic_hash": ""
   },
   "server/api/adminMongo.js": {
@@ -3580,8 +3565,8 @@
     "semantic_hash": ""
   },
   "server/db/mongoMessaging.js": {
-    "mtime": 1793696272.4643054,
-    "ast_hash": "318639d707b6e2fbf347aa232fc98977",
+    "mtime": 1793776021.4519527,
+    "ast_hash": "62a8ab1939dcefe510ec6f6ba558f7f9",
     "semantic_hash": ""
   },
   "server/db/mongoRemote.js": {
@@ -3590,13 +3575,13 @@
     "semantic_hash": ""
   },
   "server/db/mongoRepository.js": {
-    "mtime": 1793700184.688749,
-    "ast_hash": "aae99ff4593a17f8bb1d0dd96b542beb",
+    "mtime": 1793779123.420564,
+    "ast_hash": "66304ef15f136414bb2687b2ace849b2",
     "semantic_hash": ""
   },
   "server/db/mongoSchema.js": {
-    "mtime": 1793699659.266892,
-    "ast_hash": "b8a33b5ba65d72a7a5c7829908aa5c82",
+    "mtime": 1793719482.8853908,
+    "ast_hash": "b0364e917ea1ca5efa526df436e5796c",
     "semantic_hash": ""
   },
   "server/db/mongoStore.js": {
@@ -3655,8 +3640,8 @@
     "semantic_hash": ""
   },
   "server/test/mongo/repository.test.js": {
-    "mtime": 1793698927.9454188,
-    "ast_hash": "5eed3da628a7a1b04d84d385469a49ef",
+    "mtime": 1793777424.5520706,
+    "ast_hash": "50df902d612d49df0dc51625b6b2a6b5",
     "semantic_hash": ""
   },
   "server/test/scripts/mongoCli.test.js": {
@@ -3695,8 +3680,8 @@
     "semantic_hash": ""
   },
   "client/src/components/common/AnchoredMenu.jsx": {
-    "mtime": 1793705036.7363234,
-    "ast_hash": "654ae07c54396c01ab6075ad4a7d63a1",
+    "mtime": 1793782015.380587,
+    "ast_hash": "4882ef7300e9fd298a3ea078e3070f88",
     "semantic_hash": ""
   },
   "client/src/hooks/chat/useVoiceRecording.js": {
@@ -3717,6 +3702,261 @@
   "client/test/components/sidebar/SidebarHeader.createMenu.test.jsx": {
     "mtime": 1793705037.2425797,
     "ast_hash": "0af0e27c75e0cecc825b574a60840b2f",
+    "semantic_hash": ""
+  },
+  "client/src/components/common/ChatWallpaper.jsx": {
+    "mtime": 1793719576.4981966,
+    "ast_hash": "4c9212db3d499316cb140637d78691a4",
+    "semantic_hash": ""
+  },
+  "client/src/components/settings/panels/ChatBackgroundSettingsPanel.jsx": {
+    "mtime": 1793720047.0107853,
+    "ast_hash": "d44d7c53742e0af024312fa90114a5f1",
+    "semantic_hash": ""
+  },
+  "client/src/hooks/chat/useChatAppearance.js": {
+    "mtime": 1793720974.6360376,
+    "ast_hash": "4cf7e2b42b9c0cfecc2dd06a9a323ede",
+    "semantic_hash": ""
+  },
+  "client/src/utils/chatWallpapers.js": {
+    "mtime": 1793719576.4971142,
+    "ast_hash": "6943792e399fe3ec19012d17fdb6e17d",
+    "semantic_hash": ""
+  },
+  "client/test/components/settings/ChatBackgroundSettingsPanel.test.jsx": {
+    "mtime": 1793720974.63953,
+    "ast_hash": "967897bfddf29945a4ff9fc32be4a221",
+    "semantic_hash": ""
+  },
+  "client/test/e2e/chat-background-flow.mjs": {
+    "mtime": 1793721313.8397596,
+    "ast_hash": "1003f7b8ba5be7c586218a6ac510a992",
+    "semantic_hash": ""
+  },
+  "client/test/utils/chatAppearance.test.js": {
+    "mtime": 1793719793.1437397,
+    "ast_hash": "9035c88775968aac78385d36c5e1c130",
+    "semantic_hash": ""
+  },
+  "server/api/appearance.js": {
+    "mtime": 1793719482.8796492,
+    "ast_hash": "5dc1c6548218a25e34f26501dd32d862",
+    "semantic_hash": ""
+  },
+  "server/db/mongoAppearance.js": {
+    "mtime": 1793719482.7796721,
+    "ast_hash": "fe414ec8e1613554e6da4aeb8c38d25f",
+    "semantic_hash": ""
+  },
+  "server/lib/services/appearanceService.js": {
+    "mtime": 1793720974.6325455,
+    "ast_hash": "6d9a8edae52e8b9728a198d4f33c0612",
+    "semantic_hash": ""
+  },
+  "server/test/api/appearance.test.js": {
+    "mtime": 1793719792.9861991,
+    "ast_hash": "9bb0624682ffd94be8e624c8b55e2245",
+    "semantic_hash": ""
+  },
+  "server/test/mongo/appearance.test.js": {
+    "mtime": 1793719793.1288385,
+    "ast_hash": "a695a62481dc41f549fdc6dc4e152ad5",
+    "semantic_hash": ""
+  },
+  "shared/chatAppearance.js": {
+    "mtime": 1793719482.76312,
+    "ast_hash": "48718098acf1abfff399f0a08c1d3cff",
+    "semantic_hash": ""
+  },
+  "shared/package.json": {
+    "mtime": 1793719986.4350395,
+    "ast_hash": "0ed3d174f3e6893c20f45e51ecb571dc",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/arches.svg": {
+    "mtime": 1793719576.459189,
+    "ast_hash": "2cb4e8193f26a33c1f43dcf5fdecafa1",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/blueprint.svg": {
+    "mtime": 1793719576.4626737,
+    "ast_hash": "16b9c1193681af56b11c30e0549827d4",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/brickwork.svg": {
+    "mtime": 1793719576.4858823,
+    "ast_hash": "4d81f1decd098d8215021d1cc05beed9",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/constellation.svg": {
+    "mtime": 1793719576.4797323,
+    "ast_hash": "8bc388cf9726a9a4a66a482f42a2b820",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/contours.svg": {
+    "mtime": 1793719576.4606614,
+    "ast_hash": "901e06633fa212396708dc4ba94e076b",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/courtyard.svg": {
+    "mtime": 1793719576.4616714,
+    "ast_hash": "e0ac8eb9f9538b7c74e2577b67ecd324",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/leaves.svg": {
+    "mtime": 1793719576.4709506,
+    "ast_hash": "04f2cc45b13038c7ca31716336a71a16",
+    "semantic_hash": ""
+  },
+  "client/src/assets/wallpapers/ribbons.svg": {
+    "mtime": 1793719576.4747,
+    "ast_hash": "af8620b8b97358a9bbdf43c4c941f3b6",
+    "semantic_hash": ""
+  },
+  "server/test/lib/appearanceService.test.js": {
+    "mtime": 1793720955.6332216,
+    "ast_hash": "f82eeefc024dad33ae8b3831af6b60fb",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/MessageComposer.uploadMenu.test.jsx": {
+    "mtime": 1793722142.4678006,
+    "ast_hash": "809058de42d01e64fc3ca86f0a946c96",
+    "semantic_hash": ""
+  },
+  "client/src/components/common/PersianDateTimeField.jsx": {
+    "mtime": 1793724431.0763211,
+    "ast_hash": "3510889b5d76160505d0528de552bf5c",
+    "semantic_hash": ""
+  },
+  "client/src/utils/persianDateTime.js": {
+    "mtime": 1793722998.3501544,
+    "ast_hash": "521cb8039a5e5399527767fc02a7c481",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/PersianDateTimeField.test.jsx": {
+    "mtime": 1793724492.3590412,
+    "ast_hash": "f6d181e745c84c11ef624f0d87661eb7",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/ToolsDateTime.test.jsx": {
+    "mtime": 1793724906.6735764,
+    "ast_hash": "5cdda55688eb3aac81e1abba1e6e9677",
+    "semantic_hash": ""
+  },
+  "client/test/e2e/persian-calendar-flow.mjs": {
+    "mtime": 1793782906.6213214,
+    "ast_hash": "79cc89e2248e9144c61069ab7b8196f1",
+    "semantic_hash": ""
+  },
+  "client/test/utils/messagingApi.test.js": {
+    "mtime": 1793723227.558576,
+    "ast_hash": "b4872bf7e18ea7c16b0005a2cc32353f",
+    "semantic_hash": ""
+  },
+  "client/test/utils/persianDateTime.test.js": {
+    "mtime": 1793723040.2862031,
+    "ast_hash": "3e4a07eebfcbb56f8c584d8816afe369",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/tools/toolStyles.js": {
+    "mtime": 1793724752.7048967,
+    "ast_hash": "f8047bfaab575eafc2a9d3be053dc3ab",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/tools/ScheduleMessageDialog.jsx": {
+    "mtime": 1793726284.5356956,
+    "ast_hash": "8dc3dbebcccc777154a99c79b49f36f3",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/tools/ScheduleMessageForm.jsx": {
+    "mtime": 1793726284.5356956,
+    "ast_hash": "d840eec2b771bdcddf2b957f7e0fd6a4",
+    "semantic_hash": ""
+  },
+  "client/src/components/pwa/DevicePermissionsSetup.jsx": {
+    "mtime": 1793777172.017176,
+    "ast_hash": "3bf0eece822bb07ca4933d23e57acbf8",
+    "semantic_hash": ""
+  },
+  "client/src/utils/devicePermissions.js": {
+    "mtime": 1793780010.593834,
+    "ast_hash": "3bfb7c7c80f4f9ec0f1d7e1cd42d5890",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/MessageComposer.schedule.test.jsx": {
+    "mtime": 1793779517.3497238,
+    "ast_hash": "a7553e1aa344a8a884e59ed25ff8118c",
+    "semantic_hash": ""
+  },
+  "client/test/components/pwa/DevicePermissionsSetup.test.jsx": {
+    "mtime": 1793780889.6299257,
+    "ast_hash": "922bef1fb67ec8238b7c8077c73a1f45",
+    "semantic_hash": ""
+  },
+  "client/test/components/pwa/PushSubscription.test.jsx": {
+    "mtime": 1793779614.2189827,
+    "ast_hash": "3498f2c558ffe0955eb946efa5e1b6d8",
+    "semantic_hash": ""
+  },
+  "client/test/e2e/pwa-onboarding-flow.mjs": {
+    "mtime": 1793780746.865374,
+    "ast_hash": "29235f37718abc758809d5c5aa785912",
+    "semantic_hash": ""
+  },
+  "client/test/utils/devicePermissions.test.js": {
+    "mtime": 1793779614.2189827,
+    "ast_hash": "a41eb7d36430662573f605056d049252",
+    "semantic_hash": ""
+  },
+  "server/test/api/push.test.js": {
+    "mtime": 1793776021.4549775,
+    "ast_hash": "affca0b0a9e69b6d9f001449638cf8ab",
+    "semantic_hash": ""
+  },
+  "client/test/components/sidebar/UserMenuButton.layers.test.jsx": {
+    "mtime": 1793781426.8248398,
+    "ast_hash": "5f73c982451ab288615e1b36cfa94a62",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/ChatHeaderActions.jsx": {
+    "mtime": 1793783213.963713,
+    "ast_hash": "f492190270915573b3c2b4435ae7aad6",
+    "semantic_hash": ""
+  },
+  "client/src/components/chat/ChatLayout.jsx": {
+    "mtime": 1793783033.1883605,
+    "ast_hash": "959bbd04f9fbcdcbe5b6c765d9977e14",
+    "semantic_hash": ""
+  },
+  "client/src/components/sidebar/navigation/ConversationFilters.jsx": {
+    "mtime": 1793782975.892018,
+    "ast_hash": "5277bb9248390e3238d513b9cb5b258b",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/ChatHeaderActions.test.jsx": {
+    "mtime": 1793783213.965917,
+    "ast_hash": "6d75122d3b2085498b6acef940851d7a",
+    "semantic_hash": ""
+  },
+  "client/test/components/chat/ChatLayout.test.jsx": {
+    "mtime": 1793782484.6665444,
+    "ast_hash": "a6583ac6150e0a50087facc7addd189d",
+    "semantic_hash": ""
+  },
+  "client/test/components/sidebar/ConversationFilters.test.jsx": {
+    "mtime": 1793782975.8931255,
+    "ast_hash": "ced74112ba27491163d2e4042e80cd2e",
+    "semantic_hash": ""
+  },
+  "client/test/e2e/responsive-chat-layout.mjs": {
+    "mtime": 1793783213.969968,
+    "ast_hash": "fc89bdec634983002d510bd4c98eab73",
+    "semantic_hash": ""
+  },
+  "client/test/components/common/PlaceholderAlignment.test.jsx": {
+    "mtime": 1793784201.6277301,
+    "ast_hash": "568176fb259d0f8eb7a3c27c9513e23a",
     "semantic_hash": ""
   }
 }

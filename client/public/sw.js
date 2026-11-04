@@ -1,4 +1,4 @@
-const CACHE_VERSION = "0.13.2-ouj.2";
+const CACHE_VERSION = "0.13.2-ouj.3";
 const CACHE_NAME = `songbird-${CACHE_VERSION}`;
 const PREFERENCES_CACHE = "ouj-preferences-v1";
 const APP_SHELL = [
@@ -11,6 +11,22 @@ const APP_SHELL = [
 async function notificationLocale() {
   try { const response = await (await caches.open(PREFERENCES_CACHE)).match("/__ouj_locale"); return await response?.text() === "en" ? "en" : "fa"; }
   catch { return "fa"; }
+}
+async function applyAppBadge(value) {
+  if (!Number.isFinite(Number(value)) || value === undefined || value === null) return;
+  const count = Math.max(0, Math.floor(Number(value)));
+  try {
+    if (count > 0 && navigator.setAppBadge) await navigator.setAppBadge(count);
+    else if (!count && navigator.clearAppBadge) await navigator.clearAppBadge();
+  } catch { /* Device/OS support does not affect notification delivery. */ }
+}
+async function activePushAccount() {
+  try { return await (await (await caches.open(PREFERENCES_CACHE)).match("/__ouj_account"))?.text(); }
+  catch { return null; }
+}
+async function acceptsPush(payload) {
+  const account = await activePushAccount();
+  return account !== "signed-out" && (!account || !payload.accountId || account === String(payload.accountId));
 }
 
 const isCacheableAssetPath = (pathname) => {
@@ -37,6 +53,21 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("message", (event) => {
+  if (event?.data?.type === "OUJ_ACCOUNT") {
+    event.waitUntil((async () => {
+      const account = event.data.accountId ? String(event.data.accountId) : "signed-out";
+      await (await caches.open(PREFERENCES_CACHE)).put("/__ouj_account", new Response(account));
+      if (account === "signed-out") {
+        await applyAppBadge(0);
+        try { (await self.registration.getNotifications()).forEach(notification => notification.close()); } catch { /* Best effort. */ }
+      }
+    })());
+  }
+  if (event?.data?.type === "OUJ_BADGE") {
+    event.waitUntil((async () => {
+      if (await acceptsPush(event.data)) await applyAppBadge(event.data.count);
+    })());
+  }
   if (event?.data?.type === "OUJ_LOCALE" && ["fa", "en"].includes(event.data.locale)) {
     event.waitUntil(caches.open(PREFERENCES_CACHE).then((cache) => cache.put("/__ouj_locale", new Response(event.data.locale))).catch(() => {}));
   }
@@ -121,23 +152,19 @@ self.addEventListener("push", (event) => {
   }
   const data = payload.data || {};
 
-  // Call pushes are handled before the generic message path. The dismiss
-  // branch must always run — even when a window is focused. The incoming
-  // branch suppresses display when a window is focused: the realtime
-  // call:incoming ring covers focused windows (same trade-off as messages).
+  // Every accepted push produces a visible notification (required by WebKit).
+  // Active windows and finished calls use quiet notifications.
   if (data.callPush === "incoming" || data.callPush === "dismiss") {
     const callTag = `call-${data.chatId || "unknown"}`;
     event.waitUntil(
       (async () => {
+        if (!await acceptsPush(payload)) return;
         if (data.callPush === "dismiss") {
-          try {
-            const existing = await self.registration.getNotifications({
-              tag: callTag,
-            });
-            existing.forEach((notification) => notification.close());
-          } catch {
-            // a dismiss that cannot run must not throw
-          }
+          const locale = ["fa", "en"].includes(payload.locale) ? payload.locale : await notificationLocale();
+          await self.registration.showNotification(locale === "fa" ? "گفتگوی اوج" : "Ouj Chat", {
+            body: locale === "fa" ? "تماس پایان یافت." : "Call ended.", data, tag: callTag, silent: true,
+            icon: "/ouj-icons/icon-192.png", badge: "/ouj-icons/icon-192.png",
+          });
           return;
         }
         const clients = await self.clients.matchAll({
@@ -149,19 +176,16 @@ self.addEventListener("push", (event) => {
             ? Boolean(client.focused)
             : false,
         );
-        if (appFocused) {
-          // A focused Songbird window rings in-app via realtime.
-          return;
-        }
-        const locale = await notificationLocale();
+        const locale = ["fa", "en"].includes(payload.locale) ? payload.locale : await notificationLocale();
         const caller = payload.title?.match(/^Incoming (?:voice|video) call from (.+)$/)?.[1];
         const title = locale === "fa" && caller ? `تماس ${data.callType === "video" ? "تصویری" : "صوتی"} از ${caller}` : payload.title || (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat");
         await self.registration.showNotification(title, {
           body: locale === "fa" ? "برای پاسخ بزنید" : payload.body || "Tap to answer",
           data,
           tag: callTag,
-          renotify: true,
-          requireInteraction: true,
+          renotify: !appFocused,
+          silent: appFocused,
+          requireInteraction: !appFocused,
           badge: "/ouj-icons/icon-192.png",
           icon: "/ouj-icons/icon-192.png",
         });
@@ -170,7 +194,7 @@ self.addEventListener("push", (event) => {
     return;
   }
 
-  const badgeCount = Number(payload.badge || 0);
+  const badgeCount = payload.badge;
   const tag = data.chatId ? `chat-${data.chatId}` : "songbird";
   const options = {
     data,
@@ -181,6 +205,8 @@ self.addEventListener("push", (event) => {
   };
   event.waitUntil(
     (async () => {
+      if (!await acceptsPush(payload)) return;
+      await applyAppBadge(badgeCount);
       const clients = await self.clients.matchAll({
         type: "window",
         includeUncontrolled: true,
@@ -190,21 +216,13 @@ self.addEventListener("push", (event) => {
           ? Boolean(client.focused)
           : false,
       );
-      if (appFocused) {
-        // A focused Songbird window handles unread state in-app.
-        return;
-      }
-      try {
-        if (badgeCount > 0 && navigator?.setAppBadge) {
-          navigator.setAppBadge(badgeCount).catch(() => null);
-        }
-      } catch {
-        // ignore badge errors; must not affect notification delivery
-      }
-      const locale = await notificationLocale();
-      const title = payload.title || (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat");
+      options.silent = appFocused && !payload.isTest;
+      options.renotify = !options.silent;
+      const locale = ["fa", "en"].includes(payload.locale) ? payload.locale : await notificationLocale();
+      const title = payload.isTest ? (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat") : payload.title || (locale === "fa" ? "گفتگوی اوج" : "Ouj Chat");
       // Notification bodies containing user-written messages stay unchanged.
-      options.body = payload.body || (locale === "fa" ? "پیام جدید" : "New message");
+      options.body = payload.isTest ? (locale === "fa" ? "اعلان آزمایشی؛ دریافت پیام‌ها فعال است." : "Test notification. Message alerts are working.")
+        : payload.previewHidden ? (locale === "fa" ? "پیام جدید" : "New message") : payload.body || (locale === "fa" ? "پیام جدید" : "New message");
       await self.registration.showNotification(title, options);
     })(),
   );
@@ -212,20 +230,16 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = event.notification?.data?.url || "/";
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientsArr) => {
-        const existing = clientsArr.find((client) =>
-          client.url.includes(self.location.origin),
-        );
-        if (existing) {
-          existing.focus();
-          existing.navigate(target);
-          return;
-        }
-        self.clients.openWindow(target);
-      }),
-  );
+  event.waitUntil((async () => {
+    let target = new URL("/chat", self.location.origin);
+    const data = event.notification?.data || {};
+    if (data.chatId) target.searchParams.set("chatId", String(data.chatId));
+    else if (data.url) {
+      try { const requested = new URL(data.url, self.location.origin); if (requested.origin === target.origin && ["http:", "https:"].includes(requested.protocol)) target = requested; } catch { /* Open the app. */ }
+    }
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const existing = clients.find(client => { try { return new URL(client.url).origin === target.origin; } catch { return false; } });
+    if (existing) { await existing.focus(); await existing.navigate(target.href); }
+    else await self.clients.openWindow(target.href);
+  })());
 });

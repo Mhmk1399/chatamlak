@@ -1,5 +1,6 @@
 import { t as localize, useLocale as useAppLocale } from "../../../i18n/locale.js";
 import { Bell, BellOff, MessageCircleMore, MessageCircleX } from "../../../icons/lucide.js";
+import { PERMISSION_SETUP_EVENT } from "../../../utils/devicePermissions.js";
 
 export function NotificationsSettingsPanel({
   notificationsActive,
@@ -27,6 +28,8 @@ export function NotificationsSettingsPanel({
 
   return (
     <>
+      <button type="button" onClick={() => window.dispatchEvent(new Event(PERMISSION_SETUP_EVENT))}
+        className="mb-3 min-h-11 rounded-xl border border-brand-200 px-4 py-2 text-sm font-semibold text-brand-700 dark:border-brand-500/30 dark:text-brand-200">{localize("Set up device permissions")}</button>
       <button
         type="button"
         onClick={onToggleNotifications}

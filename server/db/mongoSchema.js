@@ -50,6 +50,7 @@ export const MONGO_INDEXES = [
   index("remote_channel_queue", { source_id: 1, source_version: 1, telegram_message_id: 1 }, { unique: true, partialFilterExpression: { telegram_message_id: { $type: "number" } } }),
   index("remote_channel_queue", { status: 1, next_attempt_at: 1, id: 1 }),
   index("chat_event_log", { chat_id: 1, id: 1 }),
+  index("chat_event_log", { viewer_user_id: 1, id: 1 }),
   index("group_call_peers", { chat_id: 1, updated_at: 1 }),
   index("scheduled_messages", { status: 1, due_at: 1, lease_until: 1 }),
   index("chat_topics", { chat_id: 1, created_at: 1 }),
