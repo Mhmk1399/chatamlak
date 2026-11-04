@@ -1,16 +1,16 @@
 # Graph Report - chatamlak  (2026-11-04)
 
 ## Corpus Check
-- 681 files · ~543,321 words
+- 685 files · ~546,767 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3757 nodes · 8439 edges · 244 communities (204 shown, 40 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 19 edges (avg confidence: 0.8)
+- 3783 nodes · 8503 edges · 241 communities (197 shown, 44 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 20 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b6ca5200`
+- Built from commit: `3699fe98`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -176,7 +176,6 @@
 - [[_COMMUNITY_Community 160|Community 160]]
 - [[_COMMUNITY_Community 161|Community 161]]
 - [[_COMMUNITY_Community 162|Community 162]]
-- [[_COMMUNITY_Community 163|Community 163]]
 - [[_COMMUNITY_Community 164|Community 164]]
 - [[_COMMUNITY_Community 165|Community 165]]
 - [[_COMMUNITY_Community 166|Community 166]]
@@ -194,15 +193,12 @@
 - [[_COMMUNITY_Community 178|Community 178]]
 - [[_COMMUNITY_Community 180|Community 180]]
 - [[_COMMUNITY_Community 181|Community 181]]
-- [[_COMMUNITY_Community 182|Community 182]]
-- [[_COMMUNITY_Community 184|Community 184]]
 - [[_COMMUNITY_Community 185|Community 185]]
 - [[_COMMUNITY_Community 187|Community 187]]
 - [[_COMMUNITY_Community 188|Community 188]]
 - [[_COMMUNITY_Community 189|Community 189]]
 - [[_COMMUNITY_Community 193|Community 193]]
 - [[_COMMUNITY_Community 194|Community 194]]
-- [[_COMMUNITY_Community 196|Community 196]]
 - [[_COMMUNITY_Community 202|Community 202]]
 - [[_COMMUNITY_Community 203|Community 203]]
 - [[_COMMUNITY_Community 205|Community 205]]
@@ -237,8 +233,8 @@
 - [[_COMMUNITY_Community 266|Community 266]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `t()` - 178 edges
-2. `useLocale()` - 161 edges
+1. `t()` - 187 edges
+2. `useLocale()` - 163 edges
 3. `dbKnex` - 126 edges
 4. `apiFetch()` - 84 edges
 5. `makeApp()` - 79 edges
@@ -257,13 +253,13 @@
   client/src/hooks/chat/useChatAppearance.js → shared/chatAppearance.js
 - `createMirrorJobRegistry()` --calls--> `now()`  [INFERRED]
   server/lib/remoteMirrorJobs.js → client/src/utils/mentions.js
-- `resolveExpectedSecret()` --calls--> `getSetting()`  [INFERRED]
-  server/api/remoteChannelTick.js → server/lib/appSettings.js
+- `normalizeSessionUser()` --calls--> `normalizeChatAppearance()`  [EXTRACTED]
+  client/src/utils/sessionStorage.js → shared/chatAppearance.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (244 total, 40 thin omitted)
+## Communities (241 total, 44 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.22
@@ -271,51 +267,51 @@ Nodes (4): connectionHint(), connectMongo(), config, state
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
-Nodes (57): ActionRow(), ActionsTab, CheckUpdateRow(), StatusBadge(), CompactSelect(), CustomSelect(), EmptyState(), Field() (+49 more)
+Nodes (57): ActionsTab, CompactSelect(), CustomSelect(), EmptyState(), Field(), FilterDropdown(), FilterPopover(), LoadingRows() (+49 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.10
-Nodes (39): AdminGroupModal(), emptyFormFor(), NewGroupModal, OwnerPicker(), AdminUserModal(), AuthFormFields(), SIGNAL_LEVELS, CallsPanel() (+31 more)
+Cohesion: 0.06
+Nodes (56): AdminGroupModal(), emptyFormFor(), NewGroupModal, OwnerPicker(), SIGNAL_LEVELS, CallsPanel(), MISSED_STATUSES, SAMPLE_CALLS (+48 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
-Nodes (57): fetchAppInfo(), useActiveChatState(), useAppActivity(), useChatCacheStats(), useChatScroll(), useDiscoverSearch(), useDmUsernames(), useHealthCheck() (+49 more)
+Nodes (55): useActiveChatState(), useAppActivity(), useChatCacheStats(), useChatScroll(), useDiscoverSearch(), useDmUsernames(), useHealthCheck(), useMessageVisibility() (+47 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.03
-Nodes (75): createPushService(), buildTimestampSchedule(), adminDeleteChat(), adminDeleteUser(), createMessageFiles(), createSession(), deleteChatById(), deleteSession() (+67 more)
+Nodes (76): createPushService(), buildTimestampSchedule(), createUploadTools(), adminDeleteChat(), adminDeleteUser(), createMessageFiles(), createSession(), deleteChatById() (+68 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.06
-Nodes (68): deleteUserAvatar(), uploadUserAvatar(), apiFetch(), createChannelChat(), createChat(), createDmChat(), createGroupChat(), deleteAccount() (+60 more)
+Cohesion: 0.05
+Nodes (74): deleteUserAvatar(), uploadUserAvatar(), apiFetch(), claimAdminPrivileges(), createChannelChat(), createChat(), createDmChat(), createGroupChat() (+66 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.06
 Nodes (48): encryptedMediumBuffer, encryptedSmallBuffer, largePlain, mediumEncryptedFile, mediumPlain, mediumPlainFile, smallEncryptedFile, smallPlain (+40 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.13
-Nodes (19): fetchIceServers(), fetchIncomingCall(), sendCallSignal(), CallEndHarness(), CameralessPeerScreenHarness(), MediaIntegrityHarness(), NoCameraHarness(), NoCameraOfferHarness() (+11 more)
+Cohesion: 0.10
+Nodes (21): fetchIceServers(), fetchIncomingCall(), sendCallSignal(), CallEndHarness(), CameralessPeerScreenHarness(), MediaIntegrityHarness(), NoCameraHarness(), NoCameraOfferHarness() (+13 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.04
 Nodes (26): build_domain_groups(), collect_install_options(), compare_offline_source_version(), detect_public_ip(), file_exists_path(), find_offline_source_zip(), handle_exit(), handle_interrupt() (+18 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.06
-Nodes (30): getCachedAdminStats(), normalizeSqlForPostgres(), adminCountChats(), adminCountUsers(), claimNextRemoteChannelQueueItem(), createOrReuseMessage(), dbGetSetting(), ensureSavedChatForUser() (+22 more)
+Cohesion: 0.07
+Nodes (29): normalizeSqlForPostgres(), adminCountChats(), adminCountUsers(), claimNextRemoteChannelQueueItem(), createOrReuseMessage(), dbGetSetting(), ensureSavedChatForUser(), findChatByGroupUsername() (+21 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.08
-Nodes (57): PwToggle(), messagingRequest(), SignalIndicator(), ChatLayout(), clamp(), Fields(), today(), EMPTY (+49 more)
+Cohesion: 0.06
+Nodes (72): ActionRow(), CheckUpdateRow(), StatusBadge(), SemiCircleGauge(), PwToggle(), ServiceRow(), StatusBadge(), EnvLockBadge() (+64 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.10
 Nodes (54): apply_ownership(), backup_database(), bootstrap_data_command_launcher(), clone_repo(), configure_coturn(), configure_lego_ip_ssl(), configure_lego_renewal_timer(), configure_manual_ssl_files() (+46 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.13
-Nodes (13): registerHealthRoutes(), registerApiRoutes(), registerMessageRoutes(), registerMessagingRoutes(), registerPresenceRoutes(), registerProfileRoutes(), registerPushRoutes(), registerRemoteChannelTickRoutes() (+5 more)
+Cohesion: 0.14
+Nodes (11): registerHealthRoutes(), registerApiRoutes(), registerMessagingRoutes(), registerPresenceRoutes(), registerProfileRoutes(), registerPushRoutes(), registerRemoteChannelTickRoutes(), resolveExpectedSecret() (+3 more)
 
 ### Community 14 - "Community 14"
 Cohesion: 0.07
@@ -338,16 +334,16 @@ Cohesion: 0.05
 Nodes (42): bugs, url, devDependencies, concurrently, conventional-changelog-conventionalcommits, railway, semantic-release, @semantic-release/changelog (+34 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.07
-Nodes (56): addChatMember(), adminBanUser(), adminTransaction(), bootstrapAdminUsers(), bulkAddMemberToChats(), clearAdminAuditLogs(), clearChatMemberLeft(), clearGroupMemberRemoved() (+48 more)
+Cohesion: 0.06
+Nodes (63): addChatMember(), adminBanUser(), adminTransaction(), bootstrapAdminUsers(), bulkAddMemberToChats(), clearAdminAuditLogs(), clearChatMemberLeft(), clearGroupMemberRemoved() (+55 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.12
-Nodes (31): emptyStats, ensureWaveformCacheLoaded(), persistWaveformCache(), buildChannelSeenCacheKey(), buildChatListCacheKey(), buildMessagesCacheKey(), buildMessagesIndexKey(), canUseIdb() (+23 more)
+Cohesion: 0.08
+Nodes (50): emptyStats, ensureWaveformCacheLoaded(), persistWaveformCache(), CACHE_STORES, idbClearStore(), idbDelete(), idbGet(), idbGetAllEntries() (+42 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.07
-Nodes (19): makeManager(), makeManager(), songbirdItem, createRemoteChannelManager(), errorMessage(), extractTelegramPostText(), fetchSongbirdJson(), firstTextFromMessages() (+11 more)
+Nodes (17): makeManager(), makeManager(), songbirdItem, createRemoteChannelManager(), errorMessage(), extractTelegramPostText(), fetchSongbirdJson(), firstTextFromMessages() (+9 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.29
@@ -358,36 +354,36 @@ Cohesion: 0.29
 Nodes (7): بازیابی آفلاین, بررسی دیتابیس, دستورهای دیتابیس, مدیریت دیگر, مرجع سریع, ورود دادهٔ SQL قدیمی, پشتیبان‌گیری
 
 ### Community 24 - "Community 24"
-Cohesion: 0.13
-Nodes (30): dbKnex, addAllEligibleChatMembers(), adminClearAllMessages(), adminListChats(), adminListUsers(), adminResetDatabase(), dbGetAllSettings(), getAll() (+22 more)
+Cohesion: 0.10
+Nodes (38): dbKnex, backfillAllUuids(), backfillNullUuids(), backfillNullUuidsPg(), convertFkColumnPg(), dropPrimaryKeyPg(), migration036UuidPrimaryKeys, postgresUp() (+30 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.18
-Nodes (14): getWebSocketUrl(), patchChatAndMoveToFront(), useChatEvents(), compareMessages(), getLocale(), normalizeMessageForRender(), formatBytesAsMb(), formatChatCardTimestamp() (+6 more)
+Cohesion: 0.25
+Nodes (10): compareMessages(), useMessagesLoader(), formatBytesAsMb(), formatChatCardTimestamp(), formatDayLabel(), formatTime(), parseServerDate(), isMessageAuthoredByUser() (+2 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.14
-Nodes (12): ChatHeaderActions(), BASE_PROPS, ChatWindowPanel(), BASE_PROPS, useFloatingDayChip(), useFocusedMedia(), MessageItem, MessageList() (+4 more)
+Cohesion: 0.20
+Nodes (7): BASE_PROPS, useFloatingDayChip(), useFocusedMedia(), FocusedMediaModal(), MessageList(), OfflineHistoryBanner(), MessageTimeline()
 
 ### Community 27 - "Community 27"
 Cohesion: 0.12
-Nodes (36): appendMissingEnvValues(), ask(), commandExists(), createPromptInterface(), defaultEnvPath, envExamplePath, formatEnvString(), formatExistingHint() (+28 more)
+Nodes (37): parseTelegramProxy(), appendMissingEnvValues(), ask(), commandExists(), createPromptInterface(), defaultEnvPath, envExamplePath, formatEnvString() (+29 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.17
-Nodes (5): NICKNAME_MAX, USERNAME_MAX, ALLOWED_STATUSES, NICKNAME_MAX, USERNAME_MAX
+Cohesion: 0.10
+Nodes (20): storageEncryption, getFlagValue(), getNpmOriginalArgs(), getPositionalArgs(), parseNpmOriginalArgs(), scriptDir, main(), NICKNAME_MAX (+12 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.05
 Nodes (40): scripts, db:backfill, db:backup, db:chat:add, db:chat:create, db:chat:delete, db:chat:edit, db:chat:inspect (+32 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.17
-Nodes (17): CACHE_STORES, idbClearStore(), idbDelete(), idbGet(), idbGetAllEntries(), idbGetStats(), idbSet(), isIdbAvailable() (+9 more)
+Cohesion: 0.24
+Nodes (10): ContactNameImport(), errorMessage(), ContactImportError, contactName(), contactPickerAvailability(), nameParts(), parseVcardName(), pickContactName() (+2 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.06
-Nodes (34): Accessing the Admin Panel, Actions Tab, Admin Panel, Audit Logs, Calls, Categories, Chats Tab, CLI Alternative (+26 more)
+Nodes (35): Accessing the Admin Panel, Actions Tab, Admin Panel, Audit Logs, Calls, Categories, Chats Tab, CLI Alternative (+27 more)
 
 ### Community 33 - "Community 33"
 Cohesion: 0.15
@@ -418,8 +414,8 @@ Cohesion: 0.07
 Nodes (27): command, enabled, type, RENDER_API_KEY, RENDER_API_TOKEN, formatter, enabled, headers (+19 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.07
-Nodes (28): AuthStatusBanner(), useChatAppearanceContext(), InlineError(), AppContextMenu(), BASE_ITEM, DESKTOP_VIEWPORT, MOBILE_VIEWPORT, ForwardChatGridItem() (+20 more)
+Cohesion: 0.10
+Nodes (20): AppContextMenu(), BASE_ITEM, DESKTOP_VIEWPORT, MOBILE_VIEWPORT, ForwardChatGridItem(), canForwardToChat(), excludeForwardSourceChat(), getForwardChatDisplay() (+12 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.07
@@ -434,24 +430,24 @@ Cohesion: 0.07
 Nodes (20): migration001InitialSchema, migration002LegacyChatRename, migration004MessageFileMetadata, migration005DmDefaultName, migration009GroupColor, migration011ChatMutes, migration013MessageReads, migration016UserBans (+12 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.25
-Nodes (11): imageFiles, mixedFiles, objectBody, typicalMessage, normalizeMessageBody(), sanitizeMessageForCache(), getFileSummaryMeta(), isDocumentModeFiles() (+3 more)
+Cohesion: 0.16
+Nodes (16): checkAppVersion(), fetchAppInfo(), imageFiles, mixedFiles, objectBody, typicalMessage, useAppReleaseInfo(), getFileSummaryMeta() (+8 more)
 
 ### Community 45 - "Community 45"
-Cohesion: 0.16
-Nodes (14): registerCallRoutes(), registerChatRoutes(), registerRemoteChannelRoutes(), createCallManager(), normalizeSongbirdSource(), normalizeTelegramSource(), resolveSongbirdSource(), APP_ENCRYPTED_TYPES (+6 more)
+Cohesion: 0.19
+Nodes (11): registerCallRoutes(), registerChatRoutes(), registerRemoteChannelRoutes(), createCallManager(), normalizeSongbirdSource(), normalizeTelegramSource(), resolveSongbirdSource(), validateUuidBody() (+3 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.08
 Nodes (24): bugs, url, dependencies, @aws-sdk/client-s3, devDependencies, supertest, vitest, @vitest/coverage-v8 (+16 more)
 
 ### Community 47 - "Community 47"
-Cohesion: 0.15
-Nodes (21): registerAdminPanelRoutes(), statsCache, uploadsSizeCache, firstReadable(), firstReadableWithSudoFallback(), INSTALLER_LOG_CANDIDATES, NGINX_LOG_CANDIDATES, probeLogSources() (+13 more)
+Cohesion: 0.14
+Nodes (22): getCachedAdminStats(), registerAdminPanelRoutes(), statsCache, uploadsSizeCache, firstReadable(), firstReadableWithSudoFallback(), INSTALLER_LOG_CANDIDATES, NGINX_LOG_CANDIDATES (+14 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.10
-Nodes (19): BASE_PROPS, destroyPooledAudio(), loadAudioWaveform(), MessageFiles(), queueWaveformDecode(), trimVoiceAudioPool(), VOICE_AUDIO_LAST_USED_AT, VOICE_AUDIO_POOL (+11 more)
+Cohesion: 0.06
+Nodes (32): BASE_PROPS, destroyPooledAudio(), formatSeconds(), loadAudioWaveform(), MessageFiles(), queueWaveformDecode(), trimVoiceAudioPool(), VOICE_AUDIO_LAST_USED_AT (+24 more)
 
 ### Community 49 - "Community 49"
 Cohesion: 0.15
@@ -459,11 +455,7 @@ Nodes (6): AdminPanel(), chats, CURRENT_USER, users, _stores, useAdminCache()
 
 ### Community 50 - "Community 50"
 Cohesion: 0.06
-Nodes (34): Calls, Realtime (نیازمند restart), Secrets (فقط مالک), آپلود فایل, تب اقدامات, تب تنظیمات, تب داشبورد, تب سرویس‌ها (+26 more)
-
-### Community 51 - "Community 51"
-Cohesion: 0.61
-Nodes (5): checkAppVersion(), compareVersions(), fetchLatestGitHubTag(), normalizeVersion(), parseVersion()
+Nodes (35): Calls, Realtime (نیازمند restart), Secrets (فقط مالک), آپلود فایل, تب اقدامات, تب تنظیمات, تب داشبورد, تب سرویس‌ها (+27 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.21
@@ -477,17 +469,13 @@ Nodes (21): devDependencies, eslint, @eslint/js, eslint-plugin-react, eslint-plu
 Cohesion: 0.10
 Nodes (20): Push notifications نمیرسند {#push-notifications-not-arriving}, ابتدا کجا را بررسی کنیم, اپلیکیشن راه اندازی نمیشود / 502 Bad Gateway {#app-wont-start--502-bad-gateway}, برطرف کردن خطای 502 در محیط های ابری (Render, Railway, Fly.io) {#fixing-502-bad-gateway-in-cloud-environments}, به روزرسانی های بیدرنگ نمیرسند {#real-time-updates-not-arriving}, تداخل پورت با Nginx {#port-conflict-with-nginx}, توقف نصب هنگام دانلود بسته ها {#installation-stuck-downloading-packages}, خطاهای اتصال و تراکنش MongoDB {#mongodb-connection-errors} (+12 more)
 
-### Community 55 - "Community 55"
-Cohesion: 0.76
-Nodes (4): extractMessageBodyText(), getMessageFiles(), hasMessageText(), isCallLogBody()
-
 ### Community 56 - "Community 56"
-Cohesion: 0.25
-Nodes (11): pendingLogins, registerAdminRemoteChannelRoutes(), clearTelegramSession(), isEnvSecretSet(), readEnv(), readStored(), resolveMaybePromise(), resolveTelegramSecrets() (+3 more)
+Cohesion: 0.24
+Nodes (12): pendingLogins, registerAdminRemoteChannelRoutes(), getTelegramClientConnectionOptions(), clearTelegramSession(), isEnvSecretSet(), readEnv(), readStored(), resolveMaybePromise() (+4 more)
 
 ### Community 57 - "Community 57"
-Cohesion: 0.23
-Nodes (14): _cache, coerce(), DEFS_BY_KEY, getAllSettings(), getSetting(), isEnvExplicitlySet(), loadSettings(), resetSetting() (+6 more)
+Cohesion: 0.14
+Nodes (19): _cache, coerce(), DEFS_BY_KEY, getAllSettings(), getSetting(), isEnvExplicitlySet(), loadSettings(), resetSetting() (+11 more)
 
 ### Community 58 - "Community 58"
 Cohesion: 0.06
@@ -510,8 +498,8 @@ Cohesion: 0.10
 Nodes (20): Admin panel issues, App won't start / 502 Bad Gateway, DNS resolution problems, Docker build issues, File uploads failing, Fixing 502 Bad Gateway in cloud environments {#fixing-502-bad-gateway-in-cloud-environments}, Installation stuck downloading packages, MongoDB connection and transaction errors {#mongodb-connection-errors} (+12 more)
 
 ### Community 63 - "Community 63"
-Cohesion: 0.06
-Nodes (26): formatDuration(), openPicker(), releases, base, setup(), BASE_PROPS, useVoiceRecording(), resources (+18 more)
+Cohesion: 0.07
+Nodes (26): formatDuration(), mapCallRow(), releases, BASE_PROPS, useVoiceRecording(), resources, useContextMenuTrigger(), useHoldToRecord() (+18 more)
 
 ### Community 64 - "Community 64"
 Cohesion: 0.12
@@ -534,8 +522,8 @@ Cohesion: 0.24
 Nodes (5): decodeUrlConfig(), execFile, isPostgresConfig(), resolvePostgresCliConfig(), config
 
 ### Community 70 - "Community 70"
-Cohesion: 0.11
-Nodes (18): createKnexInstance(), dataDir, dbPath, projectRootDir, serverDir, serverRootDir, createMediaQueueManager(), seen (+10 more)
+Cohesion: 0.09
+Nodes (22): createKnexInstance(), dataDir, dbPath, projectRootDir, serverDir, serverRootDir, main(), avatarUploadsDir (+14 more)
 
 ### Community 71 - "Community 71"
 Cohesion: 0.12
@@ -558,8 +546,8 @@ Cohesion: 0.13
 Nodes (15): اوبونتو / دبیان (نصب سیستمی), 📞 تماس صوتی و تصویری, داکر (Docker), راه اندازی سرور Coturn, غیرفعال کردن تماس‌ها, قابلیت‌ها, نمای کلی معماری, پیکربندی (+7 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.30
-Nodes (11): claimAdminPrivileges(), getChatPreview(), prepareFilesForMessage(), presignUploadFile(), uploadFile(), uploadFileToPresignedUrl(), extractAudioWaveform(), extractImageMetadataAndThumbnail() (+3 more)
+Cohesion: 0.62
+Nodes (5): extractAudioWaveform(), extractImageMetadataAndThumbnail(), extractMediaPreprocessMetadata(), extractVideoMetadataAndThumbnail(), parseWaveformSamples()
 
 ### Community 77 - "Community 77"
 Cohesion: 0.33
@@ -581,10 +569,6 @@ Nodes (10): registerAppRoutes(), compareVersions(), findChangelogVersionSection(
 Cohesion: 0.27
 Nodes (12): buildUploadCorsRule(), clearBucketCorsRequestCache(), COVERAGE_METHODS, deriveRequestOrigin(), ensureBucketCors(), ensureBucketCorsForRequest(), normalizeOrigin(), requestCheckCache (+4 more)
 
-### Community 83 - "Community 83"
-Cohesion: 0.53
-Nodes (3): registerAppearanceRoutes(), createAppearanceService(), CHAT_WALLPAPER_IDS
-
 ### Community 84 - "Community 84"
 Cohesion: 0.15
 Nodes (12): bugs, url, homepage, license, name, overrides, minimatch, private (+4 more)
@@ -597,10 +581,6 @@ Nodes (7): Before an upgrade, Deployment script versions, Docker and cloud deplo
 Cohesion: 0.29
 Nodes (7): استقرار Docker و ابری, اولین انتقال از SQL, بازیابی و بازگشت نسخه, به‌روزرسانی, به‌روزرسانی نصب MongoDB موجود, نسخهٔ اسکریپت نصب, پیش از ارتقا
 
-### Community 87 - "Community 87"
-Cohesion: 0.15
-Nodes (3): createGroupCallSession(), Peer, TrackedPeer
-
 ### Community 88 - "Community 88"
 Cohesion: 0.29
 Nodes (9): backfillMongoTextExpiry(), cleanupMongoTextMessages(), adminGetAll(), adminGetRow(), adminRun(), adminSave(), backfillStorageEncryption(), backfillTextMessageExpiry() (+1 more)
@@ -610,11 +590,11 @@ Cohesion: 0.22
 Nodes (3): failures, suffix, uploads
 
 ### Community 90 - "Community 90"
-Cohesion: 0.15
-Nodes (10): registerMongoAdminRoutes(), known, readLegacyPostgres(), readLegacySqlite(), adminActions, args, offlineRequired(), serverDir (+2 more)
+Cohesion: 0.14
+Nodes (12): username(), registerMongoAdminRoutes(), known, readLegacyPostgres(), readLegacySqlite(), prepareLegacyImport(), adminActions, args (+4 more)
 
 ### Community 91 - "Community 91"
-Cohesion: 0.25
+Cohesion: 0.19
 Nodes (8): createInspector(), args, getDiskUsageInfo(), kind, limit, positional, printSnapshot(), toMB()
 
 ### Community 92 - "Community 92"
@@ -626,8 +606,8 @@ Cohesion: 0.17
 Nodes (5): BASE_PROPS, BOB, DESKTOP_VIEWPORT, ME, MOBILE_VIEWPORT
 
 ### Community 94 - "Community 94"
-Cohesion: 0.07
-Nodes (36): EnvLockBadge(), GROUP_CHILDREN, GROUP_MASTER, GROUP_META, NumberInput(), SECRET_ROWS, SecretCard(), SETTING_ICON_ANIM (+28 more)
+Cohesion: 0.12
+Nodes (19): GROUP_CHILDREN, GROUP_MASTER, GROUP_META, SECRET_ROWS, SETTING_ICON_ANIM, SETTING_ICONS, SettingsTab, Toggle() (+11 more)
 
 ### Community 96 - "Community 96"
 Cohesion: 0.17
@@ -638,16 +618,16 @@ Cohesion: 0.17
 Nodes (11): BTC:, <img src="./client/public/songbird-logo.svg" alt="Songbird"> Songbird, TON:, TRX:, حمایت, قابلیت‌های کلیدی, لایسنس, مستندات (+3 more)
 
 ### Community 98 - "Community 98"
-Cohesion: 0.05
-Nodes (31): AuthFooter(), AuthHeader(), AuthOverlay(), setup(), renderChat(), AnchoredMenu(), CategoryButton(), LanguageSwitcher() (+23 more)
+Cohesion: 0.07
+Nodes (31): AuthFooter(), AuthFormFields(), AuthHeader(), AuthOverlay(), AuthStatusBanner(), useChatAppearanceContext(), CategoryButton(), InlineError() (+23 more)
 
 ### Community 99 - "Community 99"
 Cohesion: 0.18
 Nodes (8): Configure Nginx, HTTP only, HTTPS, 1. Set the Vite `base`, 2. Check asset references in `index.html`, 3. Add the Nginx location block, Overview, Running behind a domain + subpath
 
 ### Community 100 - "Community 100"
-Cohesion: 0.33
-Nodes (8): registerAuthRoutes(), normalizeChatAppearance(), clearSavedSessionUser(), fetchSessionUser(), getSavedSessionUser(), getStorage(), normalizeSessionUser(), saveSessionUser()
+Cohesion: 0.54
+Nodes (6): clearSavedSessionUser(), fetchSessionUser(), getSavedSessionUser(), getStorage(), normalizeSessionUser(), saveSessionUser()
 
 ### Community 101 - "Community 101"
 Cohesion: 0.18
@@ -656,10 +636,6 @@ Nodes (11): SSE و اتصالات طولانی‌مدت, اجرای برنامه
 ### Community 102 - "Community 102"
 Cohesion: 0.22
 Nodes (4): assets, errors, requests, suffix
-
-### Community 103 - "Community 103"
-Cohesion: 0.22
-Nodes (13): generateUuid(), backfillAllUuids(), backfillNullUuids(), backfillNullUuidsPg(), convertFkColumnPg(), dropPrimaryKeyPg(), migration036UuidPrimaryKeys, postgresUp() (+5 more)
 
 ### Community 104 - "Community 104"
 Cohesion: 0.25
@@ -670,8 +646,8 @@ Cohesion: 0.15
 Nodes (12): bugs, url, homepage, license, name, optionalDependencies, better-sqlite3, private (+4 more)
 
 ### Community 106 - "Community 106"
-Cohesion: 0.13
-Nodes (7): createRedisClient(), createRedisSessionStore(), InProcessRedisClient, createSseHub(), hasValidUuidReferences(), UUID_EVENT_TYPES, createWebSocketGateway()
+Cohesion: 0.26
+Nodes (6): createRedisClient(), createRedisSessionStore(), createSseHub(), hasValidUuidReferences(), UUID_EVENT_TYPES, createWebSocketGateway()
 
 ### Community 107 - "Community 107"
 Cohesion: 0.29
@@ -698,12 +674,12 @@ Cohesion: 0.22
 Nodes (8): Breaking Changes, Checklist, Screenshots (if applicable), Summary, Testing, Type of Change, What's Included, Why This Change Is Needed
 
 ### Community 113 - "Community 113"
-Cohesion: 0.12
-Nodes (40): createPostgresMaintenance(), main(), main(), confirmAction(), getCliArgs(), getPositionalArgs(), hasForceYes(), main() (+32 more)
+Cohesion: 0.23
+Nodes (23): createPostgresMaintenance(), main(), main(), confirmAction(), getCliArgs(), hasForceYes(), chunkArray(), detectRunningServer() (+15 more)
 
 ### Community 114 - "Community 114"
-Cohesion: 0.60
-Nodes (3): ChatWallpaper(), CHAT_WALLPAPERS, getChatWallpaper()
+Cohesion: 0.29
+Nodes (6): registerAuthRoutes(), ChatWallpaper(), CHAT_WALLPAPER_IDS, normalizeChatAppearance(), CHAT_WALLPAPERS, getChatWallpaper()
 
 ### Community 115 - "Community 115"
 Cohesion: 0.15
@@ -730,28 +706,28 @@ Cohesion: 0.36
 Nodes (4): ensureAdminApiToken(), envBackup, ensureValidVapidKeys(), ensureWebhookSecret()
 
 ### Community 122 - "Community 122"
-Cohesion: 0.17
-Nodes (20): registerAdminRoutes(), normalizeChatType(), normalizeGroupUsername(), normalizeHexColor(), normalizeVisibility(), parseListValue(), resolveChatRow(), resolveUserRow() (+12 more)
+Cohesion: 0.25
+Nodes (17): registerAdminRoutes(), normalizeChatType(), normalizeGroupUsername(), normalizeHexColor(), normalizeVisibility(), parseListValue(), resolveChatRow(), resolveUserRow() (+9 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.39
 Nodes (7): clean(), main(), parseArgs(), projectRootDir, scriptDir, serverDir, toBool()
 
 ### Community 126 - "Community 126"
-Cohesion: 0.08
-Nodes (19): mapCallRow(), ContextMenuSurface, ChatRow, ChatsListPanel(), ChatsLoadingSkeleton(), DiscoveredCommunityRow, DiscoveredUserRow, EmptyChats() (+11 more)
+Cohesion: 0.05
+Nodes (20): renderChat(), AnchoredMenu(), LanguageSwitcher(), SidebarHeader(), UserMenuButton(), applyDocumentLocale(), setLocale(), ChatsListPanel() (+12 more)
 
 ### Community 127 - "Community 127"
-Cohesion: 0.13
-Nodes (11): ENC_MAGIC, ENC_MAGIC, PNG_MAGIC, appWithFile(), JPEG_HEAD, createStorageEncryption(), ensureStorageEncryptionKey(), FILE_MAGIC (+3 more)
+Cohesion: 0.15
+Nodes (10): ENC_MAGIC, ENC_MAGIC, PNG_MAGIC, appWithFile(), JPEG_HEAD, createStorageEncryption(), ensureStorageEncryptionKey(), FILE_MAGIC (+2 more)
 
 ### Community 128 - "Community 128"
 Cohesion: 0.40
 Nodes (7): copyWithFallback(), detectLegacyLayout(), isLegacyKey(), mapLegacyToNewKey(), migrateLegacyStorageLayout(), safeList(), rewriteStorageKeys()
 
 ### Community 130 - "Community 130"
-Cohesion: 0.25
-Nodes (5): makeAdminApp(), temporaryPaths, makeAppWithUser(), initAutoAddWorker(), userEvents
+Cohesion: 0.29
+Nodes (4): temporaryPaths, makeAppWithUser(), initAutoAddWorker(), userEvents
 
 ### Community 131 - "Community 131"
 Cohesion: 0.42
@@ -762,8 +738,8 @@ Cohesion: 0.12
 Nodes (11): InstallBar, InstallGuideModal(), AdminPage, App(), AuthPage, ChatPage, InvitePage, loadAuthPage() (+3 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.50
-Nodes (4): patchChatPreview(), whitespaceGen, isValidUuid(), normalizeUuid()
+Cohesion: 0.27
+Nodes (7): getWebSocketUrl(), patchChatAndMoveToFront(), useChatEvents(), patchChatPreview(), whitespaceGen, isValidUuid(), normalizeUuid()
 
 ### Community 135 - "Community 135"
 Cohesion: 0.50
@@ -790,8 +766,8 @@ Cohesion: 0.18
 Nodes (8): HTTPS, فقط HTTP, پیکربندی Nginx, اجرا پشت یک دامنه + زیرمسیر, مرور کلی, ۱. تنظیم `base` در Vite, ۲. بررسی ارجاع‌های دارایی در `index.html`, ۳. افزودن بلوک location در Nginx
 
 ### Community 141 - "Community 141"
-Cohesion: 0.10
-Nodes (26): backupDir, dbPath, main(), projectRootDir, dataDir, getFlagValue(), getNpmOriginalArgs(), parseNpmOriginalArgs() (+18 more)
+Cohesion: 0.17
+Nodes (15): backupDir, dbPath, projectRootDir, dataDir, promptInput(), serverDir, applyOwnership(), backupDir (+7 more)
 
 ### Community 142 - "Community 142"
 Cohesion: 0.33
@@ -802,8 +778,8 @@ Cohesion: 0.29
 Nodes (7): devDependencies, fast-check, mongodb-memory-server, supertest, vitest, @vitest/coverage-v8, @vitest/ui
 
 ### Community 144 - "Community 144"
-Cohesion: 0.22
-Nodes (8): args, dryRun, force, port, projectRootDir, scriptDir, serverDir, storageProvider
+Cohesion: 0.14
+Nodes (13): main(), CHAT, USERS, addChatMembers(), hasFlag(), args, dryRun, force (+5 more)
 
 ### Community 145 - "Community 145"
 Cohesion: 0.31
@@ -842,16 +818,12 @@ Cohesion: 0.11
 Nodes (18): 0. Operating principle, 10. Minimum tests and acceptance checks for each change, 11. Change-control rules for growing later, 2. Repository boundaries and database ownership, 3. Identity, authentication, authorization, and user actions, 5. Resource budget and performance on the CURRENT VPS, 6. Database and query rules, 7. Crawler, history, and scoring reliability (+10 more)
 
 ### Community 162 - "Community 162"
-Cohesion: 0.18
-Nodes (9): importLegacyData(), prepareLegacyImport(), refs, COLLECTION_KEYS, documentDefaults(), ensureMongoSchema(), MONGO_INDEXES, NUMERIC_IDS (+1 more)
-
-### Community 163 - "Community 163"
-Cohesion: 0.23
-Nodes (9): FocusedMediaModal(), formatSeconds(), buildFileDownloadUrl(), downloadMessageFile(), downloadMessageFiles(), getMessageFileDownloadName(), getMessageFileDownloadUrl(), isCrossOriginUrl() (+1 more)
+Cohesion: 0.20
+Nodes (8): importLegacyData(), refs, COLLECTION_KEYS, documentDefaults(), ensureMongoSchema(), MONGO_INDEXES, NUMERIC_IDS, validators
 
 ### Community 164 - "Community 164"
-Cohesion: 0.27
-Nodes (8): loadEmojiPicker(), localizeEmojiData(), insertEmojiAtSelection(), preferenceKey(), readEmojiPreferences(), saveEmojiPreferences(), tones, withRecentEmoji()
+Cohesion: 0.15
+Nodes (14): openPicker(), setup(), loadEmojiPicker(), clearChatDraft(), keyFor(), readChatDraft(), saveChatDraft(), localizeEmojiData() (+6 more)
 
 ### Community 167 - "Community 167"
 Cohesion: 0.57
@@ -866,8 +838,8 @@ Cohesion: 0.40
 Nodes (3): BASE_PROPS, DESKTOP_VIEWPORT, MOBILE_VIEWPORT
 
 ### Community 172 - "Community 172"
-Cohesion: 0.70
-Nodes (3): clean(), hasEmptyExplicitPort(), resolveWebhookCallbackUrl()
+Cohesion: 0.19
+Nodes (12): registerMessageRoutes(), dispatchMediaWorkerJob(), isLocalWorkerAddress(), sendTranscodeRequest(), APP_ENCRYPTED_TYPES, isAppEncryptedType(), resolveThumbUrl(), createVideoTranscodeManager() (+4 more)
 
 ### Community 173 - "Community 173"
 Cohesion: 0.50
@@ -898,28 +870,20 @@ Cohesion: 0.40
 Nodes (3): BASE_PROPS, DESKTOP_VIEWPORT, MOBILE_VIEWPORT
 
 ### Community 181 - "Community 181"
-Cohesion: 0.40
-Nodes (4): updateChatAppearance(), ChatAppearanceContext, useChatAppearance(), Harness()
-
-### Community 184 - "Community 184"
-Cohesion: 0.36
-Nodes (5): CHAT_PAGE_CONFIG, readEnvNumber(), readEnvSizeMbAsBytes(), setChatPageConfig(), ORIGINAL
+Cohesion: 0.27
+Nodes (5): updateChatAppearance(), ChatAppearanceContext, useChatAppearance(), alice, Harness()
 
 ### Community 185 - "Community 185"
 Cohesion: 0.50
 Nodes (3): AdminClaimCard(), AdminPage(), loadAdminPage()
 
 ### Community 189 - "Community 189"
-Cohesion: 0.07
-Nodes (30): makeAuditApp(), makeAdminApp(), makeAdminApp(), ENV_KEYS, savedEnv, setupAdminApp(), setupSecretsApp(), setup() (+22 more)
+Cohesion: 0.08
+Nodes (27): makeAuditApp(), makeAdminApp(), makeAdminApp(), makeAdminApp(), ENV_KEYS, savedEnv, setupAdminApp(), setupSecretsApp() (+19 more)
 
 ### Community 193 - "Community 193"
 Cohesion: 0.67
 Nodes (3): 1. Facts, planned changes, and discovery, Confirmed current facts, Target architecture (implement incrementally)
-
-### Community 196 - "Community 196"
-Cohesion: 0.67
-Nodes (3): getUserRole(), isUserAdmin(), isUserOwner()
 
 ### Community 205 - "Community 205"
 Cohesion: 0.50
@@ -986,24 +950,24 @@ Cohesion: 0.40
 Nodes (3): BASE_PROPS, DESKTOP_VIEWPORT, MOBILE_VIEWPORT
 
 ## Knowledge Gaps
-- **1140 isolated node(s):** `name`, `private`, `license`, `type`, `url` (+1135 more)
+- **1142 isolated node(s):** `name`, `private`, `license`, `type`, `url` (+1137 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **40 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **44 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `updateChat()` connect `Community 19` to `Community 24`, `Community 25`, `Community 3`?**
-  _High betweenness centrality (0.144) - this node is a cross-community bridge._
+- **Why does `updateChat()` connect `Community 19` to `Community 24`, `Community 3`, `Community 134`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
 - **Why does `patchChatAndMoveToFront()` connect `Community 3` to `Community 19`?**
-  _High betweenness centrality (0.138) - this node is a cross-community bridge._
-- **Why does `dbKnex` connect `Community 24` to `Community 128`, `Community 131`, `Community 4`, `Community 196`, `Community 70`, `Community 103`, `Community 10`, `Community 45`, `Community 47`, `Community 113`, `Community 19`, `Community 182`, `Community 88`, `Community 57`, `Community 122`, `Community 91`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
+  _High betweenness centrality (0.099) - this node is a cross-community bridge._
+- **Why does `t()` connect `Community 11` to `Community 1`, `Community 98`, `Community 2`, `Community 164`, `Community 126`, `Community 26`, `Community 3`, `Community 40`, `Community 133`, `Community 174`, `Community 142`, `Community 48`, `Community 181`, `Community 25`, `Community 90`, `Community 63`, `Community 94`, `Community 31`?**
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
 - **What connects `name`, `private`, `license` to the rest of the system?**
-  _1140 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1142 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.050837496326770495 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04971932638331997 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.09737134394668641 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.062123859444768004 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
-  _Cohesion score 0.043859649122807015 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04432432432432432 - nodes in this community are weakly interconnected._

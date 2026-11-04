@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "client/src/components/admin/AdminUserModal.jsx": {
-    "mtime": 1793690327.4525099,
-    "ast_hash": "32c827f8a4e7a6b11d742678847f4cdf",
+    "mtime": 1793802246.7135625,
+    "ast_hash": "de4de2202eac3ade22f7b7e35a0f79ca",
     "semantic_hash": ""
   },
   "client/src/components/admin/ChatsTab.jsx": {
@@ -2910,8 +2910,8 @@
     "semantic_hash": ""
   },
   "DESIGN.md": {
-    "mtime": 1793800922.8587966,
-    "ast_hash": "c2166a226d8170ea5eb4bf4db2b0ee88",
+    "mtime": 1793802210.765317,
+    "ast_hash": "e28443b6a99994ce4be78ff3f097c7a9",
     "semantic_hash": ""
   },
   "README.fa_IR.md": {
@@ -2930,8 +2930,8 @@
     "semantic_hash": ""
   },
   "UX-CONTRACT.md": {
-    "mtime": 1793800922.8607962,
-    "ast_hash": "c87471b7d21200a55d2c5edac1958a1b",
+    "mtime": 1793802210.7673266,
+    "ast_hash": "5ce2aa8a82ec30b0ed79a8aff32105e4",
     "semantic_hash": ""
   },
   "client/AGENTS.md": {
@@ -2955,8 +2955,8 @@
     "semantic_hash": ""
   },
   "docs/Admin-Panel.md": {
-    "mtime": 1793699006.17704,
-    "ast_hash": "6e8dae8f89d764f66d255030606c5366",
+    "mtime": 1793802048.099522,
+    "ast_hash": "8dd17242ca541b70addaeae2cde1b5f7",
     "semantic_hash": ""
   },
   "docs/CDN-Setup.md": {
@@ -3050,8 +3050,8 @@
     "semantic_hash": ""
   },
   "docs/fa/Admin-Panel.md": {
-    "mtime": 1793699006.2021291,
-    "ast_hash": "ca64d1f41eea0dcd5fa2c15eee22dce7",
+    "mtime": 1793802048.1006372,
+    "ast_hash": "a748580952898cce594ba4eab2148cc9",
     "semantic_hash": ""
   },
   "docs/fa/CDN-Setup.md": {
@@ -3410,8 +3410,8 @@
     "semantic_hash": ""
   },
   "client/src/i18n/fa-ui.js": {
-    "mtime": 1793796368.268267,
-    "ast_hash": "e2bab26f7a74aa6733519702433e5ada",
+    "mtime": 1793802004.804182,
+    "ast_hash": "da27d450b798da3e8088f81ebf80b524",
     "semantic_hash": ""
   },
   "client/test/e2e/ouj-brand-flow.mjs": {
@@ -3997,6 +3997,26 @@
   "client/public/licenses/emoji-picker.txt": {
     "mtime": 1793797314.1523752,
     "ast_hash": "1dd3908eb72cfc25d9855e82766b0ff6",
+    "semantic_hash": ""
+  },
+  "client/src/components/admin/ContactNameImport.jsx": {
+    "mtime": 1793802004.804182,
+    "ast_hash": "20d136a5f7e3035ecedc5d42347c1366",
+    "semantic_hash": ""
+  },
+  "client/src/utils/contactImport.js": {
+    "mtime": 1793802269.1498513,
+    "ast_hash": "7ab055df0f25b81f6f7b1f16c82a04ab",
+    "semantic_hash": ""
+  },
+  "client/test/components/admin/AdminUserModal.contacts.test.jsx": {
+    "mtime": 1793802210.76934,
+    "ast_hash": "184d96a16070947c51b6a266d15215e7",
+    "semantic_hash": ""
+  },
+  "client/test/utils/contactImport.test.js": {
+    "mtime": 1793802269.1519282,
+    "ast_hash": "428e1e55a73c1c1a968e7eec6715ff2c",
     "semantic_hash": ""
   }
 }

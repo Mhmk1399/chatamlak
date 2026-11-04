@@ -84,6 +84,17 @@ Manage all users in your Songbird instance:
 - **Delete Users**: Permanently remove user accounts
 - **Search & Filter**: Searching and filtering across the entire users dataset
 
+### Fill a new user's nickname from a contact
+
+In the **New user** form, the optional **Fill from contacts** controls fill only **Nickname**:
+
+- **Choose contact** opens the browser's contact picker only after your click and requests the name of one selected contact. Direct selection requires HTTPS, a top-level page and browser support, typically Chrome on Android; iPhone and desktop support is not guaranteed. See [Chrome's Contact Picker guidance](https://developer.chrome.com/docs/capabilities/web-apis/contact-picker).
+- **Contact file (.vcf)** reads one UTF-8 vCard locally, up to **256 KiB**. Only its `FN`/`N` name fields are used; multi-contact files are not accepted.
+
+Review the imported nickname and shorten it if it exceeds the configured nickname limit. Enter the username and password yourself, then explicitly choose **Create user**. Selecting a contact does not create an account, import a phone number or map an existing identity. Cancelling, denied access or an unsupported browser leaves manual entry available.
+
+The application does not upload or retain the contact file, phone numbers or address book. Only the reviewed name becomes the ordinary nickname when you explicitly submit the existing create-user form. The existing API and administrative permissions apply.
+
 ## Chats Tab
 
 Manage DMs, groups, and channels:
