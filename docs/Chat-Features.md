@@ -151,7 +151,15 @@ Check search, skin tones, insertion position and on-screen keyboard layout on th
 
 ## Reactions, pinned messages and mentions
 
-Use the controls beside a message to add or remove a supported emoji reaction. Reaction counts update for participants. Group and channel owners or administrators can pin a message; pinned messages appear above the history and can be opened from there.
+Hold a non-interactive part of a message bubble for about **450 ms** to open its menu, with visual feedback while pressing. Scrolling, swiping, cancelling the gesture or releasing before the threshold cancels the pending hold; links and buttons keep their own actions. Right-click, **Shift+F10** and the **React** button below the message open the same menu.
+
+The reaction row offers these seven reactions: **👍 ❤️ 😂 🎉 😮 😢 👎**. Choose a reaction to add it; choosing your already-selected reaction removes it. Counts update for participants. **Reply**, **Copy**, **Edit**, **Forward**, **Delete** and changing the message's **Topic** follow the existing message permissions.
+
+**Pin/Unpin** requires the **owner** or **admin** role in the selected group or channel's membership. A server-wide Admin Panel role alone does not grant that permission. Pinned messages appear above the history and can be opened from there.
+
+Reactions and pinning are unavailable for pending messages or while offline. If saving fails, the menu stays open with the error so you can retry.
+
+The menu fits mobile and desktop viewports and follows the selected Persian/English direction. Its glass panel has a shadow, background blur only while displayed, and short entrance/exit transitions. Reduced-motion and reduced-transparency preferences are respected, with an opaque fallback where needed.
 
 When writing a message, type `@` followed by part of a member's username to see mention suggestions. Selecting a suggestion inserts the username into the composer.
 

@@ -20,12 +20,31 @@ const and = (...filters) => {
   return clauses.length ? { $and: clauses } : {};
 };
 const alive = (field = "expires_at") => ({ $or: [{ [field]: null }, { [field]: { $gt: now() } }] });
+const sessionTokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
+const SESSION_DEVICE_BATCH_SIZE = 100;
 export const isRemoteMessageClientRequestId = (value) => /^remote:/i.test(String(value || "").trim());
 export const isRemoteMessageRow = (row) => isRemoteMessageClientRequestId(row?.client_request_id || row?.clientRequestId);
 
 export function createMongoRepository({ db, client, encryption = storageEncryption }) {
   const s = createMongoStore({ db, client });
   const R = { store: s };
+  async function removeSessionDeviceLabels(filter) {
+    const cursor = db.collection("sessions").find(filter, s.opts({ projection: { _id: 0, token: 1 } })).batchSize(SESSION_DEVICE_BATCH_SIZE);
+    let hashes = [];
+    const flush = async () => {
+      if (!hashes.length) return;
+      await s.remove("session_devices", { token_hash: { $in: hashes } });
+      hashes = [];
+    };
+    try {
+      for await (const session of cursor) {
+        if (typeof session.token !== "string" || !session.token) continue;
+        hashes.push(sessionTokenHash(session.token));
+        if (hashes.length === SESSION_DEVICE_BATCH_SIZE) await flush();
+      }
+      await flush();
+    } finally { await cursor.close(); }
+  }
   const commands = createDocumentExecutor(s);
   Object.assign(R, commands, { adminGetRow: commands.getRow, adminGetAll: commands.getAll, adminRun: commands.run });
   const decrypt = (row) => {
@@ -275,8 +294,20 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     createSession: (userId, token) => s.insert("sessions", { id: crypto.randomUUID(), user_id: userId, token, last_seen: now() }),
     async getSession(token) { const session = token ? await s.one("sessions", { token }) : null; if (!session) return null; const user = await R.findUserById(session.user_id); return user && !user.banned ? { ...publicUser(user), chat_appearance: user.chat_appearance, session_id: session.id, token: session.token } : null; },
     touchSession: (token) => s.update("sessions", { token }, { last_seen: now() }),
-    deleteSession: (token) => s.remove("sessions", { token }),
-    deleteSessionsByUserId: (userId) => s.remove("sessions", { user_id: userId }),
+    async deleteSession(token) {
+      if (typeof token !== "string" || !token) return 0;
+      return s.transaction(async () => {
+        await s.remove("session_devices", { token_hash: sessionTokenHash(token) });
+        return s.remove("sessions", { token });
+      });
+    },
+    async deleteSessionsByUserId(userId) {
+      if (typeof userId !== "string" || !userId) return 0;
+      return s.transaction(async () => {
+        await removeSessionDeviceLabels({ user_id: userId });
+        return s.remove("sessions", { user_id: userId });
+      });
+    },
     updateUserPassword: (id, passwordHash) => s.update("users", { id }, { password_hash: passwordHash }),
     updateUserStatus: (id, status) => s.update("users", { id }, { status }),
     setUserBanned: (id, banned) => s.update("users", { id }, { banned: Number(Boolean(banned)) }),
@@ -346,7 +377,8 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     // Preserve the existing history contract: messages in surviving chats stay
     // visible with a deleted-author placeholder, including their attachments.
     await s.update("chat_messages", { read_by_user_id: userId }, { read_by_user_id: null });
-    for (const name of ["chat_members", "chat_left_members", "group_removed_members", "chat_mutes", "hidden_chats", "chat_preferences", "chat_message_reads", "hidden_chat_messages", "message_reactions", "chat_poll_votes", "scheduled_messages", "push_subscriptions", "sessions", "group_call_peers"]) await s.remove(name, { user_id: userId });
+    await R.deleteSessionsByUserId(userId);
+    for (const name of ["chat_members", "chat_left_members", "group_removed_members", "chat_mutes", "hidden_chats", "chat_preferences", "chat_message_reads", "hidden_chat_messages", "message_reactions", "chat_poll_votes", "scheduled_messages", "push_subscriptions", "group_call_peers"]) await s.remove(name, { user_id: userId });
     await s.remove("users", { id: userId });
     return { storedNames, files, avatarUrl: user?.avatar_url || null, deletedChatIds, transferredChatIds };
   });

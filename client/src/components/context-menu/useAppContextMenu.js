@@ -263,6 +263,8 @@ export function useAppContextMenu({
         targetMessageKey: message
           ? String(message?._clientId ?? message?._serverId ?? message?.id ?? "")
           : "",
+        message,
+        isOffline: Boolean(data?.isOffline ?? (isOfflineProp || sseConnected === false)),
       });
     },
     [

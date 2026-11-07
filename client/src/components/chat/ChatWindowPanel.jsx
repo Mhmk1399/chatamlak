@@ -1116,7 +1116,7 @@ export default function ChatWindowPanel({
         }, 900);
       }}
     />
-    <MessageEngagement message={msg} />
+    <MessageEngagement message={msg} onOpenContextMenu={onOpenContextMenu} isOffline={isOffline || sseConnected === false} />
     </>
   );
 

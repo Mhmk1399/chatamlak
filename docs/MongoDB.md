@@ -8,6 +8,14 @@ Accounts, memberships, sessions, chats, messages, reactions, polls, schedules, s
 
 Attachment and avatar **metadata** is in MongoDB. The binary files still use the configured local or S3-compatible storage provider; this change does not move them to GridFS. Back up local upload volumes or remote objects separately from the database, and retain the encryption keys needed to read them.
 
+## Technical data lifecycle
+
+Revoking one session removes its matching `session_devices` label and session in one transaction. Revoking all sessions for a user, including during account deletion, reads session tokens through a cursor and removes the matching labels in batches of at most **100**, within the transaction. Other accounts' device labels are retained.
+
+Cancelling an eligible schedule (`cancelSchedule`) sets its duplicate `body` and `lease_until` to `null`. Completing it as `sent` (`finishSchedule`) does the same; the published message uses the normal chat-message record. Pending and failed schedules retain their text for correction or retry. The existing schedule record and API remain in place.
+
+These lifecycle operations prevent redundant technical data from accumulating as sessions are revoked or schedules reach a terminal state. They do not perform a retrospective sweep of existing data or drop collections. No new API or collection is introduced.
+
 ## Requirements
 
 - Node.js `>=24.18.0` and npm `>=11.18.0`.
@@ -165,6 +173,8 @@ The MongoDB integration suite uses a real temporary replica set through `mongodb
 To use an existing test replica set, set `MONGODB_TEST_URI` privately to a URI containing an **explicit dedicated database** such as `ouj_chat_test` or `ouj_chat_e2e`. The database name must contain `test` or `e2e`; test data may be cleared. Never point it at `ouj_chat` or another live database. For example, a local non-secret test URI is `mongodb://localhost:27017/ouj_chat_test?replicaSet=ouj-rs`.
 
 These commands describe how to run checks; their presence does not claim that an import, restore, Atlas environment or production load test has already been completed.
+
+`server/test/mongo/dataLifecycle.test.js` covers transactional session-label removal, rollback, account isolation, bounded batches and schedule-text retention. Run it only through the dedicated real-Mongo test configuration described above.
 
 ## Troubleshooting
 

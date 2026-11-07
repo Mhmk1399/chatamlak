@@ -1,10 +1,48 @@
 import { t as localize, useLocale as useAppLocale } from "../../i18n/locale.js";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useFocusTrap } from "../../hooks/useFocusTrap.js";
+import "./message-context-menu.css";
 
 const SCREEN_GAP = 12;
 
 export default function AppContextMenu({ menu, onClose }) {
+  if (menu?.kind === "message") return <LoadMessageMenu menu={menu} onClose={onClose} />;
+  return <StandardContextMenu menu={menu} onClose={onClose} />;
+}
+
+let MessageMenu, messageMenuPromise;
+const loadMessageMenu = () => messageMenuPromise ||= import("./MessageContextMenu.jsx")
+  .then((module) => { MessageMenu = module.default; return MessageMenu; })
+  .catch((error) => { messageMenuPromise = null; throw error; });
+
+function LoadMessageMenu({ menu, onClose }) {
+  useAppLocale();
+  const [Component, setComponent] = useState(() => MessageMenu);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const fallbackRef = useRef(null);
+  useFocusTrap(fallbackRef, !Component);
+  useEffect(() => {
+    if (Component) return;
+    let cancelled = false;
+    loadMessageMenu().then((component) => { if (!cancelled) setComponent(() => component); })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [Component, attempt]);
+  if (Component) return <Component menu={menu} onClose={onClose} />;
+  return createPortal(<div className="ouj-message-menu-overlay ouj-message-menu-loading" onClick={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
+    <div ref={fallbackRef} role="dialog" aria-modal="true" aria-label={localize("Message actions")} className="ouj-glass ouj-message-action-card p-4" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onClose?.(); } }}>
+      <p role={error ? "alert" : "status"} className="text-sm">{localize(error ? "Could not load message actions. Try again." : "Loading message actions…")}</p>
+      <div className="mt-3 flex gap-2">
+        {error && <button type="button" className="min-h-11 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white" onClick={() => { setError(false); setAttempt((value) => value + 1); }}>{localize("Try again")}</button>}
+        <button type="button" className="min-h-11 rounded-xl border border-brand-200 px-4 text-sm" onClick={onClose}>{localize("Close")}</button>
+      </div>
+    </div>
+  </div>, document.body);
+}
+
+function StandardContextMenu({ menu, onClose }) {
   useAppLocale();
   const menuRef = useRef(null);
   const [desktopPosition, setDesktopPosition] = useState({ x: 0, y: 0 });

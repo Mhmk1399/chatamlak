@@ -686,7 +686,7 @@ export const MessageItem = memo(function MessageItem({
   const canOpenForwardedOrigin = Boolean(forwardedTarget);
   const canOpenSenderProfile =
     !isDeletedAuthor && typeof onOpenSenderProfile === "function";
-  const contextMenuMobileEnabled = !isDesktop && isMobileTouchDevice;
+  const contextMenuMobileEnabled = Boolean(isMobileTouchDevice);
   const senderMenuMember = {
     id: msg.user_id || null,
     username: msg.username || "",
@@ -719,10 +719,10 @@ export const MessageItem = memo(function MessageItem({
   const messageContextMenu = {
     disabled: !onOpenContextMenu,
     isMobile: contextMenuMobileEnabled,
-    holdDelayMs:
-      contextMenuMobileEnabled && canSwipeReply ? 650 : undefined,
-    moveTolerancePx:
-      contextMenuMobileEnabled && canSwipeReply ? 0 : undefined,
+    holdDelayMs: 450,
+    moveTolerancePx: 10,
+    contextKey: `${chatId}:${messageIdentity}`,
+    pressClassName: "ouj-message-holding",
     onOpen: ({ event, targetEl, isMobile }) =>
       onOpenContextMenu?.({
         kind: "message",
@@ -1096,6 +1096,8 @@ export const MessageItem = memo(function MessageItem({
               <ContextMenuSurface
                 as="div"
                 data-message-bubble
+                tabIndex={onOpenContextMenu ? 0 : undefined}
+                aria-haspopup={onOpenContextMenu ? "dialog" : undefined}
                 className={`${mediaBubbleClass} relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[calc(100vw-5.5rem)] sm:max-w-[86%] md:max-w-[min(84%,calc(100%-2rem))] ${
                   hasMarkdownCodeBlock ? "min-w-36" : "min-w-0"
                 } ${
@@ -1253,6 +1255,8 @@ export const MessageItem = memo(function MessageItem({
             <ContextMenuSurface
               as="div"
               data-message-bubble
+              tabIndex={onOpenContextMenu ? 0 : undefined}
+              aria-haspopup={onOpenContextMenu ? "dialog" : undefined}
               className={`${mediaBubbleClass} relative rounded-2xl px-4 py-3 text-sm shadow-xs overflow-visible max-w-[78%] sm:max-w-[82%] md:max-w-[75%] ${
                 hasMarkdownCodeBlock ? "min-w-36" : "min-w-0"
               } ${

@@ -20,6 +20,8 @@ const ContextMenuSurface = forwardRef(function ContextMenuSurface(
     onPointerMove,
     onPointerUp,
     onPointerCancel,
+    onPointerLeave,
+    onKeyDown,
     onClickCapture,
     ...props
   },
@@ -37,6 +39,8 @@ const ContextMenuSurface = forwardRef(function ContextMenuSurface(
         onPointerCancel,
         triggerProps.onPointerCancel,
       )}
+      onPointerLeave={composeHandlers(onPointerLeave, triggerProps.onPointerLeave)}
+      onKeyDown={composeHandlers(onKeyDown, triggerProps.onKeyDown)}
       onClickCapture={composeHandlers(
         onClickCapture,
         triggerProps.onClickCapture,

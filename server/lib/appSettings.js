@@ -204,7 +204,7 @@ export const SETTING_DEFS = [
     description: "Show Remote Channel settings to channel owners in the UI. When off, only server admins can configure mirroring (via the admin panel).",
     group: "remote_channel",
     envKey: "REMOTE_CHANNEL_UI",
-    defaultVal: true,
+    defaultVal: false,
   },
   {
     key: "REMOTE_CHANNEL_MEDIA_STREAM",
@@ -214,7 +214,7 @@ export const SETTING_DEFS = [
       "Allow channel owners to enable 'media stream' feature in the UI to mirror files.",
     group: "remote_channel",
     envKey: "REMOTE_CHANNEL_MEDIA_STREAM",
-    defaultVal: true,
+    defaultVal: false,
   },
   {
     key: "REMOTE_CHANNEL_POLL_INTERVAL_MS",

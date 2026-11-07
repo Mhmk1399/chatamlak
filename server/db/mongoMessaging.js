@@ -302,7 +302,7 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
       s.update(
         "scheduled_messages",
         { id, user_id: userId, status: { $in: ["pending", "failed"] } },
-        { status: "cancelled" },
+        { status: "cancelled", body: null, lease_until: null },
       ),
     async dueSchedules() {
       return (
@@ -335,7 +335,7 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
         },
       ),
     finishSchedule: (id, status, error = null) =>
-      s.update("scheduled_messages", { id }, { status, error }),
+      s.update("scheduled_messages", { id }, { status, error, lease_until: null, ...(status === "sent" ? { body: null } : {}) }),
     async policy(chatId) {
       return (
         (await s.one("chat_group_policy", { chat_id: chatId })) || {

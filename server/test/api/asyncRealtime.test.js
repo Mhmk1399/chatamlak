@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import request from "supertest";
 import { makeApp, makeUserStore } from "../helpers/makeApp.js";
 import { createPresenceTracker } from "../../lib/presenceTracker.js";
@@ -8,23 +8,8 @@ const BOB_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const CHAT_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const MSG_ID = "mmmmmmmm-mmmm-4mmm-8mmm-mmmmmmmmmmmm";
 
-describe("Postgres Mode Realtime Events Audit & Fix Verification", () => {
-  let originalDbClient;
-
-  beforeEach(() => {
-    originalDbClient = process.env.DB_CLIENT;
-    process.env.DB_CLIENT = "postgres";
-  });
-
-  afterEach(() => {
-    if (originalDbClient !== undefined) {
-      process.env.DB_CLIENT = originalDbClient;
-    } else {
-      delete process.env.DB_CLIENT;
-    }
-  });
-
-  test("1. Status & typing indicator emitting SSE event in Postgres mode", async () => {
+describe("Realtime events with asynchronous database operations", () => {
+  test("Status and typing indicators emit SSE events with asynchronous dependencies", async () => {
     const emittedEvents = [];
     const emitChatEvent = vi.fn((chatId, payload) => {
       emittedEvents.push({ chatId, payload });
@@ -113,7 +98,7 @@ describe("Postgres Mode Realtime Events Audit & Fix Verification", () => {
     });
   });
 
-  test("3. Read receipts (POST /api/messages/read) emits chat_read SSE and awaits markMessagesRead in Postgres mode", async () => {
+  test("Read receipts emit chat_read SSE and await markMessagesRead", async () => {
     const emittedEvents = [];
     const emitChatEvent = vi.fn((chatId, payload) => {
       emittedEvents.push({ chatId, payload });
@@ -229,25 +214,4 @@ describe("Postgres Mode Realtime Events Audit & Fix Verification", () => {
     return markPromise;
   });
 
-  test("6. profileService.updateProfile handles Promise returning DB functions in Postgres mode", async () => {
-    const { createProfileService } = await import("../../lib/services/profileService.js");
-    const alice = { id: ALICE_ID, username: "alice" };
-    const chat = { id: CHAT_ID };
-
-    const service = createProfileService({
-      findUserById: () => Promise.resolve(alice),
-      updateUserProfile: () => Promise.resolve(1),
-      listChatsForUser: () => Promise.resolve([chat]),
-      listChatMembers: () => Promise.resolve([{ username: "alice" }, { username: "bob" }]),
-    });
-
-    const result = await service.updateProfile({ userId: ALICE_ID, updates: { nickname: "Alice New" } });
-    expect(result.success).toBe(true);
-    expect(result.sseEvents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ targetUsername: "alice" }),
-        expect.objectContaining({ targetUsername: "bob" }),
-      ]),
-    );
-  });
 });

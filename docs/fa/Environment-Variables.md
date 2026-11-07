@@ -16,6 +16,8 @@ nano .env
 
 ## مقادیر قابل پیکربندی
 
+بازتاب کانال خارجی به فعال‌سازی صریح نیاز دارد: پیش‌فرض `REMOTE_CHANNEL`، `REMOTE_CHANNEL_UI` و `REMOTE_CHANNEL_MEDIA_STREAM` برابر `false` است؛ گروه‌ها و کانال‌های داخلی اوج در دسترس می‌مانند.
+
 | متغیر | نوع | پیش‌فرض | توضیح |
 |---|---|---:|---|
 | `SERVER_PORT` | `integer` | `5174` | پورت سرور API. (`PORT` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
@@ -63,8 +65,8 @@ nano .env
 | `MESSAGE_TEXT_RETENTION` | `integer` | `0` | حذف خودکار پیام‌های فقط‌متنی پس از N روز (`0` غیرفعال می‌کند). |
 | `MESSAGE_MAX_CHARS` | `integer` | `4000` | حداکثر طول پیام. |
 | `REMOTE_CHANNEL` | `boolean` | `false` | فعال‌کردن worker سمت‌سرور کانال ریموت. |
-| `REMOTE_CHANNEL_UI` | `boolean` | `true` | نمایش تنظیمات کانال ریموت به مالکان کانال در رابط کاربری. وقتی `false` باشد، این بخش از کاربران عادی پنهان می‌شود (و درخواست‌های API کاربران رد می‌شود) — فقط ادمین‌های سرور می‌توانند میرورینگ را از طریق پنل ادمین پیکربندی کنند. |
-| `REMOTE_CHANNEL_MEDIA_STREAM` | `boolean` | `true` | اجازه به مالکان کانال برای فعال‌کردن گزینه «Stream Media Files» در رابط کاربری. وقتی `false` باشد، این گزینه برای همه کانال‌ها غیرفعال و قفل می‌شود. |
+| `REMOTE_CHANNEL_UI` | `boolean` | `false` | نمایش تنظیمات کانال ریموت به مالکان کانال در رابط کاربری. وقتی `false` باشد، این بخش از کاربران عادی پنهان می‌شود (و درخواست‌های API کاربران رد می‌شود) — فقط ادمین‌های سرور می‌توانند میرورینگ را از طریق پنل ادمین پیکربندی کنند. |
+| `REMOTE_CHANNEL_MEDIA_STREAM` | `boolean` | `false` | اجازه به مالکان کانال برای فعال‌کردن گزینه «Stream Media Files» در رابط کاربری. وقتی `false` باشد، این گزینه برای همه کانال‌ها غیرفعال و قفل می‌شود. |
 | `REMOTE_CHANNEL_TELEGRAM_API_ID` | `integer` | `0` | API ID مربوط به Telegram. |
 | `REMOTE_CHANNEL_TELEGRAM_API_HASH` | `string` | `""` | API hash مربوط به Telegram. |
 | `REMOTE_CHANNEL_TELEGRAM_SESSION_STRING` | `string` | `""` | StringSession مربوط به Telegram. با آن مانند یک رمز عبور رفتار کنید. |

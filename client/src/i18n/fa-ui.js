@@ -1,4 +1,11 @@
 export const faUi = {
+  "Loading message actions…": "در حال آماده‌سازی گزینه‌های پیام…",
+  "Could not load message actions. Try again.": "بارگذاری گزینه‌های پیام ممکن نشد. دوباره تلاش کنید.",
+  "Copy text": "کپی متن",
+  "Copy link": "کپی پیوند",
+  "Message actions": "گزینه‌های پیام",
+  "Reconnect to react or pin messages.": "برای واکنش یا پین پیام، اتصال اینترنت را برقرار کنید.",
+  "Could not save this action. Try again.": "ذخیرهٔ تغییر ممکن نشد. دوباره تلاش کنید.",
   "Fill from contacts": "تکمیل از مخاطبین",
   "Only the selected contact's name fills the nickname. Set the username and password yourself, then choose Create user.": "فقط نام مخاطب انتخاب‌شده در نام نمایشی قرار می‌گیرد. نام کاربری و رمز عبور را تعیین کنید و سپس «ساخت کاربر» را بزنید.",
   "Choose contact": "انتخاب مخاطب",

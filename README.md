@@ -16,6 +16,8 @@
 
 </div>
 
+Project source guide: [File and component map (Persian)](MD/PROJECT_MAP.md).
+
 ## Key Features
 
 - 💬 **Chat Types**: Direct messages, groups, and channels

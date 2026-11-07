@@ -9,7 +9,7 @@ import {
   tehranToday,
 } from "../../../utils/persianDateTime.js";
 import { t, tError, useLocale } from "../../../i18n/locale.js";
-import { toolButton, toolInput } from "./toolStyles.js";
+import { toolInput } from "./toolStyles.js";
 
 // Both the composer dialog and Chat tools use this validation/entry owner.
 export default function ScheduleMessageForm({
@@ -158,7 +158,11 @@ export default function ScheduleMessageForm({
           {error}
         </p>
       )}
-      <button type="submit" disabled={saving || busy} className={toolButton}>
+      <button
+        type="submit"
+        disabled={saving || busy}
+        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 active:bg-brand-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600 dark:active:bg-brand-700"
+      >
         {t(saving ? "Saving…" : "Schedule message")}
       </button>
     </form>

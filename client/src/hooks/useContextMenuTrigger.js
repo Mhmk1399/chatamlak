@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const DEFAULT_HOLD_DELAY_MS = 300;
 const MOVE_TOLERANCE_PX = 12;
@@ -32,6 +32,7 @@ export function useContextMenuTrigger({
   moveTolerancePx = MOVE_TOLERANCE_PX,
   holdOnMouse = false,
   contextKey,
+  pressClassName,
   onOpen,
 }) {
   const holdTimerRef = useRef(null);
@@ -45,19 +46,25 @@ export function useContextMenuTrigger({
     startScrollLeft: 0,
   });
   const suppressClickRef = useRef(false);
+  const pressTargetRef = useRef(null);
+  const releaseListenersRef = useRef(null);
 
-  const clearHoldTimer = () => {
+  const clearHoldTimer = useCallback(() => {
     if (holdTimerRef.current !== null && typeof window !== "undefined") {
       window.clearTimeout(holdTimerRef.current);
     }
     holdTimerRef.current = null;
-  };
+    if (pressClassName) pressTargetRef.current?.classList.remove(pressClassName);
+    pressTargetRef.current = null;
+    releaseListenersRef.current?.();
+    releaseListenersRef.current = null;
+  }, [pressClassName]);
 
-  useEffect(() => clearHoldTimer, []);
+  useEffect(() => clearHoldTimer, [clearHoldTimer]);
 
   useEffect(() => {
     clearHoldTimer(); pointerRef.current.active = false; suppressClickRef.current = false;
-  }, [disabled, contextKey]);
+  }, [disabled, contextKey, clearHoldTimer]);
 
   useEffect(() => {
     if ((!isMobile && !holdOnMouse) || disabled) return undefined;
@@ -73,15 +80,14 @@ export function useContextMenuTrigger({
       document.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("blur", handleScroll);
     };
-  }, [disabled, isMobile, holdOnMouse]);
+  }, [disabled, isMobile, holdOnMouse, clearHoldTimer]);
 
   return useMemo(() => {
     if (disabled || typeof onOpen !== "function") {
       return {};
     }
 
-    const openMenu = (event, source = "desktop") => {
-      const targetEl = event?.currentTarget || null;
+    const openMenu = (event, source = "desktop", targetEl = event?.currentTarget || null) => {
       onOpen({
         event,
         source,
@@ -91,8 +97,8 @@ export function useContextMenuTrigger({
     };
 
     const onContextMenu = (event) => {
-      if (isMobile && !holdOnMouse) return;
       event.preventDefault();
+      if (isMobile && !holdOnMouse && event.nativeEvent?.pointerType === "touch") return;
       openMenu(event, "desktop");
     };
 
@@ -121,10 +127,29 @@ export function useContextMenuTrigger({
         startScrollTop: Number(scrollTarget?.scrollTop || 0),
         startScrollLeft: Number(scrollTarget?.scrollLeft || 0),
       };
+      if (pressClassName) {
+        pressTargetRef.current = surface;
+        surface?.classList.add(pressClassName);
+      }
+      const stopReleasedPointer = (released) => {
+        if (released.pointerId !== event.pointerId) return;
+        if (released.type === "pointercancel" && holdOnMouse) suppressClickRef.current = true;
+        pointerRef.current.active = false;
+        clearHoldTimer();
+      };
+      window.addEventListener("pointerup", stopReleasedPointer, true);
+      window.addEventListener("pointercancel", stopReleasedPointer, true);
+      window.addEventListener("pointermove", onPointerMove, true);
+      releaseListenersRef.current = () => {
+        window.removeEventListener("pointerup", stopReleasedPointer, true);
+        window.removeEventListener("pointercancel", stopReleasedPointer, true);
+        window.removeEventListener("pointermove", onPointerMove, true);
+      };
       holdTimerRef.current = window.setTimeout(() => {
         suppressClickRef.current = true;
         pointerRef.current.active = false;
-        openMenu(event, "mobile");
+        clearHoldTimer();
+        openMenu(event, "mobile", surface);
       }, holdDelayMs);
     };
 
@@ -187,8 +212,12 @@ export function useContextMenuTrigger({
       onPointerUp: cancelPointer,
       onPointerCancel: (event) => cancelPointer(event, true),
       onPointerLeave: holdOnMouse ? (event) => cancelPointer(event, true) : undefined,
-      onKeyDown: holdOnMouse ? (event) => { if (["Enter", " "].includes(event.key)) suppressClickRef.current = false; } : undefined,
+      onKeyDown: (event) => {
+        if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+          event.preventDefault(); event.stopPropagation(); clearHoldTimer(); openMenu(event);
+        } else if (holdOnMouse && ["Enter", " "].includes(event.key)) suppressClickRef.current = false;
+      },
       onClickCapture,
     };
-  }, [disabled, holdDelayMs, isMobile, moveTolerancePx, onOpen, holdOnMouse]);
+  }, [disabled, holdDelayMs, isMobile, moveTolerancePx, onOpen, holdOnMouse, pressClassName, clearHoldTimer]);
 }

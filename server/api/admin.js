@@ -104,7 +104,7 @@ function registerAdminRoutes(app, deps) {
     }
 
     // ADMIN_API_TOKEN is auto-generated and persisted to .env on first boot
-    // (see lib/adminApiToken.js), so this should always be set. Still guard
+    // (see lib/secrets.js), so this should always be set. Still guard
     // against a missing value rather than silently skipping the check.
     const expectedToken = String(process.env.ADMIN_API_TOKEN || "");
     const provided = String(req.headers["x-songbird-admin-token"] || "");
