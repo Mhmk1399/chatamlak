@@ -6,7 +6,7 @@
 .ouj-date-control[data-hovered] { border-color: var(--color-brand-400); }
 .ouj-date-control:focus-within { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 .ouj-date-field[data-invalid] .ouj-date-control { border-color: var(--color-rose-500); }
-.ouj-date-segments { display: flex; direction: ltr; align-items: center; flex: 1; min-width: 0; padding-inline: 6px; font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ouj-date-segments { display: flex; direction: ltr; align-items: center; flex: 1; min-width: 0; padding-inline: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ouj-date-segment { padding: 4px 3px; border-radius: 5px; text-align: center; outline: none; caret-color: transparent; }
 .ouj-date-segment[data-type='literal'] { padding-inline: 1px; color: var(--color-slate-500); }
 .ouj-date-segment[data-placeholder] { color: var(--color-slate-500); }

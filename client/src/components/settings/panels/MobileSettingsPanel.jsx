@@ -309,7 +309,7 @@ export function MobileSettingsPanel({
             maxLength={NICKNAME_MAX}
             lang={nicknameHasPersian ? "fa" : "en"}
             dir={nicknameHasPersian ? "rtl" : "ltr"}
-            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
               nicknameHasPersian ? "font-fa text-end" : "text-start"
             }`}
             style={{ unicodeBidi: "plaintext" }}
@@ -336,7 +336,7 @@ export function MobileSettingsPanel({
             autoCapitalize="none"
             lang={usernameHasPersian ? "fa" : "en"}
             dir={usernameHasPersian ? "rtl" : "ltr"}
-            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+            className={`w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-14 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
               usernameHasPersian ? "font-fa text-end" : "text-start"
             }`}
             style={{ unicodeBidi: "plaintext" }}
@@ -402,7 +402,7 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showCurrentPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"
@@ -433,7 +433,7 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showNewPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"
@@ -462,7 +462,7 @@ export function MobileSettingsPanel({
               }))
             }
             placeholder={showConfirmPassword ? "12345678" : "********"}
-            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+            className="w-full rounded-xl border border-brand-200 bg-white px-3 py-2 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
           />
           <button
             type="button"

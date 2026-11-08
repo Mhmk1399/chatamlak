@@ -4,8 +4,8 @@ import { getLocale, intlLocale, formatNumber } from "../../i18n/locale.js";
 // ─── Style constants ─────────────────────────────────────────────────────────
 
 export const cardCls    = "rounded-2xl border border-brand-200/70 bg-white/90 dark:border-brand-500/30 dark:bg-slate-950/50";
-export const inputCls   = "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
-export const inputSmCls = "h-9 w-full rounded-xl border border-brand-200/70 bg-white/90 px-3 text-sm text-slate-700 outline-hidden transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] focus:border-brand-400 focus:ring-2 focus:ring-brand-300/40 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:hover:border-brand-500/50 dark:hover:shadow-[0_0_18px_rgba(102,48,141,0.12)]";
+export const inputCls   = "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
+export const inputSmCls = "h-9 w-full rounded-xl border border-brand-200/70 bg-white/90 px-3 text-base text-slate-700 outline-hidden transition hover:border-brand-300 hover:shadow-[0_0_16px_rgba(102,48,141,0.18)] focus:border-brand-400 focus:ring-2 focus:ring-brand-300/40 dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-500 dark:hover:border-brand-500/50 dark:hover:shadow-[0_0_18px_rgba(102,48,141,0.12)]";
 export const searchIconCls = "text-brand-500 transition-colors group-hover:text-brand-600 dark:text-brand-400 dark:group-hover:text-brand-300 icon-anim-pop";
 export const labelCls   = "block text-sm font-semibold text-slate-700 dark:text-slate-200";
 export const btnPrimary = "inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-500 px-3 text-xs font-semibold text-white transition hover:bg-brand-400 hover:shadow-[0_0_14px_rgba(102,48,141,0.3)]";

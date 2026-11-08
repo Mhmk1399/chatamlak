@@ -38,7 +38,7 @@ import "./PersianDateTimeField.css";
 
 function Segments() {
   return (
-    <DateInput className="ouj-date-segments">
+    <DateInput className="text-base ouj-date-segments">
       {(segment) => (
         <DateSegment segment={segment} className="ouj-date-segment" />
       )}

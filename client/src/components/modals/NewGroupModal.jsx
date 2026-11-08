@@ -313,7 +313,7 @@ export default function NewGroupModal({
                   placeholder={localize("My {value0}", { value0: localize(entityLabel.toLowerCase()) })}
                   lang={nicknameHasPersian ? "fa" : "en"}
                   dir={nicknameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                     nicknameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
@@ -341,7 +341,7 @@ export default function NewGroupModal({
                   placeholder={`my${entityLabel.toLowerCase()}`}
                   lang={usernameHasPersian ? "fa" : "en"}
                   dir={usernameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                     usernameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
@@ -611,7 +611,7 @@ export default function NewGroupModal({
                         placeholder={remoteSourcePlaceholder}
                         lang={remoteSourceHasPersian ? "fa" : "en"}
                         dir={remoteSourceHasPersian ? "rtl" : "ltr"}
-                        className={`mt-2 w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                        className={`mt-2 w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                           remoteSourceHasPersian
                             ? "font-fa text-end"
                             : "text-start"
@@ -700,7 +700,7 @@ export default function NewGroupModal({
                   disabled={addAllMembersSelected}
                   lang={groupSearchHasPersian ? "fa" : "en"}
                   dir={groupSearchHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 ${onToggleAddAllMembers ? "pr-24" : "pr-14"} text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 ${onToggleAddAllMembers ? "pr-24" : "pr-14"} text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:cursor-not-allowed disabled:opacity-60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                     groupSearchHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}

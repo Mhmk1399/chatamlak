@@ -75,7 +75,7 @@ export default function NewChatModal({
               placeholder={localize("username")}
               lang={dmSearchHasPersian ? "fa" : "en"}
               dir={dmSearchHasPersian ? "rtl" : "ltr"}
-              className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+              className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-14 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                 dmSearchHasPersian ? "font-fa text-end" : "text-start"
               }`}
               style={{ unicodeBidi: "plaintext" }}

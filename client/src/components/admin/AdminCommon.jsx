@@ -455,7 +455,7 @@ export function TypedConfirmModal({ open, title, message, phrase, busy = false, 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{localize(message)}</p>
         <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{localize("Type")}{" "}<span className="font-semibold text-rose-600 dark:text-rose-300">{phrase}</span>{" "}{localize("to confirm.")}</p>
         <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder={phrase}
-          className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm text-slate-700 outline-hidden transition focus:border-rose-400 focus:ring-2 focus:ring-rose-300/40 dark:border-rose-500/30 dark:bg-slate-900 dark:text-slate-100" />
+          className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-base text-slate-700 outline-hidden transition focus:border-rose-400 focus:ring-2 focus:ring-rose-300/40 dark:border-rose-500/30 dark:bg-slate-900 dark:text-slate-100" />
         <div className="mt-4 flex items-center justify-end gap-2">
           <button type="button" onClick={onClose} disabled={busy}
             className="rounded-full border border-brand-200 bg-white px-4 py-2 text-xs font-semibold text-brand-700 transition hover:border-brand-300 hover:shadow-[0_0_14px_rgba(102,48,141,0.2)] disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200">{localize("Cancel")}</button>

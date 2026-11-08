@@ -437,7 +437,7 @@ export default function SidebarHeader({
               placeholder={localize("Search")}
               aria-label={localize("Search")}
               dir="auto"
-              className={`ouj-sidebar-search-input h-full w-full min-w-0 rounded-xl bg-transparent ps-10 pe-10 text-[13px] text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 ${hasPersian(query) ? "font-fa" : ""}`}
+              className={`ouj-sidebar-search-input h-full w-full min-w-0 rounded-xl bg-transparent ps-10 pe-10 text-base text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500 ${hasPersian(query) ? "font-fa" : ""}`}
               style={{ unicodeBidi: "plaintext" }}
             />
             {hasSearchText && (

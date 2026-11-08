@@ -19,9 +19,9 @@ const BASE = "/api/admin/remote-channel";
 // Inputs mirror AdminUserModal's password fields; buttons reuse the shared
 // Settings-tab inline button styles, with a thickened modal primary.
 const TEXT_INPUT =
-  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
+  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
 const PW_INPUT =
-  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-12 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
+  "w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-12 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 disabled:opacity-50 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100";
 const EYE_BTN =
   "absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-transparent bg-transparent text-brand-700 transition hover:bg-brand-100 dark:text-brand-200 dark:hover:bg-brand-500/10";
 const BTN_PRIMARY =

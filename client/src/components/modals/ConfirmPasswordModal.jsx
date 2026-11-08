@@ -97,7 +97,7 @@ export default function ConfirmPasswordModal({
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder={showPassword ? "12345678" : "********"}
                   autoComplete="current-password"
-                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"

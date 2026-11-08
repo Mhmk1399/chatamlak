@@ -163,7 +163,7 @@ export function DesktopSettingsModal({
                   maxLength={NICKNAME_MAX}
                   lang={nicknameHasPersian ? "fa" : "en"}
                   dir={nicknameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                     nicknameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
@@ -190,7 +190,7 @@ export function DesktopSettingsModal({
                   autoCapitalize="none"
                   lang={usernameHasPersian ? "fa" : "en"}
                   dir={usernameHasPersian ? "rtl" : "ltr"}
-                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                  className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-16 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                     usernameHasPersian ? "font-fa text-end" : "text-start"
                   }`}
                   style={{ unicodeBidi: "plaintext" }}
@@ -259,7 +259,7 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showCurrentPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
@@ -292,7 +292,7 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showNewPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"
@@ -323,7 +323,7 @@ export function DesktopSettingsModal({
                     }))
                   }
                   placeholder={showConfirmPassword ? "12345678" : "********"}
-                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-2xl border border-brand-200 bg-white px-4 py-3 pr-20 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button
                   type="button"

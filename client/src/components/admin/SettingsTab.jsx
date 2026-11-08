@@ -285,8 +285,7 @@ function NumberInput({ value, onChange, min, max, disabled = false }) {
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onBlur={handleBlur}
-        className="min-w-0 flex-1 border-0 bg-transparent px-0 py-1.5 text-center font-semibold text-slate-700 outline-hidden [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:text-slate-200"
-        style={{ fontSize: "clamp(0.625rem, 1.5vw + 0.2rem, 0.8125rem)" }}
+        className="text-base min-w-0 flex-1 border-0 bg-transparent px-0 py-1.5 text-center font-semibold text-slate-700 outline-hidden [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none dark:text-slate-200"
       />
       <button
         type="button"
@@ -506,7 +505,7 @@ function SettingRow({ def, localVal, onChange, groupDisabled = false, childDefs 
               disabled={!isEnabled || controlDisabled}
               onChange={(e) => onChange(e.target.value)}
               placeholder={def.key.includes("WORKER") ? "https://worker.example.com" : "https://proxy.example.com:8080"}
-              className="mt-2 w-full rounded-xl border border-brand-200/70 bg-white/90 px-3 py-2 text-sm text-slate-700 outline-hidden transition placeholder:text-slate-300 hover:border-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-300/40 disabled:cursor-not-allowed dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-600"
+              className="mt-2 w-full rounded-xl border border-brand-200/70 bg-white/90 px-3 py-2 text-base text-slate-700 outline-hidden transition placeholder:text-slate-300 hover:border-brand-300 focus:border-brand-400 focus:ring-2 focus:ring-brand-300/40 disabled:cursor-not-allowed dark:border-brand-500/30 dark:bg-slate-900/50 dark:text-slate-200 dark:placeholder-slate-600"
             />
           </div>
         </div>
@@ -647,7 +646,7 @@ function SecretCard({ row, value, visible, onToggle }) {
               autoComplete="off"
               placeholder={localize("Not available yet — restart the server once.")}
               onFocus={(e) => e.target.select()}
-              className="w-full cursor-text rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 pr-24 font-mono text-sm text-slate-500 outline-hidden transition select-text placeholder:font-sans placeholder:text-slate-300 focus:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:placeholder-slate-600 dark:focus:border-white/20"
+              className="w-full cursor-text rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 pr-24 font-mono text-base text-slate-500 outline-hidden transition select-text placeholder:font-sans placeholder:text-slate-300 focus:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:placeholder-slate-600 dark:focus:border-white/20"
               style={{
                 userSelect: "text",
                 WebkitUserSelect: "text",

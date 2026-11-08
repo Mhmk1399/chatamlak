@@ -81,7 +81,7 @@ export default function AdminClaimCard({
               placeholder={localize("Enter ADMIN_API_TOKEN")}
               autoComplete="off"
               required
-              className="w-full rounded-2xl border border-brand-200 bg-white py-2 pl-3 pr-14 text-xs text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:pl-4 sm:pr-16 sm:text-sm"
+              className="w-full rounded-2xl border border-brand-200 bg-white py-2 pl-3 pr-14 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-950 dark:text-slate-100 sm:py-3 sm:pl-4 sm:pr-16 text-base"
             />
             <button
               type="button"

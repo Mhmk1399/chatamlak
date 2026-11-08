@@ -170,7 +170,7 @@ export default function MessageContextMenu({ menu, onClose }) {
               })}
             </div>
             {actions.canSetTopic && <label className="ouj-message-topic"><span>{t("Topics")}</span>
-              <select value={actions.topicId} disabled={disabled || closing} onChange={(event) => { void save(() => actions.setTopic(event.target.value)); }}>
+              <select className="text-base" value={actions.topicId} disabled={disabled || closing} onChange={(event) => { void save(() => actions.setTopic(event.target.value)); }}>
                 <option value="">{t("All topics")}</option>{actions.topics.map((topic) => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
               </select></label>}
             {(menu.isOffline || !online) && <p className="ouj-message-menu-notice">{t("Reconnect to react or pin messages.")}</p>}

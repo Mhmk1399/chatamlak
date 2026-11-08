@@ -158,9 +158,16 @@ html.dark body {
   background-color: #110f18;
 }
 
-/* Prevent zoom on input focus for iOS Safari */
-input, textarea, select {
-  font-size: 16px !important;
+/* Match text-base, with a 16px floor to prevent iOS focus zoom. Keep this
+   guard above component/third-party font sizes without limiting larger text. */
+input,
+textarea,
+select,
+.ouj-date-segments,
+[contenteditable="true"],
+[contenteditable=""],
+[contenteditable="plaintext-only"] {
+  font-size: max(16px, 1rem) !important;
 }
 
 /* Empty-field hints follow the interface locale. Filled values retain their

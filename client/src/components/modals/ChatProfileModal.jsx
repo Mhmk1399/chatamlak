@@ -694,7 +694,7 @@ export default function ChatProfileModal({
                 placeholder={localize("Search members")}
                 lang={memberQueryHasPersian ? "fa" : "en"}
                 dir={memberQueryHasPersian ? "rtl" : "ltr"}
-                className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-2.5 pr-14 text-sm text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
+                className={`w-full rounded-2xl border border-brand-200 bg-white px-4 py-2.5 pr-14 text-base text-slate-700 outline-hidden transition focus:border-brand-400 focus:ring-2 focus:ring-brand-300/60 dark:border-brand-500/30 dark:bg-slate-900 dark:text-slate-100 ${
                   memberQueryHasPersian ? "font-fa text-end" : "text-start"
                 }`}
                 style={{ unicodeBidi: "plaintext" }}

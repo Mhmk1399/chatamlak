@@ -22,7 +22,7 @@ export default function MessagingToolbar() {
   const hasContent = context.extras.topics.length > 0 || context.extras.pinnedMessages?.length > 0 || context.error;
   return <div ref={toolbarRef} className={hasContent ? "ouj-glass shrink-0 border-b border-slate-200 px-3 py-2 dark:border-slate-800" : "shrink-0"}>
     {context.extras.topics.length > 0 && <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">{t("Topics")}
-      <select className="min-h-9 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-2 dark:border-slate-700 dark:bg-slate-900" value={context.topic} onChange={(event) => context.setTopic(event.target.value)}>
+      <select className="text-base min-h-9 min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-2 dark:border-slate-700 dark:bg-slate-900" value={context.topic} onChange={(event) => context.setTopic(event.target.value)}>
         <option value="">{t("All topics")}</option>{context.extras.topics.map((topic) => <option key={topic.id} value={topic.id}>{t(topic.title)}</option>)}
       </select>
     </label>}
