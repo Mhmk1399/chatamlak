@@ -28,7 +28,13 @@ async function openPicker() {
   await page.getByRole("button", { name: t("Choose emoji"), exact: true }).click();
   const dialog = page.getByRole("dialog", { name: t("Choose emoji"), exact: true });
   await expect.element(dialog).toBeVisible();
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await Promise.all(dialog.element().closest(".ouj-tool-sheet").getAnimations().map((animation) => animation.finished.catch(() => {})));
   return dialog;
+}
+
+async function dismissBackdrop() {
+  await userEvent.click(document.querySelector(".ouj-tool-sheet-overlay"), { position: { x: 2, y: 2 } });
 }
 
 test("inserts a searched Persian emoji at the selected range without auto sending", async () => {
@@ -60,8 +66,8 @@ for (const locale of ["fa", "en"]) for (const [width, height] of [[1280, 800], [
       await expect.element(page.getByRole("tab", { name: t(name), exact: true })).toBeVisible();
     }
     const bounds = dialog.element().getBoundingClientRect();
-    expect(bounds.left).toBeGreaterThanOrEqual(7); expect(bounds.right).toBeLessThanOrEqual(width - 7);
-    expect(bounds.top).toBeGreaterThanOrEqual(7); expect(bounds.bottom).toBeLessThanOrEqual(height - 7);
+    expect(bounds.left).toBeGreaterThanOrEqual(0); expect(bounds.right).toBeLessThanOrEqual(width);
+    expect(bounds.top).toBeGreaterThanOrEqual(12); expect(bounds.bottom).toBeLessThanOrEqual(height);
     expect(dialog.element().scrollWidth).toBeLessThanOrEqual(dialog.element().clientWidth);
     expect(dialog.element().querySelectorAll('[role="gridcell"]').length).toBeLessThan(500);
     if ([375, 1280].includes(width)) {
@@ -96,10 +102,25 @@ test("supports English aliases, keyboard selection, skin tones and recent choice
   await page.getByRole("button", { name: t("Close emoji picker"), exact: true }).click();
 });
 
+test("resizing the emoji sheet with Enter never sends the pending chat attachments", async () => {
+  const send = vi.fn();
+  await setup("en", 1280, 800, { handleSend: send, pendingUploadType: "document",
+    pendingUploadFiles: [{ id: "report-file", name: "report.pdf", mimeType: "application/pdf", sizeBytes: 20 }] });
+  const input = page.getByRole("textbox", { name: "Type a message", exact: true }); await input.fill("Daily report");
+  await openPicker();
+  const resize = page.getByRole("button", { name: "Expand sheet", exact: true }); resize.element().focus();
+  await userEvent.keyboard("{Enter}");
+  expect(send).not.toHaveBeenCalled();
+  await expect.element(page.getByRole("button", { name: "Show half-height sheet", exact: true })).toBeVisible();
+  expect(send).not.toHaveBeenCalled();
+  await userEvent.keyboard("{Escape}"); await expect.element(input).toHaveValue("Daily report");
+  await expect.element(page.getByText("report.pdf", { exact: true })).toBeVisible();
+});
+
 test("preserves the draft on outside dismissal and rejects a whole emoji beyond the message limit", async () => {
   await setup("en", 375, 812, { messageMaxChars: 3 });
   const input = page.getByRole("textbox", { name: t("Type a message"), exact: true }); await input.fill("hi");
-  let dialog = await openPicker(); await input.click(); await expect.element(dialog).not.toBeInTheDocument();
+  let dialog = await openPicker(); await dismissBackdrop(); await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(input).toHaveValue("hi"); input.element().setSelectionRange(2, 2);
   dialog = await openPicker();
   await page.getByRole("combobox", { name: t("Search emojis"), exact: true }).fill("red heart");
@@ -110,12 +131,12 @@ test("preserves the draft on outside dismissal and rejects a whole emoji beyond 
 });
 
 for (const locale of ["fa", "en"]) for (const width of [375, 1280]) {
-  test(`dismisses on a blank chat area click in ${locale} at ${width}px without changing the draft`, async () => {
+  test(`dismisses on the chat backdrop in ${locale} at ${width}px without changing the draft`, async () => {
     await setup(locale, width, 812);
     const input = page.getByRole("textbox", { name: t("Type a message"), exact: true });
     await input.fill("گزارش بازدید");
     const dialog = await openPicker();
-    await page.getByTestId("conversation-canvas").click({ position: { x: 16, y: 20 } });
+    await dismissBackdrop();
     await expect.element(dialog).not.toBeInTheDocument();
     await expect.element(page.getByRole("button", { name: t("Choose emoji"), exact: true })).toHaveAttribute("aria-expanded", "false");
     await expect.element(input).toHaveValue("گزارش بازدید");
@@ -124,27 +145,27 @@ for (const locale of ["fa", "en"]) for (const width of [375, 1280]) {
 }
 
 for (const locale of ["fa", "en"]) {
-  test(`dismisses on a touch outside in ${locale}, while interactions inside stay open`, async () => {
+  test(`dismisses on a mobile backdrop tap in ${locale}, while interactions inside stay open`, async () => {
     await setup(locale, 375, 812);
     const dialog = await openPicker();
     await page.getByRole("tab", { name: t("Animals and nature"), exact: true }).click();
     await expect.element(dialog).toBeVisible();
-    const canvas = page.getByTestId("conversation-canvas").element();
-    canvas.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, pointerId: 17, pointerType: "touch", isPrimary: true, button: 0 }));
-    canvas.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, composed: true, pointerId: 17, pointerType: "touch", isPrimary: true, button: 0 }));
+    await dismissBackdrop();
     await expect.element(dialog).not.toBeInTheDocument();
   });
 }
 
-test("outside attachment actions run on the first click, and the emoji trigger toggles without reopening", async () => {
+test("backdrop dismissal does not activate background actions, and the emoji trigger reopens once", async () => {
   await setup("en", 375, 812);
   let dialog = await openPicker();
-  await page.getByRole("button", { name: t("Attach file"), exact: true }).click();
+  await dismissBackdrop();
   await expect.element(dialog).not.toBeInTheDocument();
+  await expect.element(page.getByRole("menuitem", { name: t("Take photo"), exact: true })).not.toBeInTheDocument();
+  await page.getByRole("button", { name: t("Attach file"), exact: true }).click();
   await expect.element(page.getByRole("menuitem", { name: t("Take photo"), exact: true })).toBeVisible();
   await userEvent.keyboard("{Escape}");
   dialog = await openPicker();
-  await page.getByRole("button", { name: t("Choose emoji"), exact: true }).click();
+  await dismissBackdrop();
   await expect.element(dialog).not.toBeInTheDocument();
   await expect.element(page.getByRole("button", { name: t("Choose emoji"), exact: true })).toHaveAttribute("aria-expanded", "false");
 });
@@ -187,7 +208,7 @@ test("switches language and theme with the picker open without losing search or 
   const dialog = page.getByRole("dialog", { name: "Choose emoji", exact: true }); await expect.element(dialog).toBeVisible();
   await expect.element(page.getByRole("combobox", { name: "Search emojis", exact: true })).toHaveValue("قلب قرمز");
   await expect.element(page.getByRole("gridcell", { name: "red heart", exact: true })).toBeVisible();
-  await expect.poll(() => getComputedStyle(dialog.element().parentElement).backgroundColor).toBe("rgb(27, 24, 35)");
+  await expect.poll(() => getComputedStyle(dialog.element()).color).toBe("rgb(240, 239, 245)");
   await page.getByRole("button", { name: "Close emoji picker", exact: true }).click();
   await expect.element(page.getByRole("textbox", { name: t("Type a message"), exact: true })).toHaveValue("گزارش امروز");
 });

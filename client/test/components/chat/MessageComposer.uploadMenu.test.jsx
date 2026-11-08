@@ -31,7 +31,7 @@ describe("upload menu placement and native file selection", () => {
       const menu = page.getByRole("menu", { name: t("Attach file"), exact: true });
       await expect.element(menu).toBeVisible();
       expect(menu.element().scrollWidth).toBeLessThanOrEqual(menu.element().clientWidth);
-      for (const label of ["Photo or Video", "Take photo", "Record video", "Document"]) {
+      for (const label of ["Photo or Video", "Take photo", "Record video", "Document", "My listings", "Daily work report"]) {
         const action = page.getByText(t(label), { exact: true });
         await expect.element(action).toBeVisible();
         const button = action.element().closest("button"), rect = button.getBoundingClientRect();
@@ -65,7 +65,11 @@ describe("upload menu placement and native file selection", () => {
     await expect.element(page.getByRole("menuitem", { name: t("Document"), exact: true })).toHaveFocus();
     await userEvent.keyboard("{Escape}"); await expect.element(trigger).toHaveFocus();
     await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
-    await userEvent.keyboard("{Enter}"); await userEvent.keyboard("{End}"); await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("{Enter}"); await userEvent.keyboard("{End}");
+    await expect.element(page.getByRole("menuitem", { name: t("Daily work report"), exact: true })).toHaveFocus();
+    await userEvent.keyboard("{ArrowUp}"); await userEvent.keyboard("{ArrowUp}");
+    await expect.element(page.getByRole("menuitem", { name: t("Document"), exact: true })).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
     expect(picker).toHaveBeenCalledOnce(); expect(selected.accept).toBe(""); expect(send).not.toHaveBeenCalled();
   });
 

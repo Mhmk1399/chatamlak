@@ -10,6 +10,7 @@ RUN npm config set registry https://registry.npmjs.org/ \
   && npm config set fetch-timeout 300000 \
   && npm ci --no-audit --no-fund --loglevel=verbose
 COPY client/ ./
+COPY shared/ /app/shared/
 RUN npm run build
 
 FROM node:24-bookworm-slim AS server-deps
@@ -54,6 +55,7 @@ RUN apt-get update \
 
 COPY --from=server-deps /app/server/node_modules ./server/node_modules
 COPY server/ ./server/
+COPY shared/ ./shared/
 COPY --from=worker-deps /app/worker/node_modules ./worker/node_modules
 COPY worker/ ./worker/
 COPY scripts/run-data-command.sh ./scripts/run-data-command.sh
@@ -70,6 +72,7 @@ COPY package.json ./
 RUN mkdir -p /app/data /app/data/uploads /app/data/backups
 
 ENV APP_ENV=production
+ENV NODE_ENV=production
 ENV SERVER_PORT=5174
 ENV BIND_ADDRESS=0.0.0.0
 EXPOSE 5174

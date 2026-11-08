@@ -38,6 +38,7 @@ import { useVoiceRecording } from "../../../hooks/chat/useVoiceRecording.js";
 import { useContextMenuTrigger } from "../../../hooks/useContextMenuTrigger.js";
 import { useMessagingContext } from "../../../hooks/chat/useMessagingTools.js";
 import { insertEmojiAtSelection } from "../../../utils/emojiPreferences.js";
+import ComposerBusinessActions from "./ComposerBusinessActions.jsx";
 
 const ScheduleMessageDialog = lazy(() => import("../tools/ScheduleMessageDialog.jsx"));
 let emojiPickerPromise;
@@ -990,7 +991,10 @@ export function MessageComposer({
               >
                 <Paperclip size={18} className="icon-anim-sway" />
               </button>
-              {showUploadMenu && !uploadBusy ? (
+              <ComposerBusinessActions contextKey={recordingContext} returnFocusRef={uploadButtonRef}
+                disabled={uploadBusy || submitting || !!scheduleDraft || isEditMode || !!videoRecorderOpen}
+                onOpen={() => { setEmojiOpen(false); closeUploadMenu(false); }}>
+              {(businessMenuItems) => showUploadMenu && !uploadBusy ? (
                 <AnchoredMenu anchorRef={uploadButtonRef} onClose={closeUploadMenu} id={uploadMenuId} label={t("Attach file")} placement="top" align="start" autoFocus={focusUploadMenu}>
                   <button
                     type="button" role="menuitem"
@@ -1032,8 +1036,10 @@ export function MessageComposer({
                     className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                   >
                     <File size={18} className="shrink-0 text-brand-500 icon-anim-lift" />{t("Document")}</button>
+                  {businessMenuItems}
                 </AnchoredMenu>
               ) : null}
+              </ComposerBusinessActions>
               {CAMERA_PICKERS.map(({ kind, label, accept }) => (
                 <input
                   key={label}
@@ -1173,7 +1179,7 @@ export function MessageComposer({
               <SmilePlus size={21} className={emojiLoading ? "animate-pulse" : undefined} />
             </button>
             {emojiLoading && emojiOpen && <span role="status" className="sr-only">{t("Loading emojis…")}</span>}
-            {emojiOpen && EmojiPicker && <EmojiPicker key={recordingContext} id={emojiPickerId} anchorRef={emojiButtonRef}
+            {emojiOpen && EmojiPicker && <EmojiPicker key={recordingContext} id={emojiPickerId}
               owner={draftOwner} isDesktop={isDesktop} onClose={() => setEmojiOpen(false)} onSelect={selectEmoji} />}
             </div>
           </>

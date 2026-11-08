@@ -20,6 +20,7 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 
 | Variable | Type | Default | Description |
 |---|---|---:|---|
+| `SONGBIRD_ENV_FILE` | `string` | `.env` | Compose selector for the application's runtime `env_file`; set `.env.production` in the private production file and pass that file with `--env-file`. |
 | `SERVER_PORT` | `integer` | `5174` | API server port. (`PORT` is supported as a legacy fallback.) |
 | `CLIENT_PORT` | `integer` | `80` | Nginx listen port (what users connect to). |
 | `BIND_ADDRESS` | `string` | `localhost` | Network interface to bind to. Use `localhost` for VPS/private networks to avoid exposing backend when firewall is disabled; use `0.0.0.0` for Docker containers. |
@@ -122,9 +123,56 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 
 :::info
 
-**Encryption at rest:** Songbird auto-generates `STORAGE_ENCRYPTION_KEY` on first run and saves it into `.env`. Keep that value stable. On startup, the server backfills existing stored messages, message-upload files, and avatar files into encrypted form when needed.
+**Encryption at rest:** Keep `STORAGE_ENCRYPTION_KEY` consistent with the database. `ensureSystemSecrets` resolves keys from the runtime environment or database, generates missing keys and attempts to save them to the project's `.env`. This does not guarantee application-side encryption for every direct S3 upload. The production profile below uses provider-side encryption, which must be enabled and verified for the private Chat bucket.
 
 :::
+
+## Production Compose environment {#production-compose-environment}
+
+The root `.env.production.example` is a sanitized starting point. The private `.env.production` is ignored by version control and excluded from Docker build input, so it must be transferred privately to the deployment host or prepared there. Do not overwrite an existing private file. For a new file on the Ubuntu host:
+
+```sh
+cp -n .env.production.example .env.production
+chmod 600 .env.production
+```
+
+Edit that file privately and keep `SONGBIRD_ENV_FILE=.env.production`. Pass `--env-file .env.production` to every production Compose command. The flag supplies [Compose interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation); the repository's `env_file` selector `${SONGBIRD_ENV_FILE:-.env}` also injects the selected file's full runtime environment into the application container. The flag alone does not replace that [container environment configuration](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/). Without the selector override, the default remains `.env`.
+
+| Area | Production profile |
+|---|---|
+| Runtime | `APP_ENV=production`; `NODE_ENV=production` is set by Compose and the final Dockerfile stage, not by the env templates. |
+| Ports and files | `SERVER_PORT=5174`, `CLIENT_PORT=443`, `BIND_ADDRESS=0.0.0.0`, `DATA_DIR=/app/data`. Keep the runtime data volume persistent. |
+| Database | `DB_CLIENT=mongodb`, `MONGODB_DATABASE=ouj_chat`, `MONGODB_MAX_POOL_SIZE=20`; fill the intentionally blank `MONGODB_URI` privately. |
+| Storage | `STORAGE_DRIVER=remote`, `STORAGE_ENCRYPTION_MODE=remote`, `STORAGE_AUTO_CORS=false`; provide your endpoint, bucket, region and access credentials. |
+| Local child worker | `START_LOCAL_WORKER=auto`, `WORKER_CONCURRENCY=1`, `WORKER_URL=http://127.0.0.1:8080`, `WEBHOOK_URL=http://127.0.0.1:5174/api/uploads/webhook/processed`. These loopback addresses apply to the all-in-one container. |
+| Calls | `CALL=true`; optional TURN entries remain blank until configured for your relay. |
+| Optional services | All three `REMOTE_CHANNEL` / `REMOTE_CHANNEL_UI` / `REMOTE_CHANNEL_MEDIA_STREAM` flags are `false`; Redis connection values remain blank. |
+
+Before startup, fill `APP_PUBLIC_URL` with the exact HTTPS app origin, such as `https://chat.example.com`, and complete `STORAGE_ENDPOINT`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ACCESS_KEY_ID` and `STORAGE_SECRET_ACCESS_KEY`. Use a private Chat bucket and verify its provider-side encryption. Keep automatic CORS disabled and configure bucket CORS manually for the exact app origin; see [Object Storage](./Object-Storage.md).
+
+When reusing an existing database, securely reuse its matching encryption, VAPID and other stable system keys. Do not replace them with fresh template values. For the all-in-one bootstrap, populate `WEBHOOK_SECRET` and `STORAGE_ENCRYPTION_KEY` consistently before either app or worker starts. Runtime key generation does not update the host's `.env.production` or a worker process that has already started. A fresh database may use newly provisioned keys; retain them securely for subsequent starts and recovery.
+
+Prepare valid `certs/cert.pem` and `certs/key.pem`, configure the domain and Nginx `server_name`, and confirm that the secured MongoDB replica set is reachable from the application network with least-privilege Chat credentials. On the shared VPS, ports **80/443** may already belong to the existing Nginx: integrate Songbird with the existing private Compose network and proxy. Reuse the secured MongoDB engine; do not blindly start a second Nginx or MongoDB instance.
+
+Validate the completed configuration without printing the resolved secrets:
+
+```sh
+docker compose --env-file .env.production config --quiet
+```
+
+Only on a host with the required values, certificates, domain/proxy wiring, reachable replica set and available ports, start the complete stack:
+
+```sh
+docker compose --env-file .env.production up -d --build
+```
+
+On the shared host, after configuring the existing private network/proxy integration, start only the application service instead of another proxy:
+
+```sh
+docker compose --env-file .env.production up -d --build songbird
+```
+
+Configuration validation is not a live database, bucket or container test. These settings do not migrate authentication or the database, connect Web identity, or turn the frontend business previews into live reports/listings.
 
 ## Apply Changes
 
@@ -135,6 +183,8 @@ You can easily edit your .env file via the [Deployment Script](./Deployment-Scri
 :::
 
 **1. Docker deployment:**
+
+The examples below use the default `.env`. For the production profile, also pass `--env-file .env.production` and retain its `SONGBIRD_ENV_FILE` selector.
 
 ```bash
 cd /opt/songbird

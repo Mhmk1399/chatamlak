@@ -132,11 +132,15 @@ server/index.js → api/ → lib/services/ → db.js → db/mongoRepository.js �
 
 | فایل | مسئولیت |
 | --- | --- |
-| [chat/messages/MessageComposer.jsx](../client/src/components/chat/messages/MessageComposer.jsx) | نوشتن، ویرایش و ارسال؛ پیوست، ایموجی، ضبط با نگه‌داشتن و ورود به زمان‌بندی ارسال. |
+| [chat/messages/MessageComposer.jsx](../client/src/components/chat/messages/MessageComposer.jsx) | نوشتن، ویرایش و ارسال؛ پیوست، ایموجی، ضبط با نگه‌داشتن، زمان‌بندی و دکمه‌های پیش‌نمایش کسب‌وکار. |
+| [chat/messages/ComposerBusinessActions.jsx](../client/src/components/chat/messages/ComposerBusinessActions.jsx) | گزینه‌های آگهی‌های من و گزارش کار روزانه در منوی سنجاق؛ بستن منو، بارگذاری هنگام نیازِ پنل محلی و برگشت فوکوس به سنجاق؛ بدون درخواست دادهٔ کسب‌وکار یا ارسال نمونه به گفتگو. |
+| [chat/messages/composer-business-actions.css](../client/src/components/chat/messages/composer-business-actions.css) | ظاهر گزینه‌های کسب‌وکار در منوی سنجاق و وضعیت بارگذاری یا خطای پیش‌نمایش. |
+| [chat/business/BusinessPreviewSheet.jsx](../client/src/components/chat/business/BusinessPreviewSheet.jsx) | پیش‌نمایش نمونهٔ محلی: سه آگهی با جست‌وجو و فیلتر، و گزارش خواندنی با آمار نمایشی و تاریخ شمسی تهران؛ هیچ دادهٔ حسابی درخواست نمی‌کند. |
+| [chat/business/business-preview-sheet.css](../client/src/components/chat/business/business-preview-sheet.css) | ظاهر فهرست نمونه، جست‌وجو، حالت خالی، فیلتر و گزارش در دو پوسته. |
 | [chat/messages/MessageTimeline.jsx](../client/src/components/chat/messages/MessageTimeline.jsx) | ترکیب تاریخچه، ردیف‌های پیام و وضعیت‌های بارگیری. |
 | [chat/messages/MessageList.jsx](../client/src/components/chat/messages/MessageList.jsx) | نمایش فهرست پیام‌ها و هماهنگی ردیف‌ها با پیمایش. |
 | [chat/messages/MessageItem.jsx](../client/src/components/chat/messages/MessageItem.jsx) | حباب هر پیام، فرستنده، زمان، وضعیت ارسال، پاسخ و تعامل لمسی. |
-| [chat/messages/EmojiPickerPopover.jsx](../client/src/components/chat/messages/EmojiPickerPopover.jsx) | انتخابگر ایموجی با جست‌وجو، رنگ پوست و انتخاب‌های اخیر؛ هنگام نیاز بارگذاری می‌شود. |
+| [chat/messages/EmojiPickerPopover.jsx](../client/src/components/chat/messages/EmojiPickerPopover.jsx) | انتخابگر ایموجی در باتم‌شیت نیمه/تمام‌قد با حرکت نرم، جست‌وجو، رنگ پوست و انتخاب‌های اخیر؛ هنگام نیاز بارگذاری می‌شود. |
 | [chat/messages/emoji-picker.css](../client/src/components/chat/messages/emoji-picker.css) | ظاهر انتخابگر ایموجی و هماهنگی آن با اوج. |
 | [context-menu/ContextMenuSurface.jsx](../client/src/components/context-menu/ContextMenuSurface.jsx) | سطح مشترک دریافت راست‌کلیک، لمس طولانی و میان‌بر صفحه‌کلید. |
 | [context-menu/useAppContextMenu.js](../client/src/components/context-menu/useAppContextMenu.js) | تولید گزینه‌های منو و اتصال آن‌ها به اقدام‌های مجاز پیام، کاربر یا چت. |
@@ -152,6 +156,8 @@ server/index.js → api/ → lib/services/ → db.js → db/mongoRepository.js �
 | [forward/ForwardChatGridItem.jsx](../client/src/components/forward/ForwardChatGridItem.jsx) | کارت انتخاب مقصد فوروارد. |
 | [forward/forwardChatUtils.js](../client/src/components/forward/forwardChatUtils.js) | یکسان‌سازی و آماده‌سازی مقصدهای فوروارد. |
 
+پنل‌های کسب‌وکار فعلی فقط نمونهٔ رابط هستند و با انتخاب دکمه، هنگام نیاز بارگذاری می‌شوند؛ داده یا انتخاب آن‌ها ذخیره یا به چت ارسال نمی‌شود. دادهٔ واقعی آگهی‌ها، گزارش و مجوزهای کسب‌وکار متعلق به Web است. اتصال آینده باید از API احرازهویت‌شدهٔ همان سرویس عبور کند؛ این پیش‌نمایش، اتصال زنده یا مجوز خواندن مستقیم collectionهای Web نیست.
+
 ## ابزارهای گفتگو و تماس
 
 مسیر پایه: `client/src/components/`
@@ -166,7 +172,8 @@ server/index.js → api/ → lib/services/ → db.js → db/mongoRepository.js �
 | [chat/tools/ScheduleMessageDialog.jsx](../client/src/components/chat/tools/ScheduleMessageDialog.jsx) | ورود به زمان‌بندی برای پیش‌نویس جاری از دکمهٔ ارسال. |
 | [chat/tools/PerformancePanel.jsx](../client/src/components/chat/tools/PerformancePanel.jsx) | نمایش داده‌های سنجش عملکرد چت. |
 | [chat/tools/GroupCallPanel.jsx](../client/src/components/chat/tools/GroupCallPanel.jsx) | نمایش اتاق تماس گروهی و کنترل شرکت‌کنندگان. |
-| [chat/tools/ToolDialog.jsx](../client/src/components/chat/tools/ToolDialog.jsx) | پوستهٔ مشترک پنجره‌های ابزارهای گفتگو. |
+| [chat/tools/ToolDialog.jsx](../client/src/components/chat/tools/ToolDialog.jsx) | پوستهٔ مشترک پنجره‌های ابزارهای گفتگو با حالت معمولی و `variant="sheet"` برای پنل پایین صفحه. |
+| [chat/tools/tool-dialog.css](../client/src/components/chat/tools/tool-dialog.css) | اندازه، محدودهٔ دید، فضای امن، حرکت و حالت‌های دسترس‌پذیری پنل پایین صفحه. |
 | [chat/tools/toolStyles.js](../client/src/components/chat/tools/toolStyles.js) | کلاس‌های مشترک کنترل‌ها و فرم‌های ابزارها. |
 | [call/CallsPanel.jsx](../client/src/components/call/CallsPanel.jsx) | فهرست و تاریخچهٔ تماس‌ها. |
 | [call/CallScreen.jsx](../client/src/components/call/CallScreen.jsx) | نمای تمام‌صفحه و شناور تماس صوتی یا تصویری، وضعیت اتصال و کنترل میکروفون و دوربین. |
@@ -241,6 +248,8 @@ server/index.js → api/ → lib/services/ → db.js → db/mongoRepository.js �
 | --- | --- |
 | [useFocusTrap.js](../client/src/hooks/useFocusTrap.js) | نگه‌داشتن فوکوس داخل پنجره و بازگرداندن آن بعد از بسته‌شدن. |
 | [useContextMenuTrigger.js](../client/src/hooks/useContextMenuTrigger.js) | تشخیص نگه‌داشتن و راست‌کلیک؛ لغو حرکت در اثر اسکرول، رهاکردن یا تغییر هدف. |
+| [useSheetResizeGestures.js](../client/src/hooks/useSheetResizeGestures.js) | تشخیص جهت اسکرول عمودی برای اندازهٔ باتم‌شیت مشترک؛ آستانهٔ حرکت، نادیده‌گرفتن زوم و حرکت افقی/چندلمسی و پاک‌سازی شنونده‌ها هنگام بسته‌شدن. |
+| [useSheetDismissGesture.js](../client/src/hooks/useSheetDismissGesture.js) | بستن اختیاری باتم‌شیت با کشیدن سربرگ به پایین؛ دنبال‌کردن اشاره‌گر، برگشت نرمِ حرکت کوتاه، بستن پس از آستانه، رعایت کاهش حرکت و لغو شنونده‌ها/انیمیشن هنگام خروج. |
 | [useHoldToRecord.js](../client/src/hooks/useHoldToRecord.js) | چرخهٔ لمس یا فشار برای ضبط و قفل‌کردن رکورد. |
 | [useAppReleaseInfo.js](../client/src/hooks/useAppReleaseInfo.js) | دریافت و نگه‌داری اطلاعات انتشار برنامه. |
 | [useAdminCache.js](../client/src/hooks/useAdminCache.js) | کش داده‌های پنل مدیریت. |

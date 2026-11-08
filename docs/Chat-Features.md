@@ -40,6 +40,19 @@ Desktop filters form a vertical rail for **All**, **Unread**, **Groups**, **Chan
 
 The conversation uses one **72 px** header: mobile Back, avatar/title/status at the start of the current writing direction, then Search, voice/group-call controls and the three-dot menu as available. Video, media, pin/archive, folder assignment, profile, mute, wallpaper, delete and **Chat tools** are reached through that menu according to the conversation and your permissions. Deleting still requires the existing confirmation. Topic and pinned-message strips appear only when relevant content exists, keeping general actions in the header menu.
 
+## My listings and daily work report previews
+
+Open the composer's **paperclip attachment menu**, then choose **My listings** or **Daily work report** below the media and document actions. The menu closes and the selected bottom sheet loads on demand. Close it with **Close**, **Escape**, or a click outside; focus returns to the paperclip button. The composer keeps its single row on mobile and desktop.
+
+These two preview sheets also support dragging their top handle or empty header downward. The sheet follows your finger or pointer; releasing after a sufficient downward drag closes it with a smooth downward transition. A short or cancelled drag settles back. Header buttons and scrolling inside the body keep their normal behavior. Reduced-motion preferences make the return and close immediate.
+
+Both sheets clearly show **Demo preview** and contain local examples rather than information from your account:
+
+- **My listings:** browse three sample properties, search their titles locally and filter **All listings**, **For sale** or **For rent**. Clear the search or use **Clear filters** when no examples match.
+- **Daily work report:** view a read-only sample activity summary and example call, visit and client-follow-up metrics. Its date uses the Persian/Jalali calendar and **Asia/Tehran** in both interface languages.
+
+These previews do not fetch live business data, save changes, create business records or send samples into the conversation. Search and filter choices are temporary. Connecting real listings or reports later requires an authenticated API owned by Web, with Web enforcing the account's business permissions.
+
 ## Drafts
 
 Start typing in a conversation, then open another conversation or reload the page. Ouj Chat restores the unfinished text when you return. If the draft includes a reply, its reply target is restored too.
@@ -143,7 +156,13 @@ Open **Choose emoji** inside the composer to browse categories, search with Engl
 
 Selecting an emoji does not send the message. Choose **Send** explicitly; the usual draft, reply, edit and persistent-queue rules still apply. Skin-tone preferences and up to **24 recently used choices** are saved separately for each account in this browser. They are not synchronized to the server or another device, and clearing browser data removes them.
 
-The panel follows Persian/English direction and the light/dark theme on mobile and desktop. Close it with **Escape**, its close button or a click outside. It loads on demand from this site and uses native glyphs without a CDN; searches and message text are not sent to a third-party emoji service. First use may need a connection. After loading, offline reopening depends on the browser retaining the required cached assets.
+The picker opens as a modal bottom sheet with Persian/English direction and light/dark styling on mobile and desktop. It starts at about half the visible height, with a **300 px** minimum on short screens, bounded by the available viewport. Scroll toward later emoji with the wheel downward or an upward swipe to expand it to nearly the full visible height. Reverse vertical scrolling returns it to half height; horizontal, multi-touch and zoom gestures do not resize it.
+
+Use the header's resize button as a touch or keyboard alternative. With that button focused, **ArrowDown** expands the sheet and **ArrowUp** returns it to half height. Resizing preserves the search, emoji-grid scroll position, text draft and local preferences. Close with **Escape**, **Close** or a click outside; focus returns to the **Choose emoji** button. Choosing an emoji returns the caret to the writing input.
+
+Height changes animate smoothly, and reversing direction continues from the current height. Reduced-motion preferences remove the resize transition.
+
+The picker loads on demand from this site and uses native glyphs without a CDN; searches and message text are not sent to a third-party emoji service. First use may need a connection. After loading, offline reopening depends on the browser retaining the required cached assets.
 
 The bundled `emoji-picker-react` **5.1.4** catalog contains **1,906 base entries** and **3,931 entries including variations**, covering Unicode versions up to **16**. Native appearance and support depend on the operating system and font; the picker filters unsupported glyphs. English/Persian search includes vendored Unicode CLDR annotations with their pinned source and Unicode-3.0 license retained in the repository.
 

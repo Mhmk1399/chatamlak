@@ -8,14 +8,15 @@ services:
     expose:
       - "${SERVER_PORT:-5174}"
     env_file:
-      - path: .env
+      - path: ${SONGBIRD_ENV_FILE:-.env}
         required: false
     environment:
+      NODE_ENV: production
       APP_ENV: ${APP_ENV:-production}
       SERVER_PORT: ${SERVER_PORT:-5174}
       BIND_ADDRESS: "0.0.0.0"
       DB_CLIENT: mongodb
-      MONGODB_URI: ${MONGODB_URI:?Set your MongoDB replica-set or Atlas URI in .env}
+      MONGODB_URI: ${MONGODB_URI:?Set your MongoDB replica-set or Atlas URI in the selected environment file}
       MONGODB_DATABASE: ${MONGODB_DATABASE:-ouj_chat}
       # Tell the admin panel which container to use via the Docker API.
       # Defaults to "songbird" which matches the container_name above.

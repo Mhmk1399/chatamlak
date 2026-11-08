@@ -20,6 +20,7 @@ nano .env
 
 | متغیر | نوع | پیش‌فرض | توضیح |
 |---|---|---:|---|
+| `SONGBIRD_ENV_FILE` | `string` | `.env` | انتخاب‌گر Compose برای `env_file` زمان اجرای برنامه؛ مقدار `.env.production` را در فایل خصوصی production قرار دهید و همان فایل را با `--env-file` معرفی کنید. |
 | `SERVER_PORT` | `integer` | `5174` | پورت سرور API. (`PORT` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
 | `CLIENT_PORT` | `integer` | `80` | پورت listen مربوط به Nginx (همان چیزی که کاربران به آن متصل می‌شوند). |
 | `BIND_ADDRESS` | `string` | `localhost` | رابط شبکه مورد اتصال. برای VPS / شبکه‌های خصوصی از `localhost` استفاده کنید تا هنگام غیرفعال بودن فایروال، بک‌اند قابل افشا نباشد؛ و برای کانتینرهای Docker از `0.0.0.0` استفاده کنید. |
@@ -122,9 +123,56 @@ nano .env
 
 :::info
 
-**رمزنگاری در حالت سکون:** Songbird در اولین اجرا `STORAGE_ENCRYPTION_KEY` را به‌صورت خودکار تولید کرده و آن را در `.env` ذخیره می‌کند. آن مقدار را پایدار نگه دارید. هنگام راه‌اندازی، سرور در صورت نیاز پیام‌های ذخیره‌شده موجود، فایل‌های آپلود پیام و فایل‌های آواتار را به شکل رمزنگاری‌شده درمی‌آورد.
+**رمزنگاری در حالت سکون:** مقدار `STORAGE_ENCRYPTION_KEY` را با دیتابیس سازگار نگه دارید. `ensureSystemSecrets` کلیدها را از محیط اجرا یا دیتابیس می‌گیرد، کلید گم‌شده را تولید می‌کند و برای ذخیره در `.env` پروژه تلاش می‌کند. این رفتار تضمین رمزنگاری سمت برنامه برای همهٔ آپلودهای مستقیم S3 نیست. پروفایل production زیر از رمزنگاری سمت provider استفاده می‌کند که باید برای باکت خصوصی Chat فعال و صحت آن بررسی شود.
 
 :::
+
+## محیط production در Compose {#production-compose-environment}
+
+فایل ریشهٔ `.env.production.example` نقطهٔ شروعِ بدون اطلاعات محرمانه است. فایل خصوصی `.env.production` در کنترل نسخه نادیده گرفته و از ورودی ساخت Docker کنار گذاشته می‌شود؛ بنابراین باید خصوصی به میزبان استقرار منتقل یا همان‌جا آماده شود. فایل خصوصی موجود را بازنویسی نکنید. برای ساخت فایل جدید روی میزبان Ubuntu:
+
+```sh
+cp -n .env.production.example .env.production
+chmod 600 .env.production
+```
+
+فایل را خصوصی ویرایش کنید و `SONGBIRD_ENV_FILE=.env.production` را نگه دارید. در همهٔ فرمان‌های Compose مربوط به production، `--env-file .env.production` را وارد کنید. این گزینه مقدارهای [جای‌گذاری متغیر Compose](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation) را می‌دهد؛ انتخاب‌گر `env_file` مخزن با مقدار `${SONGBIRD_ENV_FILE:-.env}`، محیط کامل فایل انتخاب‌شده را هم به کانتینر برنامه می‌رساند. خود گزینه به‌تنهایی جای [تنظیم محیط کانتینر](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/) را نمی‌گیرد. بدون تغییر انتخاب‌گر، پیش‌فرض همان `.env` می‌ماند.
+
+| بخش | پروفایل production |
+|---|---|
+| اجرای برنامه | `APP_ENV=production`؛ مقدار `NODE_ENV=production` در Compose و مرحلهٔ نهایی Dockerfile تنظیم می‌شود، نه در فایل‌های نمونهٔ env. |
+| پورت و فایل | `SERVER_PORT=5174`، `CLIENT_PORT=443`، `BIND_ADDRESS=0.0.0.0`، `DATA_DIR=/app/data`. volume دادهٔ اجرا را ماندگار نگه دارید. |
+| دیتابیس | `DB_CLIENT=mongodb`، `MONGODB_DATABASE=ouj_chat`، `MONGODB_MAX_POOL_SIZE=20`؛ مقدار عمداً خالی `MONGODB_URI` را خصوصی تکمیل کنید. |
+| ذخیره‌سازی | `STORAGE_DRIVER=remote`، `STORAGE_ENCRYPTION_MODE=remote`، `STORAGE_AUTO_CORS=false`؛ endpoint، باکت، region و اطلاعات دسترسی provider خود را وارد کنید. |
+| ورکر فرزند محلی | `START_LOCAL_WORKER=auto`، `WORKER_CONCURRENCY=1`، `WORKER_URL=http://127.0.0.1:8080`، `WEBHOOK_URL=http://127.0.0.1:5174/api/uploads/webhook/processed`. این نشانی‌های loopback مربوط به کانتینر یکپارچه‌اند. |
+| تماس | `CALL=true`؛ مقدارهای اختیاری TURN تا تنظیم رلهٔ خودتان خالی می‌مانند. |
+| سرویس‌های اختیاری | هر سه گزینهٔ `REMOTE_CHANNEL`، `REMOTE_CHANNEL_UI` و `REMOTE_CHANNEL_MEDIA_STREAM` برابر `false` هستند؛ مقدارهای اتصال Redis خالی می‌مانند. |
+
+پیش از اجرا، `APP_PUBLIC_URL` را با مبدأ دقیق HTTPS برنامه، مانند `https://chat.example.com`، و مقدارهای `STORAGE_ENDPOINT`، `STORAGE_BUCKET`، `STORAGE_REGION`، `STORAGE_ACCESS_KEY_ID` و `STORAGE_SECRET_ACCESS_KEY` را تکمیل کنید. باکت خصوصی Chat داشته باشید و رمزنگاری سمت provider آن را بررسی کنید. CORS خودکار را خاموش نگه دارید و CORS باکت را دستی برای همان مبدأ دقیق برنامه تنظیم کنید؛ [ذخیره‌سازی ابری](./Object-Storage.md) را ببینید.
+
+اگر از دیتابیس موجود استفاده می‌کنید، کلیدهای متناظر رمزنگاری، VAPID و سایر کلیدهای پایدار سیستم را خصوصی منتقل کنید و با مقدارهای تازهٔ فایل نمونه جایگزین نکنید. برای راه‌اندازی اولیهٔ کانتینر یکپارچه، `WEBHOOK_SECRET` و `STORAGE_ENCRYPTION_KEY` باید پیش از اجرای برنامه یا ورکر، به‌صورت سازگار تکمیل شوند. تولید کلید هنگام اجرا، فایل `.env.production` میزبان یا ورکری را که قبلاً شروع شده به‌روز نمی‌کند. دیتابیس جدید می‌تواند کلیدهای تازهٔ آماده‌شده داشته باشد؛ آن‌ها را برای اجراهای بعدی و بازیابی امن نگه دارید.
+
+فایل‌های معتبر `certs/cert.pem` و `certs/key.pem` را آماده، دامنه و `server_name` در Nginx را تنظیم و دسترسی replica set امن MongoDB را از شبکهٔ برنامه با کاربر کم‌اختیار Chat بررسی کنید. در VPS مشترک ممکن است پورت‌های **۸۰ و ۴۴۳** از قبل در اختیار Nginx موجود باشند؛ Songbird را با شبکهٔ خصوصی Compose و پراکسی فعلی یکپارچه کنید. از موتور امن MongoDB موجود استفاده کنید و نمونهٔ دوم Nginx یا MongoDB را بدون بررسی اجرا نکنید.
+
+پیکربندی تکمیل‌شده را بدون چاپ مقدارهای محرمانهٔ نهایی بررسی کنید:
+
+```sh
+docker compose --env-file .env.production config --quiet
+```
+
+فقط روی میزبانی با مقدارهای لازم، گواهی معتبر، تنظیم دامنه و پراکسی، replica set در دسترس و پورت‌های آزاد، کل مجموعه را اجرا کنید:
+
+```sh
+docker compose --env-file .env.production up -d --build
+```
+
+روی میزبان مشترک، پس از آماده‌کردن اتصال به شبکهٔ خصوصی و پراکسی فعلی، فقط سرویس برنامه را اجرا کنید تا پراکسی دیگری ساخته نشود:
+
+```sh
+docker compose --env-file .env.production up -d --build songbird
+```
+
+بررسی پیکربندی، آزمون زندهٔ دیتابیس، باکت یا کانتینر نیست. این تنظیمات مهاجرت احراز هویت یا دیتابیس، اتصال هویت Web یا تبدیل پیش‌نمایش‌های فرانت‌اند کسب‌وکار به آگهی و گزارش زنده را انجام نمی‌دهند.
 
 ## اعمال تغییرات {#apply-changes}
 
@@ -135,6 +183,8 @@ nano .env
 :::
 
 **۱. نصب با Docker:**
+
+نمونه‌های زیر از `.env` پیش‌فرض استفاده می‌کنند. برای پروفایل production، گزینهٔ `--env-file .env.production` را هم وارد و انتخاب‌گر `SONGBIRD_ENV_FILE` آن را حفظ کنید.
 
 ```bash
 cd /opt/songbird
