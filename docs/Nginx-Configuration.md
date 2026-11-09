@@ -1,8 +1,8 @@
 # Configure Nginx
 
-Songbird serves both the built frontend and the API from the Node server, so Nginx only needs to proxy one upstream: `http://127.0.0.1:SERVER_PORT`.
+Ouj Chat serves both the built frontend and the API from the Node server, so Nginx only needs to proxy one upstream: `http://127.0.0.1:SERVER_PORT`.
 
-Create `/etc/nginx/sites-available/songbird`:
+Create `/etc/nginx/sites-available/ouj-chat`:
 
 :::info
 
@@ -114,7 +114,7 @@ server {
 Enable the site:
 
 ```bash
-sudo ln -sf /etc/nginx/sites-available/songbird /etc/nginx/sites-enabled/songbird
+sudo ln -sf /etc/nginx/sites-available/ouj-chat /etc/nginx/sites-enabled/ouj-chat
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx

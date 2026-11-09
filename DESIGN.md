@@ -1,6 +1,6 @@
 # Design Language & Style Guide: Ouj Chat
 
-This document defines the design language, UI patterns, color system, typography, and component conventions for **Ouj Chat / گفتگوی اوج**, the dedicated messenger for **املاک اوج** at `oujamlak.ir`. The product is a branded distribution of the open-source Songbird project. Preserve the upstream license, copyright notices and attribution while adapting product-facing names and visuals.
+This document defines the design language, UI patterns, color system, typography, and component conventions for **Ouj Chat / گفتگوی اوج**, the dedicated messenger for **املاک اوج** at `oujamlak.ir`. The product is a branded distribution of the open-source Ouj Chat project. Preserve the upstream license, copyright notices and attribution while adapting product-facing names and visuals.
 
 The approved identity is a quiet neutral chat surface with restrained purple and teal accents. Long conversations, property-related communication and routine account tasks must remain easy to read in both light and dark themes. Do not introduce property-listing, payment or transaction workflows merely because the brand belongs to a real-estate business.
 
@@ -134,7 +134,7 @@ Use `slate-*` runtime neutral tokens for surrounding text/borders and semantic s
 
 ### Selection & Text Interaction
 - Content selection is restricted by default (`user-select: none`).
-- Inputs, editable areas, and target chat content explicitly enable selection via `user-select: text` or `.sb-context-menu-selection-target`.
+- Inputs, editable areas, and target chat content explicitly enable selection via `user-select: text` or `.ouj-context-menu-selection-target`.
 
 ---
 

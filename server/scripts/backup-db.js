@@ -9,7 +9,7 @@ const projectRootDir = path.resolve(serverDir, "..");
 dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({ path: path.join(serverDir, ".env"), override: true, quiet: true });
 
-const dbPath = path.join(dataDir, "songbird.db");
+const dbPath = path.join(dataDir, "ouj-chat.db");
 const backupDir = path.join(dataDir, "backups");
 
 async function main() {
@@ -20,7 +20,7 @@ async function main() {
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   if (dbConfig.client === "postgres") {
-    const backupPath = path.join(backupDir, `songbird-backup-${stamp}.dump`);
+    const backupPath = path.join(backupDir, `ouj-chat-backup-${stamp}.dump`);
     await createPostgresMaintenance({ config: dbConfig }).backup(backupPath);
     console.log(`PostgreSQL backup created: ${backupPath}`);
     return;
@@ -30,7 +30,7 @@ async function main() {
     console.error(`No database found at ${dbPath}.`);
     process.exit(1);
   }
-  const backupPath = path.join(backupDir, `songbird-backup-${stamp}.db`);
+  const backupPath = path.join(backupDir, `ouj-chat-backup-${stamp}.db`);
   try {
     fs.copyFileSync(dbPath, backupPath);
   } catch (error) {

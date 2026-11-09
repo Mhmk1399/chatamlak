@@ -744,7 +744,7 @@ describe("CallScreen local reject exit", () => {
       .poll(() => {
         const dialog = document.querySelector('[role="dialog"]');
         if (!dialog) return "unmounted";
-        return dialog.className.includes("sb-call-exit")
+        return dialog.className.includes("ouj-call-exit")
           ? "animating"
           : "no-exit-class";
       })
@@ -762,7 +762,7 @@ describe("CallScreen local reject timing", () => {
     await userEvent.click(page.getByRole("button", { name: "Reject call" }));
 
     expect(document.querySelector('[role="dialog"]').className).toContain(
-      "sb-call-exit",
+      "ouj-call-exit",
     );
     // Still on screen partway through the 250ms exit animation.
     await new Promise((resolve) => setTimeout(resolve, 120));

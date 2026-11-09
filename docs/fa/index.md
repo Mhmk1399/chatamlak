@@ -2,19 +2,19 @@
 layout: home
 
 hero:
-  name: Songbird
+  name: گفتگوی اوج
   text: پیام‌رسان شخصی
   tagline: یک پلتفرم پیام‌رسان سبک و امن که با هدف حمایت از آزادی دیجیتال در سراسر جهان ساخته شده است.
   image:
-    src: /songbird-hero.svg
-    alt: Songbird
+    src: /ouj-chat-icon.png
+    alt: گفتگوی اوج
   actions:
     - theme: brand
       text: شروع کنید
       link: /fa/Deployment-Script
     - theme: alt
-      text: مشاهده در GitHub
-      link: https://github.com/bllackbull/Songbird
+      text: قابلیت‌های گفتگو
+      link: /fa/Chat-Features
 
 features:
   - icon: 🍃
@@ -27,11 +27,11 @@ features:
     link: /fa/Chat-Features
   - icon: 🚀
     title: نصب آسان
-    details: اسکریپت نصب تک خطی، وابستگی ها، build، Nginx و SSL را برای شما مدیریت میکند.
+    details: اسکریپت بررسی‌شدهٔ نصب را از سورس محلی پروژه اجرا کنید تا وابستگی‌ها، بیلد، Nginx و SSL را تنظیم کنید.
     link: /fa/Deployment-Script
   - icon: 🐳
     title: آماده برای Docker
-    details: ایمیج های رسمی و آماده داکر به همراه پشتیبانی از Docker Compose برای استقرار سریع و آسان در هر سرور.
+    details: سورس محلی را با Docker Compose بسازید و دیتابیس، ذخیره‌ساز و پراکسی معکوس را متناسب با استقرار تنظیم کنید.
     link: /fa/Installation-Docker
   - icon: 🛡️
     title: پنل مدیریت
@@ -47,7 +47,7 @@ features:
     link: /fa/Object-Storage
   - icon: 📡
     title: Remote Channel
-    details: کانال‌های Telegram یا کانال‌های Songbird دیگر را داخل کانال‌های خودتان mirror کنید.
+    details: کانال‌های Telegram یا کانال‌های گفتگوی اوج دیگر را داخل کانال‌های خودتان mirror کنید.
     link: /fa/Remote-Channel-Setup
   - icon: 📞
     title: تماس صوتی و تصویری

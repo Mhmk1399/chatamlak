@@ -16,7 +16,7 @@ import {
   Reply,
   Video,
 } from "../../../icons/lucide.js";
-import { SongbirdIcon, TelegramIcon } from "../../../icons/BrandIcons.jsx";
+import { OujChatIcon, TelegramIcon } from "../../../icons/BrandIcons.jsx";
 import { hasPersian } from "../../../utils/fontUtils.js";
 import { getAvatarInitials } from "../../../utils/avatarInitials.js";
 import { formatCompactCount, formatDayLabel } from "../../../utils/chatFormat.js";
@@ -207,7 +207,7 @@ export const MessageItem = memo(function MessageItem({
     ? /^remote:tg:/i.test(clientRequestId)
       ? "telegram"
       : /^remote:sb:/i.test(clientRequestId)
-        ? "songbird"
+        ? "ouj-chat"
         : "unknown"
     : null;
   const forwardedFromUsername = String(msg?.forwarded_from_username || "").trim();
@@ -314,7 +314,7 @@ export const MessageItem = memo(function MessageItem({
     hasFiles &&
     (!normalizedBodyText ||
       FILE_SUMMARY_PATTERN.test(normalizedBodyText) ||
-      normalizedBodyText.startsWith("sb-enc-v1:") ||
+      /^[a-z]{2,8}-enc-v1:/i.test(normalizedBodyText) ||
       normalizedBodyText === generatedSummaryText ||
       (hasMixedVoiceAndOtherFiles &&
         /^Sent a voice message$/i.test(normalizedBodyText)));
@@ -325,7 +325,7 @@ export const MessageItem = memo(function MessageItem({
   const suppressCodeClickUntilRef = useRef(0);
   const mentionDebugEnabled =
     typeof window !== "undefined" &&
-    window.localStorage?.getItem("sb-debug-mentions") === "1";
+    window.localStorage?.getItem("ouj-debug-mentions") === "1";
   const [mentionDebug, setMentionDebug] = useState(null);
   const onOpenMentionRef = useRef(onOpenMention);
   useEffect(() => {
@@ -341,7 +341,7 @@ export const MessageItem = memo(function MessageItem({
     return writeCachedHtml(messageBodyHtmlCache, cacheKey, renderMarkdownBlock(bodyText));
   }, [bodyText, messageIdentity, msg?._edited, msg?.edited]);
   const hasMarkdownCodeBlock =
-    typeof markdownHtml === "string" && markdownHtml.includes("sb-code-block");
+    typeof markdownHtml === "string" && markdownHtml.includes("ouj-code-block");
 
   useEffect(() => {
     const container = messageBodyRef.current;
@@ -351,7 +351,7 @@ export const MessageItem = memo(function MessageItem({
     );
     const mayContainCopyableCode =
       typeof markdownHtml === "string" &&
-      (markdownHtml.includes("sb-code-block") || markdownHtml.includes("<code"));
+      (markdownHtml.includes("ouj-code-block") || markdownHtml.includes("<code"));
     const markInvalid = (el) => {
       const now = Date.now();
       const lastValid = Number(el.dataset.sbMentionValidAt || 0);
@@ -359,11 +359,11 @@ export const MessageItem = memo(function MessageItem({
         el.dataset.sbMentionInvalidAt = String(now);
         return;
       }
-      el.classList.remove("sb-mention-active");
+      el.classList.remove("ouj-mention-active");
       el.dataset.sbMentionInvalidAt = String(now);
     };
     const markValid = (el) => {
-      el.classList.add("sb-mention-active");
+      el.classList.add("ouj-mention-active");
       el.dataset.sbMentionValidAt = String(Date.now());
       if (el.dataset.sbMentionInvalidAt) {
         delete el.dataset.sbMentionInvalidAt;
@@ -372,7 +372,7 @@ export const MessageItem = memo(function MessageItem({
     const handleMentionClick = (event) => {
       const target = event?.target;
       if (!target || typeof target.closest !== "function") return;
-      const mentionEl = target.closest(".sb-mention");
+      const mentionEl = target.closest(".ouj-mention");
       if (!mentionEl || !container.contains(mentionEl)) return;
       const rawMention =
         mentionEl.dataset.mention ||
@@ -394,7 +394,7 @@ export const MessageItem = memo(function MessageItem({
 
       const needsLoad = !cached || cached.status !== "valid";
       if (needsLoad) {
-        mentionEl.classList.add("sb-mention-loading");
+        mentionEl.classList.add("ouj-mention-loading");
       }
 
       resolveMention(mention, user.username, {
@@ -402,7 +402,7 @@ export const MessageItem = memo(function MessageItem({
         // Force a fresh fetch only when there was no usable cache hit
         force: needsLoad,
       }).then((result) => {
-        mentionEl.classList.remove("sb-mention-loading");
+        mentionEl.classList.remove("ouj-mention-loading");
         if (!result || result.status !== "valid") {
           markInvalid(mentionEl);
           return;
@@ -419,9 +419,9 @@ export const MessageItem = memo(function MessageItem({
       container.addEventListener("click", handleMentionClick);
     }
     if (mentionDebugEnabled) {
-      const totalMentions = container.querySelectorAll(".sb-mention").length;
+      const totalMentions = container.querySelectorAll(".ouj-mention").length;
       const activeMentions =
-        container.querySelectorAll(".sb-mention-active").length;
+        container.querySelectorAll(".ouj-mention-active").length;
       setMentionDebug((prev) => {
         if (
           prev &&
@@ -443,7 +443,7 @@ export const MessageItem = memo(function MessageItem({
         button.setAttribute("aria-label", label);
       };
       const enhanceCodeElements = () => {
-        const blocks = container.querySelectorAll(".sb-code-block");
+        const blocks = container.querySelectorAll(".ouj-code-block");
         blocks.forEach((block) => {
           if (block.dataset.sbEnhanced === "1") return;
           block.dataset.sbEnhanced = "1";
@@ -456,7 +456,7 @@ export const MessageItem = memo(function MessageItem({
           codeEl.tabIndex = 0;
           codeEl.setAttribute("role", "button");
           codeEl.setAttribute("aria-label", "Copy inline code");
-          codeEl.classList.add("sb-inline-code-copyable");
+          codeEl.classList.add("ouj-inline-code-copyable");
         });
       };
       const handleCodeCopy = async ({ codeEl, button }) => {
@@ -476,39 +476,39 @@ export const MessageItem = memo(function MessageItem({
         if (Date.now() < suppressCodeClickUntilRef.current) return;
         const target = event?.target;
         if (!target || typeof target.closest !== "function") return;
-        const button = target.closest(".sb-code-copy");
-        const inlineCode = target.closest(".sb-inline-code-copyable");
+        const button = target.closest(".ouj-code-copy");
+        const inlineCode = target.closest(".ouj-inline-code-copyable");
         if (inlineCode && container.contains(inlineCode)) {
           event.preventDefault();
           void handleCodeCopy({ codeEl: inlineCode, button: null });
           return;
         }
-        const block = button?.closest(".sb-code-block");
+        const block = button?.closest(".ouj-code-block");
         if (!button || !block || !container.contains(block)) return;
         event.preventDefault();
         event.stopPropagation();
         void handleCodeCopy({
-          codeEl: block.querySelector("pre.sb-code > code"),
-          button: block.querySelector(".sb-code-copy"),
+          codeEl: block.querySelector("pre.ouj-code > code"),
+          button: block.querySelector(".ouj-code-copy"),
         });
       };
       const handleCodeBlockKeyDown = (event) => {
         const target = event?.target;
         if (!target || typeof target.closest !== "function") return;
-        const inlineCode = target.closest(".sb-inline-code-copyable");
+        const inlineCode = target.closest(".ouj-inline-code-copyable");
         if (inlineCode && container.contains(inlineCode)) {
           if (event.key !== "Enter" && event.key !== " ") return;
           event.preventDefault();
           void handleCodeCopy({ codeEl: inlineCode, button: null });
           return;
         }
-        const button = target.closest(".sb-code-copy");
-        const block = button?.closest(".sb-code-block");
+        const button = target.closest(".ouj-code-copy");
+        const block = button?.closest(".ouj-code-block");
         if (!button || !block || !container.contains(block)) return;
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         void handleCodeCopy({
-          codeEl: block.querySelector("pre.sb-code > code"),
+          codeEl: block.querySelector("pre.ouj-code > code"),
           button,
         });
       };
@@ -769,8 +769,8 @@ export const MessageItem = memo(function MessageItem({
           />
           {remoteForwardedProvider === "telegram" ? (
             <TelegramIcon size={13} className="shrink-0" />
-          ) : remoteForwardedProvider === "songbird" ? (
-            <SongbirdIcon size={13} />
+          ) : remoteForwardedProvider === "ouj-chat" ? (
+            <OujChatIcon size={13} />
           ) : null}
           <span className="inline-flex min-w-0 items-center gap-0.5">
             <Tooltip label={forwardedFromLabel} asChild>
@@ -783,8 +783,8 @@ export const MessageItem = memo(function MessageItem({
               >
                 {remoteForwardedProvider === "telegram"
                   ? forwardedFromLabel.replace(/^telegram:\s*/i, "")
-                  : remoteForwardedProvider === "songbird"
-                    ? forwardedFromLabel.replace(/^songbird:\s*/i, "")
+                  : remoteForwardedProvider === "ouj-chat"
+                    ? forwardedFromLabel.replace(/^ouj-chat:\s*/i, "")
                     : forwardedFromLabel}
               </span>
             </Tooltip>
@@ -933,7 +933,7 @@ export const MessageItem = memo(function MessageItem({
             <span className="min-w-0 truncate">
               <span
                 className={`min-w-0 truncate ${
-                  hasPersian(msg?._systemEvent?.name) ? "font-fa sb-fa-baseline-fix" : ""
+                  hasPersian(msg?._systemEvent?.name) ? "font-fa ouj-fa-baseline-fix" : ""
                 }`}
                 dir="auto"
                 style={{ unicodeBidi: "isolate" }}
@@ -1231,7 +1231,7 @@ export const MessageItem = memo(function MessageItem({
                   <div
                     ref={messageBodyRef}
                     dir="auto"
-                    className={`sb-markdown mt-1 wrap-break-word wrap-anywhere ${
+                    className={`ouj-markdown mt-1 wrap-break-word wrap-anywhere ${
                       hasPersian(bodyText) ? "font-fa" : ""
                     }`}
                     style={{ unicodeBidi: "plaintext", textAlign: "start" }}
@@ -1241,7 +1241,7 @@ export const MessageItem = memo(function MessageItem({
                   />
                 ) : null}
                 {mentionDebugEnabled ? (
-                  <div className="sb-mention-debug" aria-hidden="true">
+                  <div className="ouj-mention-debug" aria-hidden="true">
                     @{mentionDebug?.active ?? 0}/{mentionDebug?.total ?? 0}
                   </div>
                 ) : null}
@@ -1418,7 +1418,7 @@ export const MessageItem = memo(function MessageItem({
                 <div
                   ref={messageBodyRef}
                   dir="auto"
-                  className={`sb-markdown mt-1 wrap-break-word wrap-anywhere ${
+                  className={`ouj-markdown mt-1 wrap-break-word wrap-anywhere ${
                     hasPersian(bodyText) ? "font-fa" : ""
                   }`}
                   style={{ unicodeBidi: "plaintext", textAlign: "start" }}
@@ -1428,7 +1428,7 @@ export const MessageItem = memo(function MessageItem({
                 />
               ) : null}
               {mentionDebugEnabled ? (
-                <div className="sb-mention-debug" aria-hidden="true">
+                <div className="ouj-mention-debug" aria-hidden="true">
                   @{mentionDebug?.active ?? 0}/{mentionDebug?.total ?? 0}
                 </div>
               ) : null}

@@ -15,7 +15,7 @@ The active Ouj Chat database is MongoDB. These Node.js/npm maintenance commands 
 | `npm --prefix server run db:help` | Show the current native maintenance command help. |
 | `npm --prefix server run db:backup -- --file ./backups/ouj.backup.json.gz` | Write the application's gzip Extended JSON archive. |
 | `npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline` | Restore an archive with the application stopped. |
-| `npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run` | Inspect an old SQLite database before import. |
+| `npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run` | Inspect an old SQLite database before import. |
 | `npm --prefix server run db:import-sql -- --postgres --dry-run` | Inspect an old PostgreSQL source configured through `LEGACY_POSTGRES_URI`. |
 
 Paths are examples. Choose a writable backup directory outside ephemeral container storage. The selected database comes from the MongoDB environment configuration, not `DATA_DIR`, `DB_CLIENT` or a `.db` filename.
@@ -60,8 +60,8 @@ SQLite and PostgreSQL are read-only migration sources. They are not active runti
 3. Run the relevant dry run, review counts and validation findings, then explicitly apply:
 
 ```sh
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --apply
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --apply
 ```
 
 For PostgreSQL, set `LEGACY_POSTGRES_URI` in your private environment and use a flag without a password-bearing argument:

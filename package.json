@@ -1,15 +1,15 @@
 {
-  "name": "songbird",
+  "name": "ouj-chat",
   "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bllackbull/songbird.git"
+    "url": "https://github.com/Mhmk1399/chatamlak.git"
   },
   "bugs": {
-    "url": "https://github.com/bllackbull/songbird/issues"
+    "url": "https://github.com/Mhmk1399/chatamlak/issues"
   },
-  "homepage": "https://github.com/bllackbull/songbird#readme",
+  "homepage": "https://oujamlak.ir",
   "scripts": {
     "dev": "concurrently \"npm --prefix client run dev\" \"npm --prefix server run dev\" \"npm --prefix worker run dev\"",
     "test": "concurrently \"npm --prefix client run test\" \"npm --prefix server run test\" \"npm --prefix worker run test\"",

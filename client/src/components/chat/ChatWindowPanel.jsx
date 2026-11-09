@@ -1078,7 +1078,7 @@ export default function ChatWindowPanel({
       onOpenContextMenu={onOpenContextMenu}
       visibilityRef={registerMessageRef ? registerMessageRef(msg) : null}
       onJumpToMessage={(messageId) => {
-        window.dispatchEvent(new CustomEvent("songbird:jump-to-message", { detail: { id: messageId } }));
+        window.dispatchEvent(new CustomEvent("ouj-chat:jump-to-message", { detail: { id: messageId } }));
         const target = document.getElementById(`message-${messageId}`);
         if (target && typeof target.scrollIntoView === "function") {
           target.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1214,12 +1214,12 @@ export default function ChatWindowPanel({
                     ) : isTypingActive ? (
                       <>
                         <span
-                          className="sb-typing-dots inline-flex h-2.5 items-center gap-1"
+                          className="ouj-typing-dots inline-flex h-2.5 items-center gap-1"
                           aria-hidden="true"
                         >
-                          <span className="sb-typing-dot" />
-                          <span className="sb-typing-dot" />
-                          <span className="sb-typing-dot" />
+                          <span className="ouj-typing-dot" />
+                          <span className="ouj-typing-dot" />
+                          <span className="ouj-typing-dot" />
                         </span>
                         <Tooltip
                           label={typingIndicator?.fullLabel || typingIndicator?.label}
@@ -1231,7 +1231,7 @@ export default function ChatWindowPanel({
                         >
                           <span
                             className={`block min-w-0 truncate whitespace-nowrap font-semibold leading-[1.2] text-brand-500 dark:text-brand-300 ${
-                              hasPersian(typingIndicator?.label) ? "font-fa sb-fa-baseline-fix" : ""
+                              hasPersian(typingIndicator?.label) ? "font-fa ouj-fa-baseline-fix" : ""
                             }`}
                             dir="auto"
                             style={{ unicodeBidi: "plaintext" }}
@@ -1244,7 +1244,7 @@ export default function ChatWindowPanel({
                       <Tooltip label={localize(peerStatusLabel)} placement="bottom" asChild>
                         <span
                           className={`block min-w-0 truncate whitespace-nowrap text-[11px] leading-[1.2] sm:text-xs ${
-                            hasPersian(peerStatusLabel) ? "font-fa sb-fa-baseline-fix" : ""
+                            hasPersian(peerStatusLabel) ? "font-fa ouj-fa-baseline-fix" : ""
                           }`}
                           dir="auto"
                           style={{ unicodeBidi: "plaintext" }}
@@ -1260,7 +1260,7 @@ export default function ChatWindowPanel({
                               ? "font-semibold text-brand-500 dark:text-brand-300"
                               : ""
                           } ${
-                            hasPersian(peerStatusLabel) ? "font-fa sb-fa-baseline-fix" : ""
+                            hasPersian(peerStatusLabel) ? "font-fa ouj-fa-baseline-fix" : ""
                           }`}
                           dir="auto"
                           style={{ unicodeBidi: "plaintext" }}

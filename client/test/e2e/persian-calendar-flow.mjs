@@ -3,9 +3,9 @@ import { chromium } from "playwright";
 import { today, toZoned } from "@internationalized/date";
 
 // Use only a separately started local instance with a dedicated test database.
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
 if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) {
-  throw new Error("Set SONGBIRD_E2E_BASE_URL to an isolated local Songbird instance.");
+  throw new Error("Set OUJ_CHAT_E2E_BASE_URL to an isolated local Ouj Chat instance.");
 }
 const browser = await chromium.launch();
 const context = await browser.newContext({ baseURL, timezoneId: "America/Los_Angeles", viewport: { width: 390, height: 844 } });
@@ -20,13 +20,13 @@ async function api(session, method, url, data) {
   return body;
 }
 try {
-  await context.addInitScript(() => localStorage.setItem("songbird-locale", "en"));
+  await context.addInitScript(() => localStorage.setItem("ouj-chat-locale", "en"));
   await api(context, "POST", "/api/register", { username: owner, nickname: "Calendar QA", password: "calendar-qa-2026" });
   await api(peer, "POST", "/api/register", { username: member, nickname: "Calendar Peer", password: "calendar-qa-2026" });
   const chat = await api(context, "POST", "/api/chats/group", { creator: owner, nickname: "Calendar QA", username: `qcalendar${suffix}`, visibility: "private", members: [member] });
   await api(context, "POST", "/api/messages", { chatId: chat.id, username: owner, body: "calendar report", clientRequestId: `calendar:${suffix}` });
   const page = await context.newPage(); page.on("pageerror", error => failures.push(error.message));
-  await page.addInitScript(chatId => sessionStorage.setItem("songbird-open-chat-id", chatId), chat.id);
+  await page.addInitScript(chatId => sessionStorage.setItem("ouj-chat-open-chat-id", chatId), chat.id);
   await page.goto("/chat");
   await page.getByRole("button", { name: "Close what's new" }).waitFor({ timeout: 5000 }).then(() => page.getByRole("button", { name: "Close what's new" }).click()).catch(() => {});
   await page.locator('textarea[name="message"]').waitFor();

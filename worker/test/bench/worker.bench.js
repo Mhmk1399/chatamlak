@@ -14,7 +14,7 @@ import { resolveDataDir, createStorage } from "../../storage.js";
 
 const tempBenchDir = path.join(
   os.tmpdir(),
-  "songbird-worker-bench-" + crypto.randomUUID(),
+  "ouj-chat-worker-bench-" + crypto.randomUUID(),
 );
 fs.mkdirSync(tempBenchDir, { recursive: true });
 
@@ -142,7 +142,7 @@ describe("File Decryption to Temp Path", () => {
 describe("Storage Resolution & Factory", () => {
   test("resolveDataDir with custom data dir", async ({ bench }) => {
     await bench("resolveDataDir with custom data dir", () => {
-      resolveDataDir("/var/songbird/data");
+      resolveDataDir("/var/ouj-chat/data");
     }).run();
   });
 
@@ -164,7 +164,7 @@ describe("Storage Resolution & Factory", () => {
         driver: "s3",
         endpoint: "https://s3.example.com",
         region: "us-east-1",
-        bucket: "songbird-media",
+        bucket: "ouj-chat-media",
         accessKeyId: "AKIATEST1234",
         secretAccessKey: "SECRETKEY1234",
       });

@@ -1,4 +1,4 @@
-const PREFIX = "songbird-draft-v1:";
+const PREFIX = "ouj-chat-draft-v1:";
 const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const keyFor = (username, chatId) => `${PREFIX}${encodeURIComponent(String(username).toLowerCase())}:${chatId}`;

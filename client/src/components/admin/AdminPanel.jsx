@@ -39,7 +39,7 @@ const TABS = [
 // Auto-exit the panel after this much inactivity (no mouse/keyboard/touch).
 const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
-const ADMIN_SIDEBAR_OPEN_STORAGE_KEY = "songbird.admin.sidebar-open";
+const ADMIN_SIDEBAR_OPEN_STORAGE_KEY = "ouj-chat.admin.sidebar-open";
 
 function getInitialSidebarOpen() {
   if (typeof window === "undefined") return true;
@@ -181,9 +181,9 @@ export default function AdminPanel({ user, onBack, isDark, onToggleTheme }) {
       }, 300);
     };
 
-    window.addEventListener("songbird:realtime-event", handleRealtimeEvent);
+    window.addEventListener("ouj-chat:realtime-event", handleRealtimeEvent);
     return () => {
-      window.removeEventListener("songbird:realtime-event", handleRealtimeEvent);
+      window.removeEventListener("ouj-chat:realtime-event", handleRealtimeEvent);
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, [tab, refreshKey]);

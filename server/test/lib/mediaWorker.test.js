@@ -25,7 +25,7 @@ describe("dispatchMediaWorkerJob", () => {
       mediaWorkerUrl: "http://media-worker.internal:8080/",
       storageProcessingMode: "remote",
       webhookSecret: "super-secret-token",
-      callbackUrl: "https://songbird.app/api/uploads/webhook/processed",
+      callbackUrl: "https://ouj-chat.app/api/uploads/webhook/processed",
       fileId: 42,
       storageKey: "uploads/test.mp4",
       storedName: "test.mp4",
@@ -37,7 +37,7 @@ describe("dispatchMediaWorkerJob", () => {
     expect(res).toBe(true);
     expect(capturedUrl).toBe("http://media-worker.internal:8080/transcode");
     expect(capturedOptions.method).toBe("POST");
-    expect(capturedOptions.headers["x-songbird-webhook-secret"]).toBe(
+    expect(capturedOptions.headers["x-ouj-chat-webhook-secret"]).toBe(
       "super-secret-token",
     );
     expect(capturedOptions.headers["Content-Type"]).toBe("application/json");
@@ -49,7 +49,7 @@ describe("dispatchMediaWorkerJob", () => {
       storedName: "test.mp4",
       mimeType: "video/mp4",
       encryptionType: "remote",
-      callbackUrl: "https://songbird.app/api/uploads/webhook/processed",
+      callbackUrl: "https://ouj-chat.app/api/uploads/webhook/processed",
     });
   });
 

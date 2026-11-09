@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# songbird-deploy-version: 0.13.2
+# ouj-chat-deploy-version: 0.13.2
 
 set -uo pipefail
 
@@ -26,9 +26,9 @@ handle_exit() {
     return 0
   fi
 
-  printf "\n%b[SONGBIRD] Script exited with code %s.%b\n" "$COLOR_ERROR" "$exit_code" "$COLOR_RESET" >&2
+  printf "\n%b[OUJ_CHAT] Script exited with code %s.%b\n" "$COLOR_ERROR" "$exit_code" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "%b[SONGBIRD] Review the log at %s for the last recorded step.%b\n" "$COLOR_ERROR" "$LOG_FILE" "$COLOR_RESET" >&2
+    printf "%b[OUJ_CHAT] Review the log at %s for the last recorded step.%b\n" "$COLOR_ERROR" "$LOG_FILE" "$COLOR_RESET" >&2
   fi
 }
 
@@ -40,21 +40,21 @@ handle_interrupt() {
 trap 'handle_interrupt' INT TERM
 trap 'handle_exit' EXIT
 
-APP_NAME="songbird"
-INSTALL_DIR="/opt/songbird"
-LOG_FILE="/opt/songbird/logs/install.log"
+APP_NAME="ouj-chat"
+INSTALL_DIR="/opt/ouj-chat"
+LOG_FILE="/opt/ouj-chat/logs/install.log"
 DATA_COMMAND_LAUNCHER="${DATA_COMMAND_LAUNCHER:-${INSTALL_DIR}/scripts/run-data-command.sh}"
-REPO_URL="${REPO_URL:-https://github.com/bllackbull/Songbird.git}"
-SERVICE_USER="songbird"
-SERVICE_GROUP="songbird"
-SERVICE_NAME="songbird"
-SERVICE_FILE="/etc/systemd/system/songbird.service"
-WORKER_SERVICE_NAME="songbird-worker"
-WORKER_SERVICE_FILE="/etc/systemd/system/songbird-worker.service"
-LEGO_RENEW_SERVICE_FILE="/etc/systemd/system/songbird-lego-renew.service"
-LEGO_RENEW_TIMER_FILE="/etc/systemd/system/songbird-lego-renew.timer"
-NGINX_SITE_FILE="/etc/nginx/sites-available/songbird"
-NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/songbird"
+REPO_URL="${REPO_URL:-https://github.com/Mhmk1399/chatamlak.git}"
+SERVICE_USER="ouj-chat"
+SERVICE_GROUP="ouj-chat"
+SERVICE_NAME="ouj-chat"
+SERVICE_FILE="/etc/systemd/system/ouj-chat.service"
+WORKER_SERVICE_NAME="ouj-chat-worker"
+WORKER_SERVICE_FILE="/etc/systemd/system/ouj-chat-worker.service"
+LEGO_RENEW_SERVICE_FILE="/etc/systemd/system/ouj-chat-lego-renew.service"
+LEGO_RENEW_TIMER_FILE="/etc/systemd/system/ouj-chat-lego-renew.timer"
+NGINX_SITE_FILE="/etc/nginx/sites-available/ouj-chat"
+NGINX_ENABLED_FILE="/etc/nginx/sites-enabled/ouj-chat"
 DEFAULT_SERVER_PORT="5174"
 DEFAULT_CLIENT_PORT="80"
 DEFAULT_WORKER_PORT="8080"
@@ -67,17 +67,17 @@ DEFAULT_SIGN_UP="true"
 DEFAULT_CHAT_VOICE_WAVEFORM_MAX_DECODE_MB="5"
 DEFAULT_CHAT_VOICE_WAVEFORM_MAX_DECODE_SECONDS="480"
 NODE_MAJOR="24"
-SCRIPT_REMOTE_URL="${SCRIPT_REMOTE_URL:-https://raw.githubusercontent.com/bllackbull/Songbird/main/scripts/install.sh}"
+SCRIPT_REMOTE_URL="${SCRIPT_REMOTE_URL:-https://raw.githubusercontent.com/Mhmk1399/chatamlak/main/scripts/install.sh}"
 LOG_LINES="${LOG_LINES:-100}"
-CERT_INSTALL_DIR="/etc/ssl/songbird"
-ACME_WEBROOT="/var/lib/songbird/certbot"
-LEGO_STATE_DIR="/var/lib/songbird/lego"
+CERT_INSTALL_DIR="/etc/ssl/ouj-chat"
+ACME_WEBROOT="/var/lib/ouj-chat/certbot"
+LEGO_STATE_DIR="/var/lib/ouj-chat/lego"
 LEGO_BIN="/usr/local/bin/lego"
-GLOBAL_COMMAND_PATH="/usr/local/bin/songbird-deploy"
-SONGBIRD_SOCIAL_GITHUB="https://github.com/bllackbull/Songbird"
-SONGBIRD_SOCIAL_TELEGRAM="https://t.me/songbirdapp"
-SONGBIRD_SOCIAL_WEBSITE="https://chat.songbird.website/invite/songbird"
-SONGBIRD_NOWPAYMENTS="https://nowpayments.io/donation/blackbull"
+GLOBAL_COMMAND_PATH="/usr/local/bin/ouj-chat-deploy"
+OUJ_CHAT_SOCIAL_GITHUB="https://github.com/Mhmk1399/chatamlak"
+OUJ_CHAT_SOCIAL_TELEGRAM=""
+OUJ_CHAT_SOCIAL_WEBSITE="https://oujamlak.ir"
+OUJ_CHAT_NOWPAYMENTS=""
 
 # Mirror URLs
 MIRROR_NODESOURCE="${MIRROR_NODESOURCE:-}"
@@ -96,7 +96,7 @@ CERTBOT_EMAIL=""
 DEFAULT_DB_CLIENT="sqlite3"
 DEFAULT_POSTGRES_HOST="127.0.0.1"
 DEFAULT_POSTGRES_PORT="5432"
-DEFAULT_POSTGRES_DB="songbird"
+DEFAULT_POSTGRES_DB="ouj-chat"
 DEFAULT_POSTGRES_USER="postgres"
 DEFAULT_POSTGRES_PASSWORD="postgres"
 DEFAULT_POSTGRES_URL=""
@@ -135,7 +135,7 @@ COTURN_MIN_PORT="${COTURN_MIN_PORT:-49152}"
 COTURN_MAX_PORT="${COTURN_MAX_PORT:-65535}"
 COTURN_EXTERNAL_IP="${COTURN_EXTERNAL_IP:-}"
 COTURN_REALM="${COTURN_REALM:-}"
-COTURN_USER="${COTURN_USER:-songbird}"
+COTURN_USER="${COTURN_USER:-ouj-chat}"
 COTURN_PASSWORD="${COTURN_PASSWORD:-}"
 COTURN_CONF_FILE="${COTURN_CONF_FILE:-/etc/turnserver.conf}"
 COTURN_DEFAULT_FILE="${COTURN_DEFAULT_FILE:-/etc/default/coturn}"
@@ -180,7 +180,7 @@ read_script_version_header() {
     return 1
   fi
   local header=""
-  header="$(grep -E '^# songbird-deploy-version:' "$file_path" | head -n 1 | cut -d ':' -f 2- | xargs || true)"
+  header="$(grep -E '^# ouj-chat-deploy-version:' "$file_path" | head -n 1 | cut -d ':' -f 2- | xargs || true)"
   if [[ -z "$header" || "$header" == "auto" ]]; then
     return 1
   fi
@@ -223,10 +223,10 @@ log() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
   local log_dir="$(dirname "$LOG_FILE")"
 
-  printf "%b[SONGBIRD] %s%b\n" "$COLOR_LOG" "$1" "$COLOR_RESET"
+  printf "%b[OUJ_CHAT] %s%b\n" "$COLOR_LOG" "$1" "$COLOR_RESET"
 
   if [[ -d "$log_dir" ]]; then
-    printf "[%s] [SONGBIRD] %s\n" "$timestamp" "$1" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [OUJ_CHAT] %s\n" "$timestamp" "$1" >> "$LOG_FILE" 2>/dev/null || true
   fi
 }
 
@@ -241,17 +241,17 @@ ensure_log_dir() {
 
 warn() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  printf "%b[%s] WARNING: %s%b\n" "$COLOR_WARN" "SONGBIRD" "$*" "$COLOR_RESET" >&2
+  printf "%b[%s] WARNING: %s%b\n" "$COLOR_WARN" "OUJ_CHAT" "$*" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "[%s] [SONGBIRD] WARNING: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [OUJ_CHAT] WARNING: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
   fi
 }
 
 fail() {
   local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-  printf "%b[%s] ERROR: %s%b\n" "$COLOR_ERROR" "SONGBIRD" "$*" "$COLOR_RESET" >&2
+  printf "%b[%s] ERROR: %s%b\n" "$COLOR_ERROR" "OUJ_CHAT" "$*" "$COLOR_RESET" >&2
   if [[ -f "$LOG_FILE" ]]; then
-    printf "[%s] [SONGBIRD] ERROR: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [OUJ_CHAT] ERROR: %s\n" "$timestamp" "$*" >> "$LOG_FILE" 2>/dev/null || true
   fi
   exit 1
 }
@@ -314,7 +314,7 @@ print_plain_success_block() {
   local lines=("$@")
   local line=""
 
-  printf "\n%b[SONGBIRD] %s%b\n" "$COLOR_SUCCESS" "$title" "$COLOR_RESET"
+  printf "\n%b[OUJ_CHAT] %s%b\n" "$COLOR_SUCCESS" "$title" "$COLOR_RESET"
   for line in "${lines[@]}"; do
     if [[ -z "$line" ]]; then
       printf "\n"
@@ -338,10 +338,10 @@ print_success_frame() {
     print_plain_success_block "$title" "${lines[@]}"
     if [[ -f "$LOG_FILE" ]]; then
       local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-      printf "[%s] [SONGBIRD] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
+      printf "[%s] [OUJ_CHAT] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
       local line=""
       for line in "${lines[@]}"; do
-        printf "[%s] [SONGBIRD] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
+        printf "[%s] [OUJ_CHAT] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
       done
     fi
     return 0
@@ -376,9 +376,9 @@ print_success_frame() {
 
   if [[ -f "$LOG_FILE" ]]; then
     local timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    printf "[%s] [SONGBIRD] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
+    printf "[%s] [OUJ_CHAT] %s\n" "$timestamp" "$title" >> "$LOG_FILE" 2>/dev/null || true
     for line in "${lines[@]}"; do
-      printf "[%s] [SONGBIRD] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
+      printf "[%s] [OUJ_CHAT] %s\n" "$timestamp" "$line" >> "$LOG_FILE" 2>/dev/null || true
     done
   fi
 }
@@ -390,8 +390,8 @@ show_deployment_success_frame() {
 
   case "$action" in
     install)
-      title="Songbird Installation Complete"
-      lines+=("Songbird has been installed successfully.")
+      title="Ouj Chat Installation Complete"
+      lines+=("Ouj Chat has been installed successfully.")
       lines+=("")
       lines+=("App:")
       if [[ "$CERT_MODE" == "http" ]]; then
@@ -441,22 +441,22 @@ show_deployment_success_frame() {
       fi
       ;;
     update)
-      title="Songbird Update Complete"
-      lines+=("Songbird has been updated successfully.")
+      title="Ouj Chat Update Complete"
+      lines+=("Ouj Chat has been updated successfully.")
       lines+=("Service restarted and nginx reloaded.")
       ;;
     *)
-      title="Songbird Success"
+      title="Ouj Chat Success"
       lines+=("Operation completed successfully.")
       ;;
   esac
 
   lines+=("")
   lines+=("Links:")
-  lines+=("GitHub: ${SONGBIRD_SOCIAL_GITHUB}")
-  lines+=("Telegram: ${SONGBIRD_SOCIAL_TELEGRAM}")
-  lines+=("Main Server Channel: ${SONGBIRD_SOCIAL_WEBSITE}")
-  lines+=("Support: ${SONGBIRD_NOWPAYMENTS}")
+  lines+=("GitHub: ${OUJ_CHAT_SOCIAL_GITHUB}")
+  lines+=("Telegram: ${OUJ_CHAT_SOCIAL_TELEGRAM}")
+  lines+=("Main Server Channel: ${OUJ_CHAT_SOCIAL_WEBSITE}")
+  lines+=("Support: ${OUJ_CHAT_NOWPAYMENTS}")
 
   print_success_frame "$title" "${lines[@]}"
 }
@@ -1330,7 +1330,7 @@ install_required_packages() {
     curl
     ca-certificates
     gnupg
-    lsb-release
+    louj-release
     build-essential
     nginx
     ffmpeg
@@ -1570,8 +1570,8 @@ ensure_service_user_exists() {
 
   # Install a passwordless sudoers drop-in so the service process can
   # control its own systemd unit and read nginx/service logs via sudo -n.
-  local sudoers_drop_in="/etc/sudoers.d/songbird"
-  local sudoers_content="# Songbird — allow the service user to control its own unit
+  local sudoers_drop_in="/etc/sudoers.d/ouj-chat"
+  local sudoers_content="# Ouj Chat — allow the service user to control its own unit
 # and read privileged logs without a password.
 ${SERVICE_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl restart ${SERVICE_NAME}
 ${SERVICE_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl stop ${SERVICE_NAME}
@@ -1744,7 +1744,7 @@ clone_repo() {
     run_silent run_as_root mkdir -p "$INSTALL_DIR" || return 1
   fi
 
-  log "Cloning Songbird repository..."
+  log "Cloning Ouj Chat repository..."
   run_silent run_as_root git clone "$REPO_URL" "$INSTALL_DIR" || return 1
 }
 
@@ -1759,7 +1759,7 @@ prepare_install_dir_for_offline() {
 }
 
 find_offline_source_zip() {
-  local zip_name="songbird.zip"
+  local zip_name="ouj-chat.zip"
   local candidates=(
     "$(pwd)/${zip_name}"
     "$HOME/${zip_name}"
@@ -1780,13 +1780,13 @@ find_restore_backup_path() {
   local extension=""
   extension="$(database_backup_extension)"
   local candidates=(
-    "/opt/songbird/data/backups"
+    "/opt/ouj-chat/data/backups"
     "/root"
   )
   local dir=""
   for dir in "${candidates[@]}"; do
     local found=""
-    found="$(run_as_root_output bash -lc "find '$dir' -maxdepth 1 -type f -name 'songbird-backup-*${extension}' -printf '%T@\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-" | tr -d '\r\n')" || found=""
+    found="$(run_as_root_output bash -lc "find '$dir' -maxdepth 1 -type f -name 'ouj-chat-backup-*${extension}' -printf '%T@\t%p\n' 2>/dev/null | sort -nr | head -1 | cut -f2-" | tr -d '\r\n')" || found=""
     if [[ -n "$found" && -f "$found" ]]; then
       printf "%s" "$found"
       return 0
@@ -1826,7 +1826,7 @@ ensure_offline_source_ready() {
   local zip_path=""
   zip_path="$(find_offline_source_zip)" || zip_path=""
   if [[ -z "$zip_path" ]]; then
-    warn "Offline ${mode_label} requires songbird.zip to be available in the current directory, user home, /root, or /."
+    warn "Offline ${mode_label} requires ouj-chat.zip to be available in the current directory, user home, /root, or /."
     press_enter_to_continue
     return 1
   fi
@@ -1852,7 +1852,7 @@ extract_offline_source_zip() {
   local source_root
   source_root="$(resolve_offline_source_root "$tmp_dir")" || {
     run_silent run_as_root rm -rf "$tmp_dir"
-    warn "Source zip does not appear to contain Songbird (missing server/client/worker/package.json)."
+    warn "Source zip does not appear to contain Ouj Chat (missing server/client/worker/package.json)."
     return 1
   }
 
@@ -2036,7 +2036,7 @@ update_source_from_zip() {
   run_silent run_as_root rm -rf "$tmp_dir" || return 1
 }
 
-install_songbird_dependencies() {
+install_ouj_chat_dependencies() {
   local npm_registry_arg=""
   if [[ -n "$MIRROR_NPM" ]]; then
     npm_registry_arg="--registry $(printf '%q' "$MIRROR_NPM")"
@@ -2291,7 +2291,7 @@ ensure_env_secret() {
   else
     local data_dir=""
     data_dir="$(get_existing_env_value "DATA_DIR" "${INSTALL_DIR}/data")"
-    if [[ -f "${data_dir}/songbird.db" ]]; then
+    if [[ -f "${data_dir}/ouj-chat.db" ]]; then
       log "Existing SQLite database found; leaving ${key} for the server to restore from it."
       return 0
     fi
@@ -2349,7 +2349,7 @@ APP_ENV=production
 DB_CLIENT=${DB_CLIENT:-sqlite3}
 POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
-POSTGRES_DB=${POSTGRES_DB:-songbird}
+POSTGRES_DB=${POSTGRES_DB:-ouj-chat}
 POSTGRES_USER=${POSTGRES_USER:-postgres}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
 POSTGRES_URL=${POSTGRES_URL:-}
@@ -2419,7 +2419,7 @@ ensure_vapid_keys() {
   fi
   local data_dir=""
   data_dir="$(get_existing_env_value "DATA_DIR" "${INSTALL_DIR}/data")"
-  if ! is_postgres_client && [[ -f "${data_dir}/songbird.db" ]]; then
+  if ! is_postgres_client && [[ -f "${data_dir}/ouj-chat.db" ]]; then
     log "Existing SQLite database found; leaving VAPID keys for the server to restore from the database."
     return 0
   fi
@@ -2856,7 +2856,7 @@ configure_systemd_service() {
   fi
   if ! run_silent run_as_root tee "$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=Songbird server
+Description=Ouj Chat server
 After=network.target
 
 [Service]
@@ -2879,7 +2879,7 @@ EOF
   log "Creating worker systemd service at ${WORKER_SERVICE_FILE}..."
   if ! run_silent run_as_root tee "$WORKER_SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=Songbird media worker
+Description=Ouj Chat media worker
 After=network.target ${SERVICE_NAME}.service
 
 [Service]
@@ -2900,15 +2900,15 @@ EOF
   fi
 
   run_as_root systemctl daemon-reload || return 1
-  run_as_root systemctl enable songbird.service || return 1
-  run_as_root systemctl enable songbird-worker.service || return 1
-  run_as_root systemctl restart songbird.service || return 1
+  run_as_root systemctl enable ouj-chat.service || return 1
+  run_as_root systemctl enable ouj-chat-worker.service || return 1
+  run_as_root systemctl restart ouj-chat.service || return 1
   if [[ -n "${DB_BACKUP_PATH:-}" ]]; then
     wait_for_server_secrets 600 || true
   else
     wait_for_server_secrets || true
   fi
-  run_as_root systemctl restart songbird-worker.service || return 1
+  run_as_root systemctl restart ouj-chat-worker.service || return 1
 }
 
 write_nginx_site_config() {
@@ -3259,7 +3259,7 @@ configure_lego_renewal_timer() {
   log "Creating lego renewal service at ${LEGO_RENEW_SERVICE_FILE}..."
   if ! run_silent run_as_root tee "$LEGO_RENEW_SERVICE_FILE" >/dev/null <<EOF
 [Unit]
-Description=Renew Songbird IP certificate with lego
+Description=Renew Ouj Chat IP certificate with lego
 After=network-online.target nginx.service
 Wants=network-online.target
 
@@ -3280,7 +3280,7 @@ EOF
   log "Creating lego renewal timer at ${LEGO_RENEW_TIMER_FILE}..."
   if ! run_silent run_as_root tee "$LEGO_RENEW_TIMER_FILE" >/dev/null <<EOF
 [Unit]
-Description=Run Songbird lego renewal twice daily
+Description=Run Ouj Chat lego renewal twice daily
 
 [Timer]
 OnBootSec=10m
@@ -3296,7 +3296,7 @@ EOF
   fi
 
   run_as_root systemctl daemon-reload || return 1
-  run_as_root systemctl enable --now songbird-lego-renew.timer || return 1
+  run_as_root systemctl enable --now ouj-chat-lego-renew.timer || return 1
 }
 
 configure_selfsigned_ssl() {
@@ -3317,7 +3317,7 @@ configure_selfsigned_ssl() {
 
   log "Running gen-certs.sh for CN=${cn}..."
   # gen-certs.sh writes to <repo>/certs/ by default, but for a bare-metal install
-  # we want the certs in CERT_INSTALL_DIR (/etc/ssl/songbird). We temporarily
+  # we want the certs in CERT_INSTALL_DIR (/etc/ssl/ouj-chat). We temporarily
   # override the output directory by symlinking, then copy to the final location.
   run_silent run_as_root mkdir -p "$CERT_INSTALL_DIR" || return 1
 
@@ -3419,7 +3419,7 @@ configure_coturn() {
   if [[ -z "$COTURN_PASSWORD" ]]; then
     COTURN_PASSWORD="$(generate_secret_hex 2>/dev/null || od -An -tx1 -N32 /dev/urandom 2>/dev/null | tr -d ' \n' || printf "secret%s" "$RANDOM$RANDOM")"
   fi
-  COTURN_USER="${COTURN_USER:-songbird}"
+  COTURN_USER="${COTURN_USER:-ouj-chat}"
 
   if run_as_root test -f "$default_file"; then
     if run_as_root grep -q "TURNSERVER_ENABLED" "$default_file"; then
@@ -3518,14 +3518,14 @@ run_migrations() {
   run_in_install_dir "npm --prefix server run db:migrate" || return 1
 }
 
-songbird_service_is_running() {
-  if have_cmd systemctl && systemctl is-active --quiet songbird.service 2>/dev/null; then
+ouj_chat_service_is_running() {
+  if have_cmd systemctl && systemctl is-active --quiet ouj-chat.service 2>/dev/null; then
     return 0
   fi
   return 1
 }
 
-songbird_healthcheck_responds() {
+ouj_chat_healthcheck_responds() {
   local port="$1"
 
   if have_cmd curl; then
@@ -3567,7 +3567,7 @@ setTimeout(() => process.exit(1), 800).unref();
   return 1
 }
 
-ensure_songbird_stopped_for_update() {
+ensure_ouj_chat_stopped_for_update() {
   local port=""
   port="$(get_existing_env_value_with_fallback "SERVER_PORT" "PORT" "$DEFAULT_SERVER_PORT")"
   port="$(sanitize_input_value "$port")"
@@ -3575,23 +3575,23 @@ ensure_songbird_stopped_for_update() {
     port="$DEFAULT_SERVER_PORT"
   fi
 
-  log "Checking whether Songbird is running before update..."
+  log "Checking whether Ouj Chat is running before update..."
 
-  if songbird_service_is_running; then
-    log "Songbird service is running. Stopping it before update..."
-    if ! run_as_root systemctl stop songbird.service; then
-      warn "Failed to stop Songbird service. Stop it manually before updating."
+  if ouj_chat_service_is_running; then
+    log "Ouj Chat service is running. Stopping it before update..."
+    if ! run_as_root systemctl stop ouj-chat.service; then
+      warn "Failed to stop Ouj Chat service. Stop it manually before updating."
       press_enter_to_continue
       return 1
     fi
-    if have_cmd systemctl && systemctl is-active --quiet songbird-worker.service 2>/dev/null; then
-      run_as_root systemctl stop songbird-worker.service || true
+    if have_cmd systemctl && systemctl is-active --quiet ouj-chat-worker.service 2>/dev/null; then
+      run_as_root systemctl stop ouj-chat-worker.service || true
     fi
-    log "Songbird service stopped."
+    log "Ouj Chat service stopped."
   fi
 
-  if songbird_healthcheck_responds "$port"; then
-    warn "Songbird is still running on port ${port}. Stop it before updating."
+  if ouj_chat_healthcheck_responds "$port"; then
+    warn "Ouj Chat is still running on port ${port}. Stop it before updating."
     press_enter_to_continue
     return 1
   fi
@@ -3642,10 +3642,10 @@ rebuild_and_restart_after_settings_change() {
   log "Rebuilding client after settings change..."
   run_in_install_dir "npm --prefix client run build" || return 1
 
-  log "Restarting Songbird service..."
-  run_as_root systemctl restart songbird.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^songbird-worker.service"; then
-    run_as_root systemctl restart songbird-worker.service || true
+  log "Restarting Ouj Chat service..."
+  run_as_root systemctl restart ouj-chat.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^ouj-chat-worker.service"; then
+    run_as_root systemctl restart ouj-chat-worker.service || true
   fi
 
   if [[ "$needs_nginx" == "yes" ]]; then
@@ -3656,14 +3656,14 @@ rebuild_and_restart_after_settings_change() {
   fi
 }
 
-update_songbird() {
+update_ouj-chat() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
-    warn "No Songbird install found at ${INSTALL_DIR}."
+    warn "No Ouj Chat install found at ${INSTALL_DIR}."
     press_enter_to_continue
     return 0
   fi
 
-  ensure_songbird_stopped_for_update || return 1
+  ensure_ouj_chat_stopped_for_update || return 1
 
   if [[ "$(prompt_yes_no "Create a database backup before updating?" "no")" == "yes" ]]; then
     backup_database || return 1
@@ -3697,34 +3697,34 @@ update_songbird() {
 
     case "$version_rel" in
       newer)
-        log "Offline update available. Preparing to update Songbird..."
+        log "Offline update available. Preparing to update Ouj Chat..."
         ;;
       lower)
         local should_downgrade=""
         should_downgrade="$(prompt_yes_no "Local zip version (${source_ver}) is lower than installed version (${install_ver}). Do you want to downgrade to version ${source_ver}?" "no")"
         if [[ "$should_downgrade" != "yes" ]]; then
           run_silent run_as_root rm -rf "$tmp_dir"
-          log "Songbird is already up to date. No rebuild needed."
+          log "Ouj Chat is already up to date. No rebuild needed."
           press_enter_to_continue
           return 0
         fi
         is_downgrade="yes"
-        log "Offline downgrade requested. Preparing to downgrade Songbird to ${source_ver}..."
+        log "Offline downgrade requested. Preparing to downgrade Ouj Chat to ${source_ver}..."
         ;;
       same)
         local should_update=""
         should_update="$(prompt_yes_no "Local zip version (${source_ver}) is the same as installed version (${install_ver}). Do you want to update to version ${source_ver}?" "no")"
         if [[ "$should_update" != "yes" ]]; then
           run_silent run_as_root rm -rf "$tmp_dir"
-          log "Songbird is already up to date. No rebuild needed."
+          log "Ouj Chat is already up to date. No rebuild needed."
           press_enter_to_continue
           return 0
         fi
-        log "Offline update requested. Preparing to update Songbird to ${source_ver}..."
+        log "Offline update requested. Preparing to update Ouj Chat to ${source_ver}..."
         ;;
       *)
         run_silent run_as_root rm -rf "$tmp_dir"
-        log "Songbird is already up to date. No rebuild needed."
+        log "Ouj Chat is already up to date. No rebuild needed."
         press_enter_to_continue
         return 0
         ;;
@@ -3736,7 +3736,7 @@ update_songbird() {
     update_source_from_zip "$offline_zip_path" || return 1
 
     log "Installing dependencies..."
-    install_songbird_dependencies || return 1
+    install_ouj_chat_dependencies || return 1
     ensure_vapid_keys || return 1
 
     log "Synchronizing database schema with latest version..."
@@ -3756,10 +3756,10 @@ update_songbird() {
       configure_systemd_service || true
     fi
 
-    log "Restarting Songbird service..."
-    run_as_root systemctl restart songbird.service || return 1
-    if have_cmd systemctl && systemctl list-unit-files | grep -q "^songbird-worker.service"; then
-      run_as_root systemctl restart songbird-worker.service || true
+    log "Restarting Ouj Chat service..."
+    run_as_root systemctl restart ouj-chat.service || return 1
+    if have_cmd systemctl && systemctl list-unit-files | grep -q "^ouj-chat-worker.service"; then
+      run_as_root systemctl restart ouj-chat-worker.service || true
     fi
     run_as_root systemctl reload nginx || return 1
 
@@ -3801,7 +3801,7 @@ update_songbird() {
 
   # Check if update is available
   if [[ "$local_commit" == "$remote_commit" ]]; then
-    log "Songbird is already up to date."
+    log "Ouj Chat is already up to date."
     local should_downgrade=""
     should_downgrade="$(prompt_yes_no "Do you want to downgrade?" "no")"
     if [[ "$should_downgrade" != "yes" ]]; then
@@ -3830,7 +3830,7 @@ update_songbird() {
   fi
 
   if [[ "$is_downgrade" == "yes" ]]; then
-    log "Downgrade requested. Preparing to downgrade Songbird to ${target_version}..."
+    log "Downgrade requested. Preparing to downgrade Ouj Chat to ${target_version}..."
     preserve_backup_and_restore_data
 
     if ! run_in_install_dir "git checkout ${target_ref}"; then
@@ -3840,7 +3840,7 @@ update_songbird() {
     fi
   else
     # Update is available - proceed with safe update
-    log "Update available. Preparing to update Songbird..."
+    log "Update available. Preparing to update Ouj Chat..."
     preserve_backup_and_restore_data
 
     # Ensure we're on main branch and pull latest
@@ -3858,7 +3858,7 @@ update_songbird() {
   fi
 
   log "Installing dependencies..."
-  install_songbird_dependencies || return 1
+  install_ouj_chat_dependencies || return 1
   ensure_vapid_keys || return 1
   
   log "Synchronizing database schema with latest version..."
@@ -3878,10 +3878,10 @@ update_songbird() {
     configure_systemd_service || true
   fi
 
-  log "Restarting Songbird service..."
-  run_as_root systemctl restart songbird.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^songbird-worker.service"; then
-    run_as_root systemctl restart songbird-worker.service || true
+  log "Restarting Ouj Chat service..."
+  run_as_root systemctl restart ouj-chat.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^ouj-chat-worker.service"; then
+    run_as_root systemctl restart ouj-chat-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
 
@@ -3889,15 +3889,15 @@ update_songbird() {
   press_enter_to_continue
 }
 
-restart_songbird() {
-  log "Restarting Songbird service..."
-  run_as_root systemctl restart songbird.service || return 1
-  if have_cmd systemctl && systemctl list-unit-files | grep -q "^songbird-worker.service"; then
-    run_as_root systemctl restart songbird-worker.service || true
+restart_ouj-chat() {
+  log "Restarting Ouj Chat service..."
+  run_as_root systemctl restart ouj-chat.service || return 1
+  if have_cmd systemctl && systemctl list-unit-files | grep -q "^ouj-chat-worker.service"; then
+    run_as_root systemctl restart ouj-chat-worker.service || true
   fi
   run_as_root systemctl reload nginx || return 1
 
-  log "Songbird restarted successfully."
+  log "Ouj Chat restarted successfully."
   press_enter_to_continue
 }
 
@@ -4007,14 +4007,14 @@ free_service_port() {
   return 0
 }
 
-remove_songbird() {
+remove_ouj-chat() {
   if [[ ! -d "$INSTALL_DIR" ]]; then
     warn "No install found at ${INSTALL_DIR}."
     press_enter_to_continue
     return 0
   fi
 
-  if [[ "$(prompt_yes_no "This will remove Songbird from this server. Continue?" "no")" != "yes" ]]; then
+  if [[ "$(prompt_yes_no "This will remove Ouj Chat from this server. Continue?" "no")" != "yes" ]]; then
     log "Removal canceled."
     return 0
   fi
@@ -4024,14 +4024,14 @@ remove_songbird() {
   server_port="$(get_existing_env_value "SERVER_PORT" "$DEFAULT_SERVER_PORT")"
   worker_port="$(get_existing_env_value "WORKER_PORT" "$DEFAULT_WORKER_PORT")"
 
-  if run_as_root systemctl list-unit-files | grep -q "^songbird.service"; then
-    run_as_root systemctl disable --now songbird.service || true
+  if run_as_root systemctl list-unit-files | grep -q "^ouj-chat.service"; then
+    run_as_root systemctl disable --now ouj-chat.service || true
   fi
-  if run_as_root systemctl list-unit-files | grep -q "^songbird-worker.service"; then
-    run_as_root systemctl disable --now songbird-worker.service || true
+  if run_as_root systemctl list-unit-files | grep -q "^ouj-chat-worker.service"; then
+    run_as_root systemctl disable --now ouj-chat-worker.service || true
   fi
-  if run_as_root systemctl list-unit-files | grep -q "^songbird-lego-renew.timer"; then
-    run_as_root systemctl disable --now songbird-lego-renew.timer || true
+  if run_as_root systemctl list-unit-files | grep -q "^ouj-chat-lego-renew.timer"; then
+    run_as_root systemctl disable --now ouj-chat-lego-renew.timer || true
   fi
   run_as_root rm -f "$SERVICE_FILE" "$WORKER_SERVICE_FILE"
   run_as_root rm -f "$LEGO_RENEW_SERVICE_FILE" "$LEGO_RENEW_TIMER_FILE"
@@ -4053,10 +4053,10 @@ remove_songbird() {
     run_as_root userdel "$SERVICE_USER" || true
   fi
 
-  log "Songbird removed."
+  log "Ouj Chat removed."
 
   if [[ -f "$GLOBAL_COMMAND_PATH" ]]; then
-    if [[ "$(prompt_yes_no "Remove global command (songbird-deploy) as well?" "no")" == "yes" ]]; then
+    if [[ "$(prompt_yes_no "Remove global command (ouj-chat-deploy) as well?" "no")" == "yes" ]]; then
       run_as_root rm -f "$GLOBAL_COMMAND_PATH"
       log "Global command removed."
     fi
@@ -4068,7 +4068,7 @@ remove_songbird() {
 configure_push_proxy() {
   local env_file="$INSTALL_DIR/.env"
   if [[ ! -f "$env_file" ]]; then
-    warn ".env file not found. Install Songbird first."
+    warn ".env file not found. Install Ouj Chat first."
     press_enter_to_continue
     return 1
   fi
@@ -4128,8 +4128,8 @@ configure_push_proxy() {
     return 1
   fi
   
-  log "Restarting Songbird service..."
-  if ! run_logged_quiet run_as_root systemctl restart songbird; then
+  log "Restarting Ouj Chat service..."
+  if ! run_logged_quiet run_as_root systemctl restart ouj-chat; then
     warn "Failed to restart service."
     press_enter_to_continue
     return 1
@@ -4141,7 +4141,7 @@ configure_push_proxy() {
   press_enter_to_continue
 }
 
-install_songbird() {
+install_ouj-chat() {
   prompt_source_mode
   collect_install_options
   prompt_database_choice
@@ -4162,7 +4162,7 @@ install_songbird() {
   ensure_log_dir || return 1
   write_full_env_with_defaults || return 1
   ensure_local_postgres_setup || return 1
-  install_songbird_dependencies || return 1
+  install_ouj_chat_dependencies || return 1
   RESTORE_BACKUP_QUIET="yes"
   if ! restore_backup_if_provided; then
     RESTORE_BACKUP_QUIET="no"
@@ -4210,7 +4210,7 @@ install_global_command_from_path() {
     return 1
   }
 
-  if ! sed -i "1s|^# songbird-deploy-version:.*$|# songbird-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "1s|^# ouj-chat-deploy-version:.*$|# ouj-chat-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4233,7 +4233,7 @@ install_global_command_from_remote() {
     rm -f "$temp_target"
     return 1
   fi
-  if ! sed -i "1s|^# songbird-deploy-version:.*$|# songbird-deploy-version: ${install_version}|" "$temp_target"; then
+  if ! sed -i "1s|^# ouj-chat-deploy-version:.*$|# ouj-chat-deploy-version: ${install_version}|" "$temp_target"; then
     rm -f "$temp_target"
     return 1
   fi
@@ -4321,7 +4321,7 @@ update_menu() {
     rm -f "$temp_remote"
     LAST_GLOBAL_COMMAND_VERSION="$remote_version"
     log "Menu updated to version ${remote_version}."
-    log "Run it from anywhere with: songbird-deploy"
+    log "Run it from anywhere with: ouj-chat-deploy"
     press_enter_to_continue
     return 0
   fi
@@ -4349,7 +4349,7 @@ install_global_command() {
 
 installed_global_command_version() {
   local version=""
-  version="$(run_as_root bash -lc "if [[ -f '$GLOBAL_COMMAND_PATH' ]]; then grep -E '^# songbird-deploy-version:' '$GLOBAL_COMMAND_PATH' | head -n 1 | cut -d ':' -f 2- | xargs; fi" 2>/dev/null || true)"
+  version="$(run_as_root bash -lc "if [[ -f '$GLOBAL_COMMAND_PATH' ]]; then grep -E '^# ouj-chat-deploy-version:' '$GLOBAL_COMMAND_PATH' | head -n 1 | cut -d ':' -f 2- | xargs; fi" 2>/dev/null || true)"
   if [[ -z "$version" || "$version" == "auto" ]]; then
     return 1
   fi
@@ -4395,23 +4395,23 @@ show_logs() {
 }
 
 show_service_logs() {
-  if systemctl list-units --type=service --all | grep songbird; then
+  if systemctl list-units --type=service --all | grep ouj-chat; then
     clear
-    printf "\n  Last %s lines of songbird service log:\n\n" "$LOG_LINES"
-    run_as_root journalctl -u songbird --no-pager -n "$LOG_LINES"
+    printf "\n  Last %s lines of ouj-chat service log:\n\n" "$LOG_LINES"
+    run_as_root journalctl -u ouj-chat --no-pager -n "$LOG_LINES"
   else
-    printf "\n  Songbird service not found.\n"
+    printf "\n  Ouj Chat service not found.\n"
   fi
   press_enter_to_continue
 }
 
 show_worker_service_logs() {
-  if systemctl list-units --type=service --all | grep songbird-worker; then
+  if systemctl list-units --type=service --all | grep ouj-chat-worker; then
     clear
-    printf "\n  Last %s lines of songbird-worker service log:\n\n" "$LOG_LINES"
-    run_as_root journalctl -u songbird-worker --no-pager -n "$LOG_LINES"
+    printf "\n  Last %s lines of ouj-chat-worker service log:\n\n" "$LOG_LINES"
+    run_as_root journalctl -u ouj-chat-worker --no-pager -n "$LOG_LINES"
   else
-    printf "\n  Songbird worker service not found.\n"
+    printf "\n  Ouj Chat worker service not found.\n"
   fi
   press_enter_to_continue
 }
@@ -4444,7 +4444,7 @@ show_nginx_error_logs() {
 
 
 show_banner() {
-  printf '\033[1;38;2;42;186;130m'   # bold Songbird green (#2ABA82)
+  printf '\033[1;38;2;42;186;130m'   # bold Ouj Chat green (#2ABA82)
   cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
@@ -4467,13 +4467,13 @@ show_menu() {
   clear
   show_banner
   printf "\n"
-  printf "Songbird Deploy Menu\n"
-  printf $'1) 📥  Install Songbird\n'
-  printf $'2) 🔄️  Update Songbird\n'
-  printf $'3) ♻️  Restart Songbird\n'
+  printf "Ouj Chat Deploy Menu\n"
+  printf $'1) 📥  Install Ouj Chat\n'
+  printf $'2) 🔄️  Update Ouj Chat\n'
+  printf $'3) ♻️  Restart Ouj Chat\n'
   printf $'4) ⚙️  Edit Settings (.env)\n'
   printf $'5) 🗃️  Manage Database\n'
-  printf $'6) 🗑️  Remove Songbird\n'
+  printf $'6) 🗑️  Remove Ouj Chat\n'
   printf $'7) 🔄️  Update menu\n'
   printf $'8) 🌐  Configure mirrors\n'
   printf $'9) 📋  View Logs\n'
@@ -4662,7 +4662,7 @@ create_owner_user() {
 
 print_db_script_help() {
   cat <<'EOF'
-Songbird Script Database Menu
+Ouj Chat Script Database Menu
 
 The installer collects every required value before running DB commands, then
 passes those values as CLI flags/arguments with stdin closed so the nested
@@ -5255,7 +5255,7 @@ db_remote_configure() {
   local args=()
 
   if [[ ! -d "${INSTALL_DIR}/server" ]]; then
-    warn "Songbird server directory not found at ${INSTALL_DIR}/server."
+    warn "Ouj Chat server directory not found at ${INSTALL_DIR}/server."
     press_enter_to_continue
     return 1
   fi
@@ -5462,12 +5462,12 @@ main() {
     show_menu
     prompt_read "Choose an option [0-9]: " choice
     case "$choice" in
-      1) run_menu_action install_songbird ;;
-      2) run_menu_action update_songbird ;;
-      3) run_menu_action restart_songbird ;;
+      1) run_menu_action install_ouj-chat ;;
+      2) run_menu_action update_ouj-chat ;;
+      3) run_menu_action restart_ouj-chat ;;
       4) run_menu_action edit_settings ;;
       5) run_menu_action show_db_menu ;;
-      6) run_menu_action remove_songbird ;;
+      6) run_menu_action remove_ouj-chat ;;
       7) run_menu_action update_menu ;;
       8) run_menu_action configure_mirrors_menu ;;
       9) run_menu_action show_logs_menu ;;

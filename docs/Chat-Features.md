@@ -2,7 +2,7 @@
 
 **Ouj Chat / گفتگوی اوج** is the dedicated messenger for **املاک اوج** at `oujamlak.ir`. It includes conversation organization, message search, polls, topics, group controls, and group calls. Open the selected conversation's **three-dot menu → Chat tools** to reach its panels; global **Chat tools** is also available in the account menu. Some panels appear only after selecting a conversation or when your role permits the action.
 
-Ouj Chat builds on the open-source Songbird project. The product branding preserves Songbird's upstream license, copyright notices and attribution.
+This distribution preserves the applicable open-source license, copyright notices and contributor attribution in the repository's `LICENSE` and README.
 
 ## Appearance and accessibility
 

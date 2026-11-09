@@ -10,7 +10,7 @@ const serverDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const BOOT_TIMEOUT_MS = 20_000;
 
 function bootServer(timeoutMs = BOOT_TIMEOUT_MS) {
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-boot-"));
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-boot-"));
 
   const child = spawn(process.execPath, ["index.js"], {
     cwd: serverDir,
@@ -55,7 +55,7 @@ describe("Server boot", () => {
     try {
       expect(result.code).toBe(1);
       expect(result.stderr).toContain("MONGODB_URI is empty");
-      expect(result.stdout).not.toContain("Songbird server running");
+      expect(result.stdout).not.toContain("Ouj Chat server running");
       expect(result.stderr).not.toMatch(/ReferenceError/);
     } finally {
       fs.rmSync(result.dataDir, { recursive: true, force: true });

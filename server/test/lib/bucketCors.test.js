@@ -37,7 +37,7 @@ describe("resolveAppOrigins", () => {
     expect(
       resolveAppOrigins({
         APP_PUBLIC_URL: "https://app.example.com, https://admin.example.com/",
-        RAILWAY_PUBLIC_DOMAIN: "songbird.up.railway.app",
+        RAILWAY_PUBLIC_DOMAIN: "ouj-chat.up.railway.app",
       }),
     ).toEqual(["https://app.example.com", "https://admin.example.com"]);
   });
@@ -51,17 +51,17 @@ describe("resolveAppOrigins", () => {
   test("falls back to RAILWAY_PUBLIC_DOMAIN", () => {
     expect(
       resolveAppOrigins({
-        RAILWAY_PUBLIC_DOMAIN: "songbird.up.railway.app",
+        RAILWAY_PUBLIC_DOMAIN: "ouj-chat.up.railway.app",
       }),
-    ).toEqual(["https://songbird.up.railway.app"]);
+    ).toEqual(["https://ouj-chat.up.railway.app"]);
   });
 
   test("falls back to RENDER_EXTERNAL_URL", () => {
     expect(
       resolveAppOrigins({
-        RENDER_EXTERNAL_URL: "https://songbird.onrender.com",
+        RENDER_EXTERNAL_URL: "https://ouj-chat.onrender.com",
       }),
-    ).toEqual(["https://songbird.onrender.com"]);
+    ).toEqual(["https://ouj-chat.onrender.com"]);
   });
 
   test("returns empty array when nothing is known", () => {

@@ -1,30 +1,30 @@
 # راه‌اندازی کانال ریموت (Remote Channel)
 
-کانال ریموت به یک کانال عمومی Songbird اجازه می‌دهد پست‌ها را از یک کانال Telegram یا یک کانال عمومی دیگر Songbird بازتاب (mirror) دهد. تنها مالکان کانال می‌توانند منبع یک کانال را پیکربندی کنند، و در هر زمان تنها یک منبع می‌تواند برای هر کانال فعال باشد.
+کانال ریموت به یک کانال عمومی گفتگوی اوج اجازه می‌دهد پست‌ها را از یک کانال Telegram یا یک کانال عمومی دیگر گفتگوی اوج بازتاب (mirror) دهد. تنها مالکان کانال می‌توانند منبع یک کانال را پیکربندی کنند، و در هر زمان تنها یک منبع می‌تواند برای هر کانال فعال باشد.
 
-در اولین فعال‌سازی، Songbird منبع را در جدیدترین پست مقداردهی اولیه می‌کند و تاریخچه را وارد نمی‌کند. پست‌هایی که پس از آن نقطه منتشر می‌شوند بازتاب داده می‌شوند.
+در اولین فعال‌سازی، گفتگوی اوج منبع را در جدیدترین پست مقداردهی اولیه می‌کند و تاریخچه را وارد نمی‌کند. پست‌هایی که پس از آن نقطه منتشر می‌شوند بازتاب داده می‌شوند.
 
 ## انواع منبع در یک نگاه
 
-| | منبع Songbird | منبع Telegram |
+| | منبع گفتگوی اوج | منبع Telegram |
 |---|---|---|
 | اعتبارنامه‌های موردنیاز | هیچ‌کدام | API ID، hash و session مربوط به Telegram |
 | پرچم سرور | `REMOTE_CHANNEL=true` | `REMOTE_CHANNEL=true` |
 | قالب منبع | پیوند دعوت کانال عمومی | `@channelname`، پیوند `t.me`، یا شناسه عددی |
 | محدودیت مقصد | مقصد باید یک کانال عمومی روی سروری با `SIGN_UP=true` باشد | منبع باید یک کانال Telegram باشد |
-| پراکسی اختیاری | `REMOTE_CHANNEL_SONGBIRD_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
+| پراکسی اختیاری | `REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL` | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` |
 
-## منبع Songbird
+## منبع گفتگوی اوج
 
-برای بازتاب از یک سرور Songbird دیگر، یک **کانال عمومی** ایجاد یا ویرایش کنید، **Remote Channel** را فعال کنید، **Songbird** را انتخاب کنید، و پیوند دعوت کانال عمومی را از سرور مقصد جای‌گذاری کنید (برای مثال `https://other.server/invite/channelname`).
+برای بازتاب از یک سرور گفتگوی اوج دیگر، یک **کانال عمومی** ایجاد یا ویرایش کنید، **Remote Channel** را فعال کنید، **گفتگوی اوج** را انتخاب کنید، و پیوند دعوت کانال عمومی را از سرور مقصد جای‌گذاری کنید (برای مثال `https://other.server/invite/channelname`).
 
 **نیازمندی‌ها:**
 
 - سرور مقصد باید `SIGN_UP=true` (سرور عمومی) داشته باشد.
 - کانال مقصد باید عمومی باشد.
-- سرور مقصد باید همان نسخه یا نسخه‌ای جدیدتر از Songbird را اجرا کند که شامل نقاط پایانی polling کانال عمومی باشد.
+- سرور مقصد باید همان نسخه یا نسخه‌ای جدیدتر از گفتگوی اوج را اجرا کند که شامل نقاط پایانی polling کانال عمومی باشد.
 
-به هیچ اعتبارنامه اضافه‌ای نیاز نیست. روی این سرور `REMOTE_CHANNEL=true` و در صورت نیاز سرورتان به پراکسی برای دسترسی به مقصد، به‌صورت اختیاری `REMOTE_CHANNEL_SONGBIRD_PROXY_URL` را تنظیم کنید.
+به هیچ اعتبارنامه اضافه‌ای نیاز نیست. روی این سرور `REMOTE_CHANNEL=true` و در صورت نیاز سرورتان به پراکسی برای دسترسی به مقصد، به‌صورت اختیاری `REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL` را تنظیم کنید.
 
 ## منبع Telegram
 
@@ -57,31 +57,31 @@
 <summary>روش جایگزین با CLI (<code>remote:configure</code>)</summary>
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 npm run remote:configure
 ```
 
 برای Docker:
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 touch .env
-docker compose run --rm -v "$PWD/.env:/app/.env" songbird npm --prefix /app/server run remote:configure
+docker compose run --rm -v "$PWD/.env:/app/.env" ouj-chat npm --prefix /app/server run remote:configure
 ```
 
-مقدار session تولیدشده را خصوصی نگه دارید. این مقدار به Songbird اجازه می‌دهد کانال‌های Telegram را که حساب Telegram واردشده به آن‌ها دسترسی دارد بخواند.
+مقدار session تولیدشده را خصوصی نگه دارید. این مقدار به گفتگوی اوج اجازه می‌دهد کانال‌های Telegram را که حساب Telegram واردشده به آن‌ها دسترسی دارد بخواند.
 </details>
 
-### ۳. اتصال یک کانال Songbird
+### ۳. اتصال یک کانال گفتگوی اوج
 
-در Songbird، یک **کانال عمومی** ایجاد یا ویرایش کنید، **Remote Channel** را فعال کنید، **Telegram** را انتخاب کنید، و منبعی مانند `@channelname` یا `https://t.me/channelname` را وارد کنید. کانال ریموت برای کانال‌های خصوصی قفل است.
+در گفتگوی اوج، یک **کانال عمومی** ایجاد یا ویرایش کنید، **Remote Channel** را فعال کنید، **Telegram** را انتخاب کنید، و منبعی مانند `@channelname` یا `https://t.me/channelname` را وارد کنید. کانال ریموت برای کانال‌های خصوصی قفل است.
 
 تنظیمات اختیاری کانال:
 
 | تنظیم | اثر |
 |---|---|
-| Sync Channel Metadata | عنوان/آواتار کانال Telegram را در کانال Songbird کپی می‌کند. |
-| Stream Media Files | هنگامی که `FILE_UPLOAD=true` باشد، رسانه Telegram را در بخش آپلودهای Songbird دانلود می‌کند. از محدودیت‌های اندازه/تعداد آپلود، نگه‌داری فایل، رمزنگاری در حالت سکون، و تنظیمات ترنسکد ویدیو پیروی می‌کند. پست‌های بازتاب‌شده فقط‌متنی از `MESSAGE_TEXT_RETENTION` پیروی می‌کنند. |
+| Sync Channel Metadata | عنوان/آواتار کانال Telegram را در کانال گفتگوی اوج کپی می‌کند. |
+| Stream Media Files | هنگامی که `FILE_UPLOAD=true` باشد، رسانه Telegram را در بخش آپلودهای گفتگوی اوج دانلود می‌کند. از محدودیت‌های اندازه/تعداد آپلود، نگه‌داری فایل، رمزنگاری در حالت سکون، و تنظیمات ترنسکد ویدیو پیروی می‌کند. پست‌های بازتاب‌شده فقط‌متنی از `MESSAGE_TEXT_RETENTION` پیروی می‌کنند. |
 
 :::info
 
@@ -107,7 +107,7 @@ docker compose run --rm -v "$PWD/.env:/app/.env" songbird npm --prefix /app/serv
 
    ```bash
    curl -X POST https://your-app.onrender.com/api/internal/remote-channel/tick \
-     -H "x-songbird-cron-secret: <secret-از-بخش-secrets>"
+     -H "x-ouj-chat-cron-secret: <secret-از-بخش-secrets>"
    ```
 
    هر tick برنامه را بیدار می‌کند، همه پیام‌های جدید از آخرین پیام بازتاب شده به بعد را بازتاب می‌دهد، صف را خالی می‌کند، سپس اتصال Telegram را قطع می‌کند تا برنامه دوباره sleep شود.

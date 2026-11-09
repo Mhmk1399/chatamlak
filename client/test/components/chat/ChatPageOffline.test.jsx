@@ -25,7 +25,7 @@ describe("ChatPage — Offline Active Chat Restoration", () => {
     window.sessionStorage.removeItem(OPEN_CHAT_ID_KEY);
     await deleteIdbCache(
       CACHE_STORES.chatList,
-      `songbird-chat-list-cache:testuser`,
+      `ouj-chat-chat-list-cache:testuser`,
     );
     vi.unstubAllGlobals();
   });
@@ -54,7 +54,7 @@ describe("ChatPage — Offline Active Chat Restoration", () => {
 
     await writeIdbCache(
       CACHE_STORES.chatList,
-      `songbird-chat-list-cache:testuser`,
+      `ouj-chat-chat-list-cache:testuser`,
       {
         version: CHAT_CACHE_VERSION,
         chats: cachedChats,
@@ -102,7 +102,7 @@ describe("ChatPage — Offline Active Chat Restoration", () => {
 
     await writeIdbCache(
       CACHE_STORES.chatList,
-      `songbird-chat-list-cache:testuser`,
+      `ouj-chat-chat-list-cache:testuser`,
       {
         version: CHAT_CACHE_VERSION,
         chats: cachedChats,
@@ -139,7 +139,7 @@ describe("ChatPage — Offline Active Chat Restoration", () => {
 
     await writeIdbCache(
       CACHE_STORES.chatList,
-      `songbird-chat-list-cache:testuser`,
+      `ouj-chat-chat-list-cache:testuser`,
       {
         version: CHAT_CACHE_VERSION,
         chats: cachedChats,

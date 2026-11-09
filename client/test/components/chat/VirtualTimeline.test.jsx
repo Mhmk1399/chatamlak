@@ -24,7 +24,7 @@ describe("virtual chat history", () => {
     await render(<Harness />);
     await expect.poll(() => document.querySelectorAll("[data-message-bubble]").length).toBeGreaterThan(0);
     expect(document.querySelectorAll("[data-message-bubble]").length).toBeLessThan(100);
-    window.dispatchEvent(new CustomEvent("songbird:jump-to-message", { detail: { id: "5001", align: "start" } }));
+    window.dispatchEvent(new CustomEvent("ouj-chat:jump-to-message", { detail: { id: "5001", align: "start" } }));
     await expect.element(page.getByText("Message 5001", { exact: true })).toBeInTheDocument();
     await expect.poll(() => {
       const row = document.getElementById("message-5001");

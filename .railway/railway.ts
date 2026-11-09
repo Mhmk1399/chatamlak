@@ -13,7 +13,7 @@ export default defineRailway(() => {
     region: "ams",
   });
 
-  const worker = service("songbird-worker", {
+  const worker = service("ouj-chat-worker", {
     rootDirectory: "worker",
     region: "ams",
     build: {
@@ -37,7 +37,7 @@ export default defineRailway(() => {
     },
   });
 
-  const app = service("songbird-server", {
+  const app = service("ouj-chat-server", {
     region: "ams",
     build: {
       builder: "DOCKERFILE",
@@ -53,7 +53,7 @@ export default defineRailway(() => {
       MONGODB_URI: preserve(),
       MONGODB_DATABASE: "ouj_chat",
       STORAGE_PROCESSING_MODE: "remote",
-      WORKER_URL: "http://${{songbird-worker.RAILWAY_PRIVATE_DOMAIN}}:8080",
+      WORKER_URL: "http://${{ouj-chat-worker.RAILWAY_PRIVATE_DOMAIN}}:8080",
       WEBHOOK_SECRET: preserve(),
       STORAGE_DRIVER: "remote",
       STORAGE_AUTO_CORS: "true",
@@ -66,9 +66,9 @@ export default defineRailway(() => {
     },
   });
 
-  const songbirdGroup = group("songbird", [app, worker, uploads]);
+  const oujChatGroup = group("ouj-chat", [app, worker, uploads]);
 
-  return project("songbird", {
-    resources: [songbirdGroup],
+  return project("ouj-chat", {
+    resources: [oujChatGroup],
   });
 });

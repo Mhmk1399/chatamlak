@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const FILE_MAGIC = Buffer.from("SBENC1\0", "utf8");
+const FILE_MAGIC = Buffer.from("OUJENC1\0", "utf8");
+const LEGACY_FILE_MAGIC = Buffer.from([83, 66, 69, 78, 67, 49, 0]);
 const FILE_HEADER_LENGTH = FILE_MAGIC.length + 12 + 16;
 const FILE_IV_OFFSET = FILE_MAGIC.length;
 const FILE_TAG_OFFSET = FILE_IV_OFFSET + 12;
@@ -17,7 +18,10 @@ const resolveKey = () => {
 export const isEncryptedFileBuffer = (buffer) =>
   Buffer.isBuffer(buffer) &&
   buffer.length >= FILE_HEADER_LENGTH &&
-  buffer.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC);
+  (buffer.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC) ||
+    buffer
+      .subarray(0, LEGACY_FILE_MAGIC.length)
+      .equals(LEGACY_FILE_MAGIC));
 
 export const decryptFileToTempPath = (filePath, originalName = "") => {
   const key = resolveKey();
@@ -42,7 +46,7 @@ export const decryptFileToTempPath = (filePath, originalName = "") => {
     decipher.final(),
   ]);
 
-  const tempDir = path.join(os.tmpdir(), "songbird-secure");
+  const tempDir = path.join(os.tmpdir(), "ouj-chat-secure");
   fs.mkdirSync(tempDir, { recursive: true });
   const ext = path.extname(String(originalName || filePath)).toLowerCase();
   const tempPath = path.join(

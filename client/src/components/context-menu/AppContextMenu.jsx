@@ -160,8 +160,8 @@ function StandardContextMenu({ menu, onClose }) {
         aria-label={localize("Context menu")}
         className={`fixed overflow-hidden rounded-[1.25rem] border border-slate-300/80 bg-white text-slate-900 shadow-[0_18px_46px_rgba(15,23,42,0.2)] dark:border-white/10 dark:bg-slate-800 dark:text-slate-100 ${
           verticalPlacement === "below"
-            ? "sb-context-menu-open-down"
-            : "sb-context-menu-open-up"
+            ? "ouj-context-menu-open-down"
+            : "ouj-context-menu-open-up"
         }`}
         style={{
           top: `${desktopPosition.y}px`,

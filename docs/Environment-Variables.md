@@ -9,7 +9,7 @@ You can easily configure most of these variables via the admin panel without tou
 You can configure environment variables to customize app behavior.
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 cp .env.example .env
 nano .env
 ```
@@ -20,7 +20,7 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 
 | Variable | Type | Default | Description |
 |---|---|---:|---|
-| `SONGBIRD_ENV_FILE` | `string` | `.env` | Compose selector for the application's runtime `env_file`; set `.env.production` in the private production file and pass that file with `--env-file`. |
+| `OUJ_CHAT_ENV_FILE` | `string` | `.env` | Compose selector for the application's runtime `env_file`; set `.env.production` in the private production file and pass that file with `--env-file`. |
 | `SERVER_PORT` | `integer` | `5174` | API server port. (`PORT` is supported as a legacy fallback.) |
 | `CLIENT_PORT` | `integer` | `80` | Nginx listen port (what users connect to). |
 | `BIND_ADDRESS` | `string` | `localhost` | Network interface to bind to. Use `localhost` for VPS/private networks to avoid exposing backend when firewall is disabled; use `0.0.0.0` for Docker containers. |
@@ -31,7 +31,7 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 | `MONGODB_MAX_POOL_SIZE` | `integer` | `20` | Maximum MongoDB client connection-pool size per application process. |
 | `MONGODB_CONNECT_TIMEOUT_MS` | `integer` | `10000` | MongoDB server-selection timeout in milliseconds. |
 | `NODE_EXTRA_CA_CERTS` | `string` | `""` | Additional trusted CA certificate PEM path when required by the database/network provider. |
-| `REDIS_HOST` | `string` | `""` | Optional Redis host. If set, Songbird uses Redis for BullMQ background job queues (media processing), session storage, and pub/sub instead of in-process fallback. |
+| `REDIS_HOST` | `string` | `""` | Optional Redis host. If set, Ouj Chat uses Redis for BullMQ background job queues (media processing), session storage, and pub/sub instead of in-process fallback. |
 | `REDIS_PORT` | `integer` | `6379` | Optional Redis port. |
 | `REDIS_URL` | `string` | `""` | Optional Redis connection URL (e.g. `redis://user:pass@host:port`). |
 | `APP_ENV` | `string` | `production` | Server runtime mode (`production` recommended/default). |
@@ -56,11 +56,11 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 | `STORAGE_FORCE_PATH_STYLE` | `boolean` | `true` | Enable path-style URL syntax (`true` recommended for MinIO, R2, ArvanCloud, etc.). |
 | `STORAGE_PROXY_URL` | `string` | `""` | Optional HTTP/HTTPS proxy URL for object storage requests. |
 | `WORKER_URL` | `string` | `""` | External media processing worker base URL for HTTP push transcoding (e.g. `https://worker.example.com`). |
-| `WORKER_PORT` | `integer` | `8080` | Port for the standalone Media Worker service (`worker/`). Songbird uses this port to construct the default local Media Worker URL (`http://127.0.0.1:8080`) when `WORKER_URL` is omitted. |
+| `WORKER_PORT` | `integer` | `8080` | Port for the standalone Media Worker service (`worker/`). Ouj Chat uses this port to construct the default local Media Worker URL (`http://127.0.0.1:8080`) when `WORKER_URL` is omitted. |
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | Media processing workflow mode (`auto`, `local`, `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | Total retry timeout in milliseconds when dispatching transcode jobs to the remote worker before falling back to the local worker (in `auto` mode) or failing the dispatch (in `remote` mode). |
-| `WEBHOOK_SECRET` | `string` | *(Auto-generated)* | Secret token (`x-songbird-webhook-secret`) to authenticate dispatch and callback requests between Songbird and the Media Worker. |
-| `WEBHOOK_URL` | `string` | `""` | Songbird public webhook callback URL sent to external workers (e.g. `https://songbird.example.com/api/uploads/webhook/processed`). |
+| `WEBHOOK_SECRET` | `string` | *(Auto-generated)* | Secret token (`x-ouj-chat-webhook-secret`) to authenticate dispatch and callback requests between Ouj Chat and the Media Worker. |
+| `WEBHOOK_URL` | `string` | `""` | Ouj Chat public webhook callback URL sent to external workers (e.g. `https://ouj-chat.example.com/api/uploads/webhook/processed`). |
 | `STORAGE_ENCRYPTION_MODE` | `string` | `remote` | Storage encryption strategy (`remote` for provider-side SSE-S3, `local` for application-level encryption). |
 | `MESSAGE_FILE_RETENTION` | `integer` | `7` | Auto-delete uploaded message files after N days (`0` disables). |
 | `MESSAGE_TEXT_RETENTION` | `integer` | `0` | Auto-delete text-only messages after N days (`0` disables). |
@@ -72,7 +72,7 @@ External channel mirroring is opt-in: `REMOTE_CHANNEL`, `REMOTE_CHANNEL_UI` and 
 | `REMOTE_CHANNEL_TELEGRAM_API_HASH` | `string` | `""` | Telegram API hash. |
 | `REMOTE_CHANNEL_TELEGRAM_SESSION_STRING` | `string` | `""` | Telegram StringSession. Treat it like a password. |
 | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` | `string` | `""` | Telegram MTProto proxy URL. (`REMOTE_CHANNEL_PROXY_URL` is supported as a legacy fallback.) |
-| `REMOTE_CHANNEL_SONGBIRD_PROXY_URL` | `string` | `""` | HTTP/HTTPS proxy for outbound requests from this server to remote Songbird servers. |
+| `REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL` | `string` | `""` | HTTP/HTTPS proxy for outbound requests from this server to remote Ouj Chat servers. |
 | `REMOTE_CHANNEL_TICK_MODE` | `boolean` | `false` | When `true`, background poll loops stay off so a serverless host can sleep. |
 | `REMOTE_CHANNEL_CRON_SECRET` | `string` | *(Auto-generated)* | Shared secret for the tick endpoint. |
 | `REMOTE_CHANNEL_POLL_INTERVAL_MS` | `integer` | `5000` | How often the poller checks enabled Remote Channel sources (`1000`-`900000`). |
@@ -136,7 +136,7 @@ cp -n .env.production.example .env.production
 chmod 600 .env.production
 ```
 
-Edit that file privately and keep `SONGBIRD_ENV_FILE=.env.production`. Pass `--env-file .env.production` to every production Compose command. The flag supplies [Compose interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation); the repository's `env_file` selector `${SONGBIRD_ENV_FILE:-.env}` also injects the selected file's full runtime environment into the application container. The flag alone does not replace that [container environment configuration](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/). Without the selector override, the default remains `.env`.
+Edit that file privately and keep `OUJ_CHAT_ENV_FILE=.env.production`. Pass `--env-file .env.production` to every production Compose command. The flag supplies [Compose interpolation](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation); the repository's `env_file` selector `${OUJ_CHAT_ENV_FILE:-.env}` also injects the selected file's full runtime environment into the application container. The flag alone does not replace that [container environment configuration](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/). Without the selector override, the default remains `.env`.
 
 | Area | Production profile |
 |---|---|
@@ -152,7 +152,7 @@ Before startup, fill `APP_PUBLIC_URL` with the exact HTTPS app origin, such as `
 
 When reusing an existing database, securely reuse its matching encryption, VAPID and other stable system keys. Do not replace them with fresh template values. For the all-in-one bootstrap, populate `WEBHOOK_SECRET` and `STORAGE_ENCRYPTION_KEY` consistently before either app or worker starts. Runtime key generation does not update the host's `.env.production` or a worker process that has already started. A fresh database may use newly provisioned keys; retain them securely for subsequent starts and recovery.
 
-Prepare valid `certs/cert.pem` and `certs/key.pem`, configure the domain and Nginx `server_name`, and confirm that the secured MongoDB replica set is reachable from the application network with least-privilege Chat credentials. On the shared VPS, ports **80/443** may already belong to the existing Nginx: integrate Songbird with the existing private Compose network and proxy. Reuse the secured MongoDB engine; do not blindly start a second Nginx or MongoDB instance.
+Prepare valid `certs/cert.pem` and `certs/key.pem`, configure the domain and Nginx `server_name`, and confirm that the secured MongoDB replica set is reachable from the application network with least-privilege Chat credentials. On the shared VPS, ports **80/443** may already belong to the existing Nginx: integrate Ouj Chat with the existing private Compose network and proxy. Reuse the secured MongoDB engine; do not blindly start a second Nginx or MongoDB instance.
 
 Validate the completed configuration without printing the resolved secrets:
 
@@ -169,7 +169,7 @@ docker compose --env-file .env.production up -d --build
 On the shared host, after configuring the existing private network/proxy integration, start only the application service instead of another proxy:
 
 ```sh
-docker compose --env-file .env.production up -d --build songbird
+docker compose --env-file .env.production up -d --build ouj-chat
 ```
 
 Configuration validation is not a live database, bucket or container test. These settings do not migrate authentication or the database, connect Web identity, or turn the frontend business previews into live reports/listings.
@@ -184,19 +184,19 @@ You can easily edit your .env file via the [Deployment Script](./Deployment-Scri
 
 **1. Docker deployment:**
 
-The examples below use the default `.env`. For the production profile, also pass `--env-file .env.production` and retain its `SONGBIRD_ENV_FILE` selector.
+The examples below use the default `.env`. For the production profile, also pass `--env-file .env.production` and retain its `OUJ_CHAT_ENV_FILE` selector.
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 # Apply updated runtime env vars from .env
-docker compose -f docker-compose.yaml up -d --force-recreate songbird
+docker compose -f docker-compose.yaml up -d --force-recreate ouj-chat
 ```
 
 If your change affects build-time client values, rebuild the image too:
 
 ```bash
-cd /opt/songbird
-docker compose -f docker-compose.yaml up -d --build --force-recreate songbird
+cd /opt/ouj-chat
+docker compose -f docker-compose.yaml up -d --build --force-recreate ouj-chat
 ```
 
 **2. Manual (systemd) deployment:**
@@ -204,14 +204,14 @@ docker compose -f docker-compose.yaml up -d --build --force-recreate songbird
 Rebuild client:
 
 ```bash
-cd /opt/songbird/client
+cd /opt/ouj-chat/client
 npm run build
 ```
 
 Restart systemd service:
 
 ```bash
-sudo systemctl restart songbird
+sudo systemctl restart ouj-chat
 ```
 
 **3. Reload Nginx:**

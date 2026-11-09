@@ -6,7 +6,7 @@ import { LoaderCircle } from "../../icons/lucide.js";
 import { useFocusTrap } from "../../hooks/useFocusTrap.js";
 
 const DELETE_FOR_EVERYONE_PREFERENCE_KEY =
-  "songbird-delete-message-for-everyone";
+  "ouj-chat-delete-message-for-everyone";
 
 const readDeleteForEveryonePreference = () => {
   if (typeof window === "undefined") return false;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { APP_CONFIG } from "../../settings/appConfig.js";
 
-const PERF_TELEMETRY_KEY = "songbird-perf-telemetry-v1";
+const PERF_TELEMETRY_KEY = "ouj-chat-perf-telemetry-v1";
 const PERF_MAX_ENTRIES = 120;
 export const readPerfTelemetry = () => readTelemetry();
 
@@ -40,12 +40,12 @@ const pushTelemetry = (entry) => {
 export function usePerfTelemetry({ activeChatId, messagesLength, loadingMessages }) {
   const openStartRef = useRef(null);
   const [detailed, setDetailed] = useState(() => {
-    try { return APP_CONFIG.debugEnabled || localStorage.getItem("songbird-perf-enabled") === "1"; } catch { return APP_CONFIG.debugEnabled; }
+    try { return APP_CONFIG.debugEnabled || localStorage.getItem("ouj-chat-perf-enabled") === "1"; } catch { return APP_CONFIG.debugEnabled; }
   });
   useEffect(() => {
-    const update = () => { try { setDetailed(APP_CONFIG.debugEnabled || localStorage.getItem("songbird-perf-enabled") === "1"); } catch { /* unavailable storage */ } };
-    window.addEventListener("songbird:performance-config", update);
-    return () => window.removeEventListener("songbird:performance-config", update);
+    const update = () => { try { setDetailed(APP_CONFIG.debugEnabled || localStorage.getItem("ouj-chat-perf-enabled") === "1"); } catch { /* unavailable storage */ } };
+    window.addEventListener("ouj-chat:performance-config", update);
+    return () => window.removeEventListener("ouj-chat:performance-config", update);
   }, []);
 
   useEffect(() => {

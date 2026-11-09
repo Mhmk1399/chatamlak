@@ -8,15 +8,15 @@ import { getSetting } from "./appSettings.js";
 import { isValidUuid } from "./uuidUtils.js";
 import { markEncryptedFileRecord } from "./storageEncryption.js";
 
-// ─── Songbird outbound proxy ──────────────────────────────────────────────────
+// ─── Ouj Chat outbound proxy ──────────────────────────────────────────────────
 // Applied per-fetch-call (no persistent connection to bake it into), so this
 // reads the live setting on every call instead of a value captured at startup.
 
 let cachedProxyUrl = "";
 let cachedDispatcher;
 
-function getSongbirdProxyDispatcher() {
-  const proxyUrl = String(getSetting("REMOTE_CHANNEL_SONGBIRD_PROXY_URL") || "").trim();
+function getOujChatProxyDispatcher() {
+  const proxyUrl = String(getSetting("REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL") || "").trim();
   if (!proxyUrl) return undefined;
   if (proxyUrl !== cachedProxyUrl) {
     cachedProxyUrl = proxyUrl;
@@ -29,11 +29,11 @@ function getSongbirdProxyDispatcher() {
   return cachedDispatcher;
 }
 
-function songbirdFetch(url, options = {}) {
+function oujChatFetch(url, options = {}) {
   // SSRF guard: reject requests to private/internal hosts regardless of call site.
   //
   // A static allowlist is intentionally not used — the Remote Channel feature
-  // federates with any public Songbird server, so the hostname is open-ended by
+  // federates with any public Ouj Chat server, so the hostname is open-ended by
   // design. Instead, we block the entire private/internal address space (loopback,
   // RFC-1918, link-local, cloud metadata endpoints, etc.) via isPrivateHost().
   // codeql[js/ssrf] - hostname validated against private-address blocklist;
@@ -48,7 +48,7 @@ function songbirdFetch(url, options = {}) {
   } catch {
     return Promise.reject(new Error("Request blocked: URL is invalid."));
   }
-  const dispatcher = getSongbirdProxyDispatcher();
+  const dispatcher = getOujChatProxyDispatcher();
   return fetch(url, dispatcher ? { ...options, dispatcher } : options);
 }
 
@@ -114,9 +114,9 @@ function errorMessage(error) {
 }
 
 /**
- * Normalize a Songbird remote channel source value.
+ * Normalize a Ouj Chat remote channel source value.
  *
- * Accepts a Songbird invite link in the form:
+ * Accepts a Ouj Chat invite link in the form:
  *   https://example.com/invite/<username>
  *   https://example.com/invite/<token>
  *
@@ -124,16 +124,16 @@ function errorMessage(error) {
  * where sourceUrl is the base origin of the target server and
  * sourceUsername is the channel username (if resolvable from the URL).
  */
-function normalizeSongbirdSource(value) {
+function normalizeOujChatSource(value) {
   const raw = String(value || "").trim();
   if (!raw) {
-    return { ok: false, error: "Songbird source is required." };
+    return { ok: false, error: "Ouj Chat source is required." };
   }
 
   if (!/^https?:\/\//i.test(raw)) {
     return {
       ok: false,
-      error: "Songbird source must be a full invite URL (https://...).",
+      error: "Ouj Chat source must be a full invite URL (https://...).",
     };
   }
 
@@ -141,11 +141,11 @@ function normalizeSongbirdSource(value) {
   try {
     url = new URL(raw);
   } catch {
-    return { ok: false, error: "Songbird source URL is invalid." };
+    return { ok: false, error: "Ouj Chat source URL is invalid." };
   }
 
   if (url.protocol !== "https:" && url.protocol !== "http:") {
-    return { ok: false, error: "Songbird source URL must use http or https." };
+    return { ok: false, error: "Ouj Chat source URL must use http or https." };
   }
 
   const parts = url.pathname.split("/").filter(Boolean);
@@ -154,7 +154,7 @@ function normalizeSongbirdSource(value) {
     return {
       ok: false,
       error:
-        "Songbird source must be a channel invite link (e.g. https://example.com/invite/channelname).",
+        "Ouj Chat source must be a channel invite link (e.g. https://example.com/invite/channelname).",
     };
   }
 
@@ -163,7 +163,7 @@ function normalizeSongbirdSource(value) {
 
   // We can't reliably distinguish a username from a token at parse time —
   // the actual channel username is resolved by calling the target server.
-  // Store the inviteTarget as a hint; resolveSongbirdSource() will fill in
+  // Store the inviteTarget as a hint; resolveOujChatSource() will fill in
   // sourceUsername after a network call.
   const looksLikeUsername = /^[a-z0-9._]{3,}$/i.test(inviteTarget);
   const sourceUsername = looksLikeUsername ? inviteTarget.toLowerCase() : "";
@@ -210,7 +210,7 @@ function isPrivateHost(hostname) {
 }
 
 /**
- * Resolve a Songbird invite link against the target server to get the
+ * Resolve a Ouj Chat invite link against the target server to get the
  * real channel username. Verifies the server is public and the channel exists.
  *
  * Public channel invite links use the channel username as the path segment
@@ -220,26 +220,26 @@ function isPrivateHost(hostname) {
  *
  * Returns { ok, sourceUsername, channelName, avatarUrl, color, error }
  */
-async function resolveSongbirdSource(sourceUrl, inviteTarget) {
+async function resolveOujChatSource(sourceUrl, inviteTarget) {
   const candidateUsername = String(inviteTarget || "").trim().toLowerCase().replace(/^@+/, "");
   if (!candidateUsername) {
-    return { ok: false, error: "Songbird source channel username could not be determined from the invite link." };
+    return { ok: false, error: "Ouj Chat source channel username could not be determined from the invite link." };
   }
 
   // SSRF protection: reject requests to private/internal hosts.
   try {
     const parsedSourceUrl = new URL(sourceUrl);
     if (isPrivateHost(parsedSourceUrl.hostname)) {
-      return { ok: false, error: "Songbird source URL must point to a public server." };
+      return { ok: false, error: "Ouj Chat source URL must point to a public server." };
     }
   } catch {
-    return { ok: false, error: "Songbird source URL is invalid." };
+    return { ok: false, error: "Ouj Chat source URL is invalid." };
   }
 
   const metaUrl = `${sourceUrl}/api/channels/${encodeURIComponent(candidateUsername)}/meta`;
   let metaRes;
   try {
-    metaRes = await songbirdFetch(metaUrl, {
+    metaRes = await oujChatFetch(metaUrl, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(15_000),
     });
@@ -248,7 +248,7 @@ async function resolveSongbirdSource(sourceUrl, inviteTarget) {
   }
 
   if (metaRes.status === 403) {
-    return { ok: false, error: "The target server is private (sign-up disabled). Only public servers can be used as a Songbird remote source." };
+    return { ok: false, error: "The target server is private (sign-up disabled). Only public servers can be used as a Ouj Chat remote source." };
   }
   if (metaRes.status === 404) {
     return { ok: false, error: "Channel not found on target server. Use a public channel invite link (e.g. https://server/invite/channelusername)." };
@@ -256,10 +256,10 @@ async function resolveSongbirdSource(sourceUrl, inviteTarget) {
 
   // A 200 response that is not JSON means the endpoint does not exist on the
   // target server (the SPA catch-all served index.html) — i.e. the target is
-  // running an older Songbird version without Songbird remote channel support.
+  // running an older Ouj Chat version without Ouj Chat remote channel support.
   const contentType = String(metaRes.headers.get("content-type") || "").toLowerCase();
   if (!contentType.includes("application/json")) {
-    return { ok: false, error: "The target server does not support Songbird remote channels. It may be running an older version of Songbird." };
+    return { ok: false, error: "The target server does not support Ouj Chat remote channels. It may be running an older version of Ouj Chat." };
   }
 
   if (!metaRes.ok) {
@@ -281,17 +281,17 @@ async function resolveSongbirdSource(sourceUrl, inviteTarget) {
   };
 }
 
-async function fetchSongbirdJson(url, timeoutMs = 15_000) {
-  const res = await songbirdFetch(url, {
+async function fetchOujChatJson(url, timeoutMs = 15_000) {
+  const res = await oujChatFetch(url, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
   });
   const contentType = String(res.headers.get("content-type") || "").toLowerCase();
   if (!contentType.includes("application/json")) {
     // Non-JSON 200 means the endpoint doesn't exist (SPA catch-all served HTML)
-    // — the target server is running an older Songbird version.
+    // — the target server is running an older Ouj Chat version.
     throw new Error(
-      "Target server does not support Songbird remote channels (outdated version).",
+      "Target server does not support Ouj Chat remote channels (outdated version).",
     );
   }
   if (!res.ok) {
@@ -567,22 +567,22 @@ function buildTelegramOriginLabel(source = {}) {
   return "Telegram channel";
 }
 
-function buildSongbirdOriginLabel(source = {}) {
+function buildOujChatOriginLabel(source = {}) {
   const title = String(source?.title || source?.source_title || "").trim();
-  if (title) return `Songbird: ${title}`;
+  if (title) return `Ouj Chat: ${title}`;
   const username = String(source?.username || source?.source_username || "")
     .trim()
     .replace(/^@+/, "");
-  if (username) return `Songbird: @${username}`;
+  if (username) return `Ouj Chat: @${username}`;
   const sourceUrl = String(source?.source_url || "").trim();
   if (sourceUrl) {
     try {
-      return `Songbird: ${new URL(sourceUrl).hostname}`;
+      return `Ouj Chat: ${new URL(sourceUrl).hostname}`;
     } catch {
-      return `Songbird: ${sourceUrl}`;
+      return `Ouj Chat: ${sourceUrl}`;
     }
   }
-  return "Songbird channel";
+  return "Ouj Chat channel";
 }
 
 function computeTextExpiryIso(retentionDays) {
@@ -860,7 +860,7 @@ export function createRemoteChannelManager(deps = {}) {
   let apiId = Number(config.telegramApiId || 0);
   let apiHash = String(config.telegramApiHash || "").trim();
   let sessionString = String(config.telegramSessionString || "").trim();
-  // The manager is enabled if the feature is on — Songbird sources work without
+  // The manager is enabled if the feature is on — Ouj Chat sources work without
   // Telegram credentials. Telegram sources additionally require apiId/hash/session.
   const enabled = Boolean(config.enabled);
   const tickMode = Boolean(config.tickMode);
@@ -897,7 +897,7 @@ export function createRemoteChannelManager(deps = {}) {
   const transcodeVideosToH264 = Boolean(config.transcodeVideosToH264);
   const uploadRootDir = String(config.uploadRootDir || "").trim();
   const avatarUploadRootDir = String(config.avatarUploadRootDir || "").trim();
-  const lockOwner = `songbird-${process.pid}`;
+  const lockOwner = `ouj-chat-${process.pid}`;
   // Entity cache: keyed by "sourceId:sourceRef". Cap at 200 entries with LRU
   // eviction to avoid unbounded growth from Telegram entity objects.
   const ENTITY_CACHE_MAX = 200;
@@ -984,8 +984,8 @@ export function createRemoteChannelManager(deps = {}) {
       retryDelay: 2000,
       autoReconnect: true,
       ...connectionOptions,
-      deviceModel: "Songbird",
-      systemVersion: "Songbird Server",
+      deviceModel: "Ouj Chat",
+      systemVersion: "Ouj Chat Server",
       appVersion: "1.0",
     });
     telegramClient.onError = async (error) => {
@@ -1278,8 +1278,8 @@ export function createRemoteChannelManager(deps = {}) {
     }
 
     // Dispatch to the correct provider implementation.
-    if (source.provider === "songbird") {
-      return syncSongbirdSourceMetadata(source);
+    if (source.provider === "ouj-chat") {
+      return syncOujChatSourceMetadata(source);
     }
 
     const activeClient = await ensureClient();
@@ -1300,23 +1300,23 @@ export function createRemoteChannelManager(deps = {}) {
   }
 
   /**
-   * Fetch channel name and avatar from a remote Songbird server's public
+   * Fetch channel name and avatar from a remote Ouj Chat server's public
    * metadata endpoint and apply them to the local channel if sync_metadata
    * is enabled — mirrors what syncResolvedSourceMetadata does for Telegram.
    */
-  async function syncSongbirdSourceMetadata(source) {
+  async function syncOujChatSourceMetadata(source) {
     const sourceUrl = String(source.source_url || "").trim();
     const channelUsername = String(source.source_username || "").trim();
     if (!sourceUrl || !channelUsername) {
       throw new Error(
-        "Songbird source URL or channel username is not configured.",
+        "Ouj Chat source URL or channel username is not configured.",
       );
     }
 
     const metaUrl = `${sourceUrl}/api/channels/${encodeURIComponent(channelUsername)}/meta`;
     let data;
     try {
-      const res = await songbirdFetch(metaUrl, {
+      const res = await oujChatFetch(metaUrl, {
         method: "GET",
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(15_000),
@@ -1324,7 +1324,7 @@ export function createRemoteChannelManager(deps = {}) {
       const contentType = String(res.headers.get("content-type") || "").toLowerCase();
       if (!contentType.includes("application/json")) {
         throw new Error(
-          "Target server does not support Songbird remote channels (outdated version).",
+          "Target server does not support Ouj Chat remote channels (outdated version).",
         );
       }
       if (!res.ok) {
@@ -1337,7 +1337,7 @@ export function createRemoteChannelManager(deps = {}) {
     } catch (error) {
       const message = errorMessage(error);
       await resolveMaybePromise(updateRemoteChannelSourceError(source.id, message));
-      throw new Error(`Songbird metadata sync failed: ${message}`);
+      throw new Error(`Ouj Chat metadata sync failed: ${message}`);
     }
 
     const title = String(data?.name || "").trim();
@@ -1364,7 +1364,7 @@ export function createRemoteChannelManager(deps = {}) {
           avatarFetchUrl = null;
         }
         if (!avatarFetchUrl) throw new Error("Avatar URL is invalid or off-origin.");
-        const avatarRes = await songbirdFetch(avatarFetchUrl, {
+        const avatarRes = await oujChatFetch(avatarFetchUrl, {
           signal: AbortSignal.timeout(15_000),
         });
         if (avatarRes.ok) {
@@ -1372,7 +1372,7 @@ export function createRemoteChannelManager(deps = {}) {
           if (buffer.length > 0) {
             const safeUsername = channelUsername.replace(/[^a-zA-Z0-9_-]/g, "");
             const stamp = Date.now();
-            const fileName = `songbird-source-${Number(source.id)}-${safeUsername}-${stamp}.jpg`;
+            const fileName = `ouj-chat-source-${Number(source.id)}-${safeUsername}-${stamp}.jpg`;
             const filePath = path.join(avatarUploadRootDir, fileName);
             fs.mkdirSync(avatarUploadRootDir, { recursive: true });
             fs.writeFileSync(filePath, buffer);
@@ -1537,11 +1537,11 @@ export function createRemoteChannelManager(deps = {}) {
     return { queued, initialized: false };
   }
 
-  async function pollSongbirdSource(source) {
+  async function pollOujChatSource(source) {
     const sourceUrl = String(source.source_url || "").trim();
     const channelUsername = String(source.source_username || "").trim();
     if (!sourceUrl || !channelUsername) {
-      throw new Error("Songbird source URL or channel username is not configured.");
+      throw new Error("Ouj Chat source URL or channel username is not configured.");
     }
 
     const lastMessageId = Number(source.last_remote_message_id || 0) || 0;
@@ -1550,7 +1550,7 @@ export function createRemoteChannelManager(deps = {}) {
     // On first poll, just record the latest message ID without mirroring history.
     if (!lastMessageId) {
       const initUrl = `${sourceUrl}/api/channels/${encodeURIComponent(channelUsername)}/messages?limit=1`;
-      const data = await fetchSongbirdJson(initUrl);
+      const data = await fetchOujChatJson(initUrl);
       const latestId = Number(data?.messages?.[0]?.id || 0) || 0;
       await resolveMaybePromise(updateRemoteChannelSourceSeen(source.id, {
         sourceUsername: channelUsername,
@@ -1564,7 +1564,7 @@ export function createRemoteChannelManager(deps = {}) {
       `${sourceUrl}/api/channels/${encodeURIComponent(channelUsername)}/messages` +
       `?afterId=${lastMessageId}&limit=${pollLimitSb}`;
 
-    const data = await fetchSongbirdJson(pollUrl);
+    const data = await fetchOujChatJson(pollUrl);
     const messages = Array.isArray(data?.messages) ? data.messages : [];
     const ordered = messages
       .filter((msg) => Number(msg?.id || 0) > lastMessageId)
@@ -1579,7 +1579,7 @@ export function createRemoteChannelManager(deps = {}) {
       maxSeenId = Math.max(maxSeenId, msgId);
 
       const body = truncateBody(String(msg.body || "").trim(), messageMaxChars);
-      // Skip messages with no text body (file-only messages from a Songbird
+      // Skip messages with no text body (file-only messages from a Ouj Chat
       // source are not yet supported — media streaming is Telegram-specific).
       if (!body) continue;
 
@@ -1595,7 +1595,7 @@ export function createRemoteChannelManager(deps = {}) {
 
       const row = await resolveMaybePromise(enqueueRemoteChannelQueueItem({
         sourceId: source.id,
-        provider: "songbird",
+        provider: "ouj-chat",
         sourceVersion: source.source_version,
         // Reuse the telegram_message_id column for the remote message ID.
         telegramMessageId: msgId,
@@ -1615,8 +1615,8 @@ export function createRemoteChannelManager(deps = {}) {
     return { queued, initialized: false };
   }
 
-  async function pollSongbirdOnce(options = {}) {
-    const sources = (await resolveMaybePromise(listEnabledRemoteChannelSources("songbird"))) || [];
+  async function pollOujChatOnce(options = {}) {
+    const sources = (await resolveMaybePromise(listEnabledRemoteChannelSources("ouj-chat"))) || [];
     if (!sources.length) {
       if (!options.skipSleep) await sleep(pollIntervalMs);
       return { queued: 0 };
@@ -1630,13 +1630,13 @@ export function createRemoteChannelManager(deps = {}) {
         batch.map(async (source) => {
           if (stopped) return 0;
           try {
-            const result = await pollSongbirdSource(source);
+            const result = await pollOujChatSource(source);
             if (source.last_error) await resolveMaybePromise(updateRemoteChannelSourceError(source.id, ""));
             return Number(result?.queued || 0);
           } catch (error) {
             const message = errorMessage(error);
             await resolveMaybePromise(updateRemoteChannelSourceError(source.id, message));
-            log("poll-songbird:error", { sourceId: Number(source.id), error: message });
+            log("poll-ouj-chat:error", { sourceId: Number(source.id), error: message });
             return 0;
           }
         }),
@@ -1646,15 +1646,15 @@ export function createRemoteChannelManager(deps = {}) {
     return { queued: totalQueued };
   }
 
-  async function runSongbirdPollLoop() {
-    // Songbird polling doesn't need a Telegram client — it's always runnable
+  async function runOujChatPollLoop() {
+    // Ouj Chat polling doesn't need a Telegram client — it's always runnable
     // as long as the feature is enabled.
     try {
       while (!stopped) {
         try {
-          await pollSongbirdOnce();
+          await pollOujChatOnce();
         } catch (error) {
-          log("poll-songbird:loop-error", { error: errorMessage(error) });
+          log("poll-ouj-chat:loop-error", { error: errorMessage(error) });
         }
         await sleep(pollIntervalMs);
       }
@@ -2348,12 +2348,12 @@ export function createRemoteChannelManager(deps = {}) {
       return;
     }
 
-    // --- Songbird provider: text-only, no Telegram client needed ---
-    if (currentSource.provider === "songbird") {
+    // --- Ouj Chat provider: text-only, no Telegram client needed ---
+    if (currentSource.provider === "ouj-chat") {
       const remoteMessage = envelope?.message || {};
       const body = truncateBody(String(remoteMessage?.body || "").trim(), messageMaxChars);
       if (!body) {
-        await resolveMaybePromise(markRemoteChannelQueueItemSkipped(item.id, "Songbird post has no text to mirror."));
+        await resolveMaybePromise(markRemoteChannelQueueItemSkipped(item.id, "Ouj Chat post has no text to mirror."));
         return;
       }
 
@@ -2383,7 +2383,7 @@ export function createRemoteChannelManager(deps = {}) {
 
       if (!created?.deduped) {
         await setMessageForwardOrigin(msgId, {
-          label: buildSongbirdOriginLabel(source),
+          label: buildOujChatOriginLabel(source),
           sourceChatId: null,
           sourceUserId: null,
           sourceUsername: null,
@@ -2697,8 +2697,8 @@ export function createRemoteChannelManager(deps = {}) {
     if (apiId && apiHash && sessionString) {
       void runPollLoop();
     }
-    // Songbird poll loop runs independently — no credentials needed.
-    void runSongbirdPollLoop();
+    // Ouj Chat poll loop runs independently — no credentials needed.
+    void runOujChatPollLoop();
     queueTimer = setInterval(() => {
       void runQueueLoop();
     }, queueIntervalMs);
@@ -2731,24 +2731,24 @@ export function createRemoteChannelManager(deps = {}) {
       throw new Error("Remote channel is disabled.");
     }
 
-    if (source.provider === "songbird") {
+    if (source.provider === "ouj-chat") {
       const sourceUrl = String(source.source_url || source.source_raw || "").trim();
       if (!sourceUrl) {
-        throw new Error("Songbird source URL is not configured.");
+        throw new Error("Ouj Chat source URL is not configured.");
       }
       const channelUsername = String(source.source_username || "").trim();
       if (!channelUsername) {
-        throw new Error("Songbird source channel username is not resolved yet. Try saving the settings again.");
+        throw new Error("Ouj Chat source channel username is not resolved yet. Try saving the settings again.");
       }
       // Verify the target server is reachable and the channel is still public.
       const metaUrl = `${sourceUrl}/api/channels/${encodeURIComponent(channelUsername)}/meta`;
-      const response = await songbirdFetch(metaUrl, {
+      const response = await oujChatFetch(metaUrl, {
         method: "GET",
         headers: { "Accept": "application/json" },
         signal: AbortSignal.timeout(10_000),
       });
       if (response.status === 403) {
-        throw new Error("Target server is private. Only public servers can be used as a Songbird remote source.");
+        throw new Error("Target server is private. Only public servers can be used as a Ouj Chat remote source.");
       }
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
@@ -2878,7 +2878,7 @@ export function createRemoteChannelManager(deps = {}) {
     const maxQueueBatches = Math.max(1, Math.min(100, Number(rawQueueCap || 20)));
     const summary = {
       telegram: null,
-      songbird: null,
+      oujChat: null,
       queueBatches: 0,
       disconnected: false,
       pollRounds: 0,
@@ -2905,13 +2905,13 @@ export function createRemoteChannelManager(deps = {}) {
           }
         }
         try {
-          const result = await pollSongbirdOnce({ skipSleep: true });
+          const result = await pollOujChatOnce({ skipSleep: true });
           roundQueued += Number(result?.queued || 0);
-          summary.songbird = "polled";
+          summary.oujChat = "polled";
         } catch (error) {
           const message = errorMessage(error);
-          log("tick:songbird-error", { error: message });
-          summary.songbird = `error: ${message}`;
+          log("tick:ouj-chat-error", { error: message });
+          summary.oujChat = `error: ${message}`;
         }
         summary.queued += roundQueued;
         summary.pollRounds += 1;
@@ -2986,8 +2986,8 @@ export function createRemoteChannelManager(deps = {}) {
 
 export {
   getTelegramClientConnectionOptions,
-  normalizeSongbirdSource,
+  normalizeOujChatSource,
   normalizeTelegramSource,
   parseTelegramProxy,
-  resolveSongbirdSource,
+  resolveOujChatSource,
 };

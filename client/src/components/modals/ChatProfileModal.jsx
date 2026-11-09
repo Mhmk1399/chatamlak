@@ -18,7 +18,7 @@ import {
   Volume2,
   VolumeX,
 } from "../../icons/lucide.js";
-import { SongbirdIcon, TelegramIcon } from "../../icons/BrandIcons.jsx";
+import { OujChatIcon, TelegramIcon } from "../../icons/BrandIcons.jsx";
 import { copyTextToClipboard } from "../../utils/clipboard.js";
 import { getAvatarInitials } from "../../utils/avatarInitials.js";
 import { hasPersian } from "../../utils/fontUtils.js";
@@ -142,11 +142,11 @@ export default function ChatProfileModal({
       if (String(payload?.chatId || "") !== String(chat.id || "")) return;
       fetchRemoteStatus();
     };
-    window.addEventListener("songbird:realtime-event", handleRealtimeEvent);
+    window.addEventListener("ouj-chat:realtime-event", handleRealtimeEvent);
 
     return () => {
       clearInterval(intervalId);
-      window.removeEventListener("songbird:realtime-event", handleRealtimeEvent);
+      window.removeEventListener("ouj-chat:realtime-event", handleRealtimeEvent);
     };
   }, [open, chat?.id, chat?.type, currentUser?.username, remoteChannelAvailable, onRemoteChannelStatusChange]);
 
@@ -648,8 +648,8 @@ export default function ChatProfileModal({
                     <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                       {remoteChannelStatus.source.provider === "telegram" ? (
                         <TelegramIcon size={18} className="shrink-0" />
-                      ) : remoteChannelStatus.source.provider === "songbird" ? (
-                        <SongbirdIcon size={18} />
+                      ) : remoteChannelStatus.source.provider === "ouj-chat" ? (
+                        <OujChatIcon size={18} />
                       ) : (
                         <span>{remoteChannelStatus.source.provider}:</span>
                       )}

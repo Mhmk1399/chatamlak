@@ -1,12 +1,16 @@
-const CACHE_VERSION = "0.13.2-ouj.3";
-const CACHE_NAME = `songbird-${CACHE_VERSION}`;
+const CACHE_VERSION = "0.13.2-ouj.4";
+const CACHE_NAME = `ouj-chat-${CACHE_VERSION}`;
 const PREFERENCES_CACHE = "ouj-preferences-v1";
 const APP_SHELL = [
   "/manifest.webmanifest",
   "/manifest.en.webmanifest",
-  "/ouj-logo.png",
+  "/ouj-icons/icon-16.png",
+  "/ouj-icons/icon-32.png",
+  "/ouj-icons/icon-180.png",
   "/ouj-icons/icon-192.png",
+  "/ouj-icons/icon-192-maskable.png",
   "/ouj-icons/icon-512.png",
+  "/ouj-icons/icon-512-maskable.png",
 ];
 async function notificationLocale() {
   try { const response = await (await caches.open(PREFERENCES_CACHE)).match("/__ouj_locale"); return await response?.text() === "en" ? "en" : "fa"; }
@@ -82,7 +86,7 @@ self.addEventListener("activate", (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((key) => key.startsWith("songbird-") && key !== CACHE_NAME)
+          .filter((key) => key.startsWith("ouj-chat-") && key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
       );
       await self.clients.claim();
@@ -195,7 +199,7 @@ self.addEventListener("push", (event) => {
   }
 
   const badgeCount = payload.badge;
-  const tag = data.chatId ? `chat-${data.chatId}` : "songbird";
+  const tag = data.chatId ? `chat-${data.chatId}` : "ouj-chat";
   const options = {
     data,
     tag,

@@ -14,7 +14,7 @@ export default function InstallGuideModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6">
       <div className="w-full max-w-md rounded-2xl border border-brand-200 bg-white p-6 shadow-2xl dark:border-brand-500/30 dark:bg-slate-950">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-brand-700 dark:text-brand-200">{localize("Install Songbird")}</h3>
+          <h3 className="text-lg font-semibold text-brand-700 dark:text-brand-200">{localize("Install Ouj Chat")}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -77,7 +77,7 @@ export default function InstallGuideModal({
                 className="h-full w-full scale-110 object-cover"
               />
             </span>
-            <span>{localize("Open Songbird from your home screen.")}</span>
+            <span>{localize("Open Ouj Chat from your home screen.")}</span>
           </div>
         </div>
         <div className="mt-6 flex justify-end">

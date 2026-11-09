@@ -69,7 +69,7 @@ describe("StorageProvider listObjects", () => {
 
   describe("LocalStorageProvider.listObjects", () => {
     it("lists files in local uploadDir matching prefix", async () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sb-local-list-"));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-local-list-"));
       const avatarDir = path.join(tmpDir, "avatars");
       fs.mkdirSync(avatarDir, { recursive: true });
       fs.writeFileSync(path.join(avatarDir, "avatar-1.png"), "data1");

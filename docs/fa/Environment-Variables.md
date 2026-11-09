@@ -9,7 +9,7 @@
 می‌توانید متغیرهای محیطی را برای سفارشی‌سازی رفتار اپلیکیشن پیکربندی کنید.
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 cp .env.example .env
 nano .env
 ```
@@ -20,7 +20,7 @@ nano .env
 
 | متغیر | نوع | پیش‌فرض | توضیح |
 |---|---|---:|---|
-| `SONGBIRD_ENV_FILE` | `string` | `.env` | انتخاب‌گر Compose برای `env_file` زمان اجرای برنامه؛ مقدار `.env.production` را در فایل خصوصی production قرار دهید و همان فایل را با `--env-file` معرفی کنید. |
+| `OUJ_CHAT_ENV_FILE` | `string` | `.env` | انتخاب‌گر Compose برای `env_file` زمان اجرای برنامه؛ مقدار `.env.production` را در فایل خصوصی production قرار دهید و همان فایل را با `--env-file` معرفی کنید. |
 | `SERVER_PORT` | `integer` | `5174` | پورت سرور API. (`PORT` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
 | `CLIENT_PORT` | `integer` | `80` | پورت listen مربوط به Nginx (همان چیزی که کاربران به آن متصل می‌شوند). |
 | `BIND_ADDRESS` | `string` | `localhost` | رابط شبکه مورد اتصال. برای VPS / شبکه‌های خصوصی از `localhost` استفاده کنید تا هنگام غیرفعال بودن فایروال، بک‌اند قابل افشا نباشد؛ و برای کانتینرهای Docker از `0.0.0.0` استفاده کنید. |
@@ -31,7 +31,7 @@ nano .env
 | `MONGODB_MAX_POOL_SIZE` | `integer` | `20` | بیشترین اتصال pool کلاینت MongoDB برای هر فرایند برنامه. |
 | `MONGODB_CONNECT_TIMEOUT_MS` | `integer` | `10000` | مهلت انتخاب سرور MongoDB بر حسب میلی‌ثانیه. |
 | `NODE_EXTRA_CA_CERTS` | `string` | `""` | مسیر گواهی PEM مرجع مورداعتماد اضافی، در صورت نیاز ارائه‌دهندهٔ دیتابیس یا شبکه. |
-| `REDIS_HOST` | `string` | `""` | آدرس اختیاری هاست Redis. در صورت تنظیم، Songbird از Redis برای صف های پس زمینه BullMQ (پردازش رسانه)، مدیریت نشست ها و pub/sub به جای مکانیزم درون-فرآیندی استفاده میکند. |
+| `REDIS_HOST` | `string` | `""` | آدرس اختیاری هاست Redis. در صورت تنظیم، گفتگوی اوج از Redis برای صف های پس زمینه BullMQ (پردازش رسانه)، مدیریت نشست ها و pub/sub به جای مکانیزم درون-فرآیندی استفاده میکند. |
 | `REDIS_PORT` | `integer` | `6379` | پورت اختیاری Redis. |
 | `REDIS_URL` | `string` | `""` | آدرس URL اختیاری اتصال به Redis (مانند `redis://user:pass@host:port`). |
 | `APP_ENV` | `string` | `production` | حالت اجرای سرور (`production` توصیه‌شده/پیش‌فرض است). |
@@ -56,11 +56,11 @@ nano .env
 | `STORAGE_FORCE_PATH_STYLE` | `boolean` | `true` | فعال سازی ساختار URL به روش path-style (مقدار `true` برای MinIO، R2، ArvanCloud توصیه میشود). |
 | `STORAGE_PROXY_URL` | `string` | `""` | آدرس پروکسی اختیاری برای درخواست های فضای ذخیره سازی ابری. |
 | `WORKER_URL` | `string` | `""` | آدرس پایه worker خارجی پردازش رسانه برای ترنسکد با HTTP push (مانند `https://worker.example.com`). |
-| `WORKER_PORT` | `integer` | `8080` | پورت سرویس Media Worker مستقل (`worker/`). در صورت خالی بودن `WORKER_URL`، پلتفرم Songbird از این مقدار برای ساخت آدرس پیشفرض ورکر محلی (`http://127.0.0.1:8080`) استفاده میکند. |
+| `WORKER_PORT` | `integer` | `8080` | پورت سرویس Media Worker مستقل (`worker/`). در صورت خالی بودن `WORKER_URL`، پلتفرم گفتگوی اوج از این مقدار برای ساخت آدرس پیشفرض ورکر محلی (`http://127.0.0.1:8080`) استفاده میکند. |
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | حالت گردش کار پردازش مدیا (`auto`، `local`، `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | مهلت زمانی تلاش مجدد به میلی ثانیه برای ارسال کارهای ترنسکد به ورکر ریموت پیش از انتقال به ورکر محلی (در حالت `auto`) یا عدم موفقیت ارسال (در حالت `remote`). |
-| `WEBHOOK_SECRET` | `string` | *(تولید خودکار)* | توکن امنیتی هدر `x-songbird-webhook-secret` برای احراز هویت ارتباطات میان Songbird و Media Worker. |
-| `WEBHOOK_URL` | `string` | `""` | آدرس بازخوانی (Callback) عمومی Webhook سرور Songbird ارسالی به workerها (مانند `https://songbird.example.com/api/uploads/webhook/processed`). |
+| `WEBHOOK_SECRET` | `string` | *(تولید خودکار)* | توکن امنیتی هدر `x-ouj-chat-webhook-secret` برای احراز هویت ارتباطات میان گفتگوی اوج و Media Worker. |
+| `WEBHOOK_URL` | `string` | `""` | آدرس بازخوانی (Callback) عمومی Webhook سرور گفتگوی اوج ارسالی به workerها (مانند `https://ouj-chat.example.com/api/uploads/webhook/processed`). |
 | `STORAGE_ENCRYPTION_MODE` | `string` | `remote` | استراتژی رمزنگاری ذخیره سازی (`remote` برای سمت ارائه دهنده، `local` برای رمزنگاری سمت اپلیکیشن). |
 | `MESSAGE_FILE_RETENTION` | `integer` | `7` | حذف خودکار فایل‌های پیام آپلودشده پس از N روز (`0` غیرفعال می‌کند). |
 | `MESSAGE_TEXT_RETENTION` | `integer` | `0` | حذف خودکار پیام‌های فقط‌متنی پس از N روز (`0` غیرفعال می‌کند). |
@@ -72,7 +72,7 @@ nano .env
 | `REMOTE_CHANNEL_TELEGRAM_API_HASH` | `string` | `""` | API hash مربوط به Telegram. |
 | `REMOTE_CHANNEL_TELEGRAM_SESSION_STRING` | `string` | `""` | StringSession مربوط به Telegram. با آن مانند یک رمز عبور رفتار کنید. |
 | `REMOTE_CHANNEL_TELEGRAM_PROXY_URL` | `string` | `""` | نشانی پراکسی MTProto مربوط به Telegram. (`REMOTE_CHANNEL_PROXY_URL` به‌عنوان جایگزین قدیمی پشتیبانی می‌شود.) |
-| `REMOTE_CHANNEL_SONGBIRD_PROXY_URL` | `string` | `""` | پراکسی HTTP/HTTPS برای درخواست‌های خروجی از این سرور به سرورهای ریموت Songbird. |
+| `REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL` | `string` | `""` | پراکسی HTTP/HTTPS برای درخواست‌های خروجی از این سرور به سرورهای ریموت گفتگوی اوج. |
 | `REMOTE_CHANNEL_TICK_MODE` | `boolean` | `false` | وقتی `true` باشد، حلقه‌های poll پس‌زمینه خاموش می‌مانند تا میزبان serverless بتواند sleep شود.  |
 | `REMOTE_CHANNEL_CRON_SECRET` | `string` | *(تولید خودکار)* | secret مشترک برای endpoint مربوط به tick. |
 | `REMOTE_CHANNEL_POLL_INTERVAL_MS` | `integer` | `5000` | فاصله زمانی بررسی منابع فعال کانال ریموت توسط poller (`1000`-`900000`). |
@@ -136,7 +136,7 @@ cp -n .env.production.example .env.production
 chmod 600 .env.production
 ```
 
-فایل را خصوصی ویرایش کنید و `SONGBIRD_ENV_FILE=.env.production` را نگه دارید. در همهٔ فرمان‌های Compose مربوط به production، `--env-file .env.production` را وارد کنید. این گزینه مقدارهای [جای‌گذاری متغیر Compose](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation) را می‌دهد؛ انتخاب‌گر `env_file` مخزن با مقدار `${SONGBIRD_ENV_FILE:-.env}`، محیط کامل فایل انتخاب‌شده را هم به کانتینر برنامه می‌رساند. خود گزینه به‌تنهایی جای [تنظیم محیط کانتینر](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/) را نمی‌گیرد. بدون تغییر انتخاب‌گر، پیش‌فرض همان `.env` می‌ماند.
+فایل را خصوصی ویرایش کنید و `OUJ_CHAT_ENV_FILE=.env.production` را نگه دارید. در همهٔ فرمان‌های Compose مربوط به production، `--env-file .env.production` را وارد کنید. این گزینه مقدارهای [جای‌گذاری متغیر Compose](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation) را می‌دهد؛ انتخاب‌گر `env_file` مخزن با مقدار `${OUJ_CHAT_ENV_FILE:-.env}`، محیط کامل فایل انتخاب‌شده را هم به کانتینر برنامه می‌رساند. خود گزینه به‌تنهایی جای [تنظیم محیط کانتینر](https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/) را نمی‌گیرد. بدون تغییر انتخاب‌گر، پیش‌فرض همان `.env` می‌ماند.
 
 | بخش | پروفایل production |
 |---|---|
@@ -152,7 +152,7 @@ chmod 600 .env.production
 
 اگر از دیتابیس موجود استفاده می‌کنید، کلیدهای متناظر رمزنگاری، VAPID و سایر کلیدهای پایدار سیستم را خصوصی منتقل کنید و با مقدارهای تازهٔ فایل نمونه جایگزین نکنید. برای راه‌اندازی اولیهٔ کانتینر یکپارچه، `WEBHOOK_SECRET` و `STORAGE_ENCRYPTION_KEY` باید پیش از اجرای برنامه یا ورکر، به‌صورت سازگار تکمیل شوند. تولید کلید هنگام اجرا، فایل `.env.production` میزبان یا ورکری را که قبلاً شروع شده به‌روز نمی‌کند. دیتابیس جدید می‌تواند کلیدهای تازهٔ آماده‌شده داشته باشد؛ آن‌ها را برای اجراهای بعدی و بازیابی امن نگه دارید.
 
-فایل‌های معتبر `certs/cert.pem` و `certs/key.pem` را آماده، دامنه و `server_name` در Nginx را تنظیم و دسترسی replica set امن MongoDB را از شبکهٔ برنامه با کاربر کم‌اختیار Chat بررسی کنید. در VPS مشترک ممکن است پورت‌های **۸۰ و ۴۴۳** از قبل در اختیار Nginx موجود باشند؛ Songbird را با شبکهٔ خصوصی Compose و پراکسی فعلی یکپارچه کنید. از موتور امن MongoDB موجود استفاده کنید و نمونهٔ دوم Nginx یا MongoDB را بدون بررسی اجرا نکنید.
+فایل‌های معتبر `certs/cert.pem` و `certs/key.pem` را آماده، دامنه و `server_name` در Nginx را تنظیم و دسترسی replica set امن MongoDB را از شبکهٔ برنامه با کاربر کم‌اختیار Chat بررسی کنید. در VPS مشترک ممکن است پورت‌های **۸۰ و ۴۴۳** از قبل در اختیار Nginx موجود باشند؛ گفتگوی اوج را با شبکهٔ خصوصی Compose و پراکسی فعلی یکپارچه کنید. از موتور امن MongoDB موجود استفاده کنید و نمونهٔ دوم Nginx یا MongoDB را بدون بررسی اجرا نکنید.
 
 پیکربندی تکمیل‌شده را بدون چاپ مقدارهای محرمانهٔ نهایی بررسی کنید:
 
@@ -169,7 +169,7 @@ docker compose --env-file .env.production up -d --build
 روی میزبان مشترک، پس از آماده‌کردن اتصال به شبکهٔ خصوصی و پراکسی فعلی، فقط سرویس برنامه را اجرا کنید تا پراکسی دیگری ساخته نشود:
 
 ```sh
-docker compose --env-file .env.production up -d --build songbird
+docker compose --env-file .env.production up -d --build ouj-chat
 ```
 
 بررسی پیکربندی، آزمون زندهٔ دیتابیس، باکت یا کانتینر نیست. این تنظیمات مهاجرت احراز هویت یا دیتابیس، اتصال هویت Web یا تبدیل پیش‌نمایش‌های فرانت‌اند کسب‌وکار به آگهی و گزارش زنده را انجام نمی‌دهند.
@@ -184,19 +184,19 @@ docker compose --env-file .env.production up -d --build songbird
 
 **۱. نصب با Docker:**
 
-نمونه‌های زیر از `.env` پیش‌فرض استفاده می‌کنند. برای پروفایل production، گزینهٔ `--env-file .env.production` را هم وارد و انتخاب‌گر `SONGBIRD_ENV_FILE` آن را حفظ کنید.
+نمونه‌های زیر از `.env` پیش‌فرض استفاده می‌کنند. برای پروفایل production، گزینهٔ `--env-file .env.production` را هم وارد و انتخاب‌گر `OUJ_CHAT_ENV_FILE` آن را حفظ کنید.
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 # Apply updated runtime env vars from .env
-docker compose -f docker-compose.yaml up -d --force-recreate songbird
+docker compose -f docker-compose.yaml up -d --force-recreate ouj-chat
 ```
 
 اگر تغییر شما روی مقادیر کلاینت در زمان بیلد تأثیر می‌گذارد، تصویر (image) را نیز دوباره بسازید:
 
 ```bash
-cd /opt/songbird
-docker compose -f docker-compose.yaml up -d --build --force-recreate songbird
+cd /opt/ouj-chat
+docker compose -f docker-compose.yaml up -d --build --force-recreate ouj-chat
 ```
 
 **۲. نصب دستی (systemd):**
@@ -204,14 +204,14 @@ docker compose -f docker-compose.yaml up -d --build --force-recreate songbird
 بازسازی کلاینت:
 
 ```bash
-cd /opt/songbird/client
+cd /opt/ouj-chat/client
 npm run build
 ```
 
 راه‌اندازی مجدد سرویس systemd:
 
 ```bash
-sudo systemctl restart songbird
+sudo systemctl restart ouj-chat
 ```
 
 **۳. بارگذاری مجدد Nginx:**

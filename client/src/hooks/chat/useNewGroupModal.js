@@ -19,7 +19,7 @@ export function useNewGroupModal({
     visibility: "public",
     allowMemberInvites: true,
     remoteChannelEnabled: false,
-    remoteChannelProvider: "songbird",
+    remoteChannelProvider: "ouj-chat",
     remoteChannelSource: "",
     remoteChannelSyncMetadata: false,
     remoteChannelStreamMedia: false,

@@ -1,11 +1,11 @@
 /**
- * Songbird brand theming for VitePress.
+ * Ouj Chat brand theming for VitePress.
  * Overrides the default theme CSS variables.
  * Brand green: #2ABA82
  */
 
 /* ---------------------------------------------------------------------------
- * Fonts — same as the Songbird app: DM Sans (Latin) + Vazirmatn (Persian).
+ * Fonts — same as the Ouj Chat app: DM Sans (Latin) + Vazirmatn (Persian).
  * ------------------------------------------------------------------------- */
 @font-face {
   font-family: 'DM Sans';

@@ -73,8 +73,8 @@ export function useGroupCall() {
         try { const data = await messagingRequest(`/chats/${detail.chatId}/call`); await updatePeers(data.peers); } catch { /* heartbeat recovers state */ }
       }
     };
-    window.addEventListener("songbird:realtime-event", event);
-    return () => window.removeEventListener("songbird:realtime-event", event);
+    window.addEventListener("ouj-chat:realtime-event", event);
+    return () => window.removeEventListener("ouj-chat:realtime-event", event);
   }, [updatePeers]);
 
   useEffect(() => {

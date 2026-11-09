@@ -43,11 +43,11 @@ This works for both domain and IP setups as long as your certificate covers what
 
 ## Option C: Use the deploy script
 
-The [Deployment Script](./Deployment-Script.md) (`songbird-deploy`) can configure Nginx for you and also handle SSL setup. That is the easiest path for bare-metal installs if you do not want to manage Nginx and certificates manually.
+The [Deployment Script](./Deployment-Script.md) (`ouj-chat-deploy`) can configure Nginx for you and also handle SSL setup. That is the easiest path for bare-metal installs if you do not want to manage Nginx and certificates manually.
 
 ## Option D: Self-signed certificate (not recommended for production)
 
-Songbird ships a helper script that generates a self-signed certificate:
+Ouj Chat ships a helper script that generates a self-signed certificate:
 
 ```bash
 bash scripts/gen-certs.sh
@@ -55,7 +55,7 @@ bash scripts/gen-certs.sh
 bash scripts/gen-certs.sh example.com
 ```
 
-The [Deployment Script](./Deployment-Script.md) (`songbird-deploy`) also offers this as **Certificate Mode → Self-signed** during installation, so you do not need to run the script manually for bare-metal installs.
+The [Deployment Script](./Deployment-Script.md) (`ouj-chat-deploy`) also offers this as **Certificate Mode → Self-signed** during installation, so you do not need to run the script manually for bare-metal installs.
 
 :::danger Limitations of self-signed certificates
 

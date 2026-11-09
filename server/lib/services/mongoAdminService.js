@@ -100,7 +100,7 @@ export function createMongoAdminActions(deps) {
         emit(chat.id, "chat_list_changed"); result = { created: count, chatId: chat.id };
       } else if (action === "create_demo") {
         let user = await R.findUserByUsername("demo"); if (!user) { const id = await R.createUser("demo", await deps.bcrypt.hash("demo-password", 10), "Demo User"); user = await R.findUserById(id); }
-        let chat = await s.one("chats", { name: "Songbird Demo" }); if (!chat) { const id = await R.createChat("Songbird Demo", "group", { createdByUserId: user.id }); chat = await R.findChatById(id); await R.addChatMember(id, user.id, "owner"); }
+        let chat = await s.one("chats", { name: "Ouj Chat Demo" }); if (!chat) { const id = await R.createChat("Ouj Chat Demo", "group", { createdByUserId: user.id }); chat = await R.findChatById(id); await R.addChatMember(id, user.id, "owner"); }
         if (!await s.count("chat_messages", { chat_id: chat.id })) for (let i = 0; i < 10; i++) await R.createMessage(chat.id, user.id, `Demo message ${i + 1}`);
         result = { userId: user.id, chatId: chat.id };
       } else if (action === "edit_remote_channel") {

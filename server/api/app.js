@@ -49,7 +49,7 @@ function registerAppRoutes(app, deps) {
         uiEnabled: Boolean(getSetting("REMOTE_CHANNEL_UI")),
         mediaStreamEnabled: Boolean(getSetting("REMOTE_CHANNEL_MEDIA_STREAM")),
         telegramConfigured: Boolean(REMOTE_CHANNELS?.telegramConfigured),
-        songbirdConfigured: Boolean(REMOTE_CHANNELS?.enabled),
+        oujChatConfigured: Boolean(REMOTE_CHANNELS?.enabled),
         proxyConfigured: Boolean(REMOTE_CHANNELS?.proxyConfigured),
       },
     });

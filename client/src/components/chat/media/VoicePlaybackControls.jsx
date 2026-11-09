@@ -15,10 +15,10 @@ export default function VoicePlaybackControls({ audioRef, duration, progress, di
     apply();
     const audio = audioRef.current;
     audio?.addEventListener("play", apply);
-    window.addEventListener("songbird:voice-speed", apply);
+    window.addEventListener("ouj-chat:voice-speed", apply);
     window.addEventListener("storage", apply);
     return () => {
-      window.removeEventListener("songbird:voice-speed", apply);
+      window.removeEventListener("ouj-chat:voice-speed", apply);
       window.removeEventListener("storage", apply);
       audio?.removeEventListener("play", apply);
     };

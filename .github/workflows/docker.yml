@@ -57,7 +57,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/songbird
+            ${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat
             ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}},value=${{ github.event.inputs.tag }}
@@ -78,7 +78,7 @@ jobs:
           provenance: false
           labels: ${{ steps.meta.outputs.labels }}
           outputs: |
-            type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/songbird,push-by-digest=true,name-canonical=true,push=true
+            type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat,push-by-digest=true,name-canonical=true,push=true
             type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=main-amd64
           cache-to: type=gha,mode=max,scope=main-amd64
@@ -133,7 +133,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/songbird
+            ${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat
             ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}},value=${{ github.event.inputs.tag }}
@@ -154,7 +154,7 @@ jobs:
           provenance: false
           labels: ${{ steps.meta.outputs.labels }}
           outputs: |
-            type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/songbird,push-by-digest=true,name-canonical=true,push=true
+            type=image,name=${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat,push-by-digest=true,name-canonical=true,push=true
             type=image,name=${{ env.GHCR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=main-arm64
           cache-to: type=gha,mode=max,scope=main-arm64
@@ -212,7 +212,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/songbird
+            ${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat
           tags: |
             type=semver,pattern={{version}},value=${{ github.event.inputs.tag }}
             type=semver,pattern={{major}}.{{minor}},value=${{ github.event.inputs.tag }}
@@ -236,7 +236,7 @@ jobs:
           # ghcr.io requires lowercase repo path; metadata tags are already
           # lowercased, but the @digest source refs must be lowercased manually.
           REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-          DH_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/songbird"
+          DH_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat"
           GHCR_IMAGE="ghcr.io/${REPO_LC}"
           shopt -s nullglob
           DIGESTS=(/tmp/digests/*)
@@ -296,7 +296,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/songbird-worker
+            ${{ secrets.DOCKERHUB_USERNAME }}/ouj-chat-worker
             ghcr.io/${{ github.repository }}-worker
           tags: |
             type=semver,pattern={{version}},value=${{ github.event.inputs.tag }}

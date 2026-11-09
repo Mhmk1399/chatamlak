@@ -21,11 +21,11 @@ const projectRootDir = path.resolve(serverDir, "..");
 dotenv.config({ path: path.join(projectRootDir, ".env"), quiet: true });
 dotenv.config({ path: path.join(serverDir, ".env"), override: true, quiet: true });
 
-const dbPath = path.join(dataDir, "songbird.db");
+const dbPath = path.join(dataDir, "ouj-chat.db");
 const backupDir = path.join(dataDir, "backups");
-const serviceName = process.env.SONGBIRD_SERVICE_NAME || "songbird.service";
-const serviceUser = process.env.SONGBIRD_SERVICE_USER || "songbird";
-const serviceGroup = process.env.SONGBIRD_SERVICE_GROUP || serviceUser;
+const serviceName = process.env.OUJ_CHAT_SERVICE_NAME || "ouj-chat.service";
+const serviceUser = process.env.OUJ_CHAT_SERVICE_USER || "ouj-chat";
+const serviceGroup = process.env.OUJ_CHAT_SERVICE_GROUP || serviceUser;
 
 function listDbBackups(extension) {
   const dirs = [backupDir];
@@ -39,7 +39,7 @@ function listDbBackups(extension) {
       const entries = fs
         .readdirSync(dir, { withFileTypes: true })
         .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(extension))
-        .filter((entry) => dir !== "/root" || entry.name.startsWith("songbird-backup-"))
+        .filter((entry) => dir !== "/root" || entry.name.startsWith("ouj-chat-backup-"))
         .map((entry) => path.join(dir, entry.name));
       files.push(...entries);
     } catch (_) {}
@@ -176,7 +176,7 @@ async function main() {
   if (dbConfig.client === "postgres") {
     const { running, port } = await detectRunningServer();
     if (running) {
-      console.error(`Stop Songbird on port ${port} before restoring a PostgreSQL archive.`);
+      console.error(`Stop Ouj Chat on port ${port} before restoring a PostgreSQL archive.`);
       process.exit(1);
     }
     console.log(`PostgreSQL active — restoring native archive "${path.basename(sourcePath)}"...`);

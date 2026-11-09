@@ -1,6 +1,6 @@
-# Repository Guidelines: Songbird
+# Repository Guidelines: Ouj Chat
 
-Songbird is a self-hosted real-time communication platform built as a Node.js/React monorepo.
+Ouj Chat is a self-hosted real-time communication platform built as a Node.js/React monorepo.
 
 ## Workspace Architecture
 

@@ -584,7 +584,7 @@ export function registerRemoteUploadRoutes(app, deps) {
     const expectedSecret =
       deps.webhookSecret !== undefined ? deps.webhookSecret : webhookSecret;
     if (expectedSecret) {
-      const headerSecret = req.headers["x-songbird-webhook-secret"];
+      const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
       if (headerSecret !== expectedSecret) {
         console.warn(
           `[uploads] Rejected webhook for file ${req.body?.fileId ?? "unknown"}: invalid webhook secret.`,

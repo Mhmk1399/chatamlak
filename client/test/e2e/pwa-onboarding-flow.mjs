@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { today, toZoned } from "@internationalized/date";
 
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
 if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with a dedicated test database.");
 // The headless shell does not implement the service-worker BadgeService.
 // Use Chromium's full headless browser for notification/badging integration.
@@ -26,7 +26,7 @@ async function eventually(check, label, timeout = 12000) {
 try {
   await context.addInitScript(() => {
     if (location.protocol !== "http:" && location.protocol !== "https:") return;
-    localStorage.setItem("songbird-locale", "en");
+    localStorage.setItem("ouj-chat-locale", "en");
     window.deviceChecks = { notifications: 0, media: 0, stopped: 0 };
     const notifications = { permission: "default", requestPermission: async () => { window.deviceChecks.notifications++; notifications.permission = "denied"; return "denied"; } };
     Object.defineProperty(window, "Notification", { value: notifications, configurable: true });

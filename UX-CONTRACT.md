@@ -2,7 +2,7 @@
 
 ## Product context
 
-Ouj Chat / گفتگوی اوج is the dedicated messenger for املاک اوج (`oujamlak.ir`), built on the open-source Songbird project for direct messages, groups and channels on desktop and mobile browsers. Preserve the visual language in [DESIGN.md](./DESIGN.md), and retain upstream license, copyright notices and attribution. Persian is the default locale; English is available throughout the application. New controls target keyboard operation and WCAG 2.2 AA; this is an implementation target, not a claim of independently verified conformance.
+Ouj Chat / گفتگوی اوج is the dedicated messenger for املاک اوج (`oujamlak.ir`), built on the open-source Ouj Chat project for direct messages, groups and channels on desktop and mobile browsers. Preserve the visual language in [DESIGN.md](./DESIGN.md), and retain upstream license, copyright notices and attribution. Persian is the default locale; English is available throughout the application. New controls target keyboard operation and WCAG 2.2 AA; this is an implementation target, not a claim of independently verified conformance.
 
 ## Business-context sources
 

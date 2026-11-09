@@ -128,8 +128,8 @@ MongoDB باید در دسترس بماند. ورکر و فضای ذخیره‌�
 ابتدا برنامهٔ قدیمی را متوقف کنید و از دیتابیس، فایل‌ها و کلیدهای رمزگذاری نسخهٔ پشتیبان بگیرید. MongoDB مقصد باید جدید و خالی باشد. ابتدا گزارش اجرای آزمایشی را بررسی کنید:
 
 ```sh
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --apply
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --apply
 ```
 
 برای PostgreSQL، رشتهٔ اتصال قدیمی را در متغیر محیطی خصوصی `LEGACY_POSTGRES_URI` قرار دهید؛ URI دارای رمز را به‌عنوان آرگومان وارد نکنید:

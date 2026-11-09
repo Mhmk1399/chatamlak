@@ -67,7 +67,7 @@ describe("GET /api/uploads/thumbs/:fileId", () => {
   let originalFetch;
 
   beforeEach(() => {
-    tmpDir = realFs.mkdtempSync(realPath.join(os.tmpdir(), "sb-thumb-test-"));
+    tmpDir = realFs.mkdtempSync(realPath.join(os.tmpdir(), "ouj-thumb-test-"));
     originalFetch = global.fetch;
   });
 
@@ -220,7 +220,7 @@ describe("webhook thumbUrl wiring", () => {
 
     const res = await request(customApp.app)
       .post("/api/uploads/webhook/processed")
-      .set("x-songbird-webhook-secret", "secret-key-123")
+      .set("x-ouj-chat-webhook-secret", "secret-key-123")
       .send({
         fileId: fileUuid,
         status: "ready",

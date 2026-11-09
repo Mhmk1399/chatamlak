@@ -230,7 +230,7 @@ export function useChatEvents({
           return;
         }
         if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("songbird:realtime-event", { detail: payload }));
+          window.dispatchEvent(new CustomEvent("ouj-chat:realtime-event", { detail: payload }));
         }
         if (["chat_tools_updated", "group_call_updated", "group_call_signal"].includes(payload.type)) return;
         if (payload.type === "chat_appearance_updated") return;

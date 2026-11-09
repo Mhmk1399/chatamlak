@@ -439,7 +439,7 @@ describe("Remote Uploads & File Management Routes", () => {
     test("returns 401 when webhook secret is invalid", async () => {
       const res = await request(appObj.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-songbird-webhook-secret", "wrong-secret")
+        .set("x-ouj-chat-webhook-secret", "wrong-secret")
         .send({ fileId: 10, status: "ready" });
 
       expect(res.status).toBe(401);
@@ -448,7 +448,7 @@ describe("Remote Uploads & File Management Routes", () => {
     test("returns 404 when file is not found", async () => {
       const res = await request(appObj.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-songbird-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "secret-key-123")
         .send({ fileId: 999, status: "ready" });
 
       expect(res.status).toBe(404);
@@ -494,7 +494,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
       const res = await request(customApp.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-songbird-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "secret-key-123")
         .send({
           fileId: fileUuid,
           status: "ready",
@@ -564,7 +564,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
       const res = await request(customApp.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-songbird-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "secret-key-123")
         .send({
           fileId: fileUuid,
           status: "ready",

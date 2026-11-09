@@ -25,7 +25,7 @@ describe("worker encryption", () => {
   });
 
   it("encrypts and detects magic header in encrypted buffer", () => {
-    const rawData = Buffer.from("Hello Songbird secure media content!");
+    const rawData = Buffer.from("Hello Ouj Chat secure media content!");
     const encrypted = encryptBuffer(rawData);
 
     expect(encrypted).toBeInstanceOf(Buffer);

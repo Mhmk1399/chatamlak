@@ -56,14 +56,14 @@ export function useMessagingTools({ user, activeChatId, loadChatsRef, scheduleMe
     const event = (event) => {
       if (["chat_tools_updated", "chat_message_deleted", "chat_message_updated"].includes(event.detail?.type)) void refresh().catch(() => {});
     };
-    window.addEventListener("songbird:realtime-event", event);
-    return () => window.removeEventListener("songbird:realtime-event", event);
+    window.addEventListener("ouj-chat:realtime-event", event);
+    return () => window.removeEventListener("ouj-chat:realtime-event", event);
   }, [refresh]);
 
   useEffect(() => {
     let stopped = false;
     let running = false;
-    const key = `songbird-sync-cursor:${user.id || user.username}`;
+    const key = `ouj-chat-sync-cursor:${user.id || user.username}`;
     const sync = async () => {
       if (running || stopped || navigator.onLine === false || document.visibilityState === "hidden") return;
       running = true;
@@ -74,7 +74,7 @@ export function useMessagingTools({ user, activeChatId, loadChatsRef, scheduleMe
           const data = await messagingRequest(`/sync?after=${cursor}`);
           if (stopped) return;
           for (const event of data.events) {
-            if (event.type === "chat_appearance_updated") window.dispatchEvent(new CustomEvent("songbird:realtime-event", { detail: event }));
+            if (event.type === "chat_appearance_updated") window.dispatchEvent(new CustomEvent("ouj-chat:realtime-event", { detail: event }));
           }
           const chatEvents = data.events.filter((event) => event.type !== "chat_appearance_updated");
           if (chatEvents.length) {

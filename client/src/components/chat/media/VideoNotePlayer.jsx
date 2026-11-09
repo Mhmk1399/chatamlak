@@ -21,11 +21,11 @@ export default function VideoNotePlayer({ file, onLoaded }) {
     if (video) observer?.observe(video);
     const pauseOther = (event) => { if (event.detail !== video) video?.pause(); };
     const hidden = () => { if (document.hidden) video?.pause(); };
-    window.addEventListener("songbird:media-play", pauseOther);
+    window.addEventListener("ouj-chat:media-play", pauseOther);
     document.addEventListener("visibilitychange", hidden);
     return () => {
       observer?.disconnect();
-      window.removeEventListener("songbird:media-play", pauseOther);
+      window.removeEventListener("ouj-chat:media-play", pauseOther);
       document.removeEventListener("visibilitychange", hidden);
       video?.pause();
     };
@@ -53,7 +53,7 @@ export default function VideoNotePlayer({ file, onLoaded }) {
             onLoaded?.();
           }}
           onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
-          onPlay={(event) => { setPlaying(true); window.dispatchEvent(new CustomEvent("songbird:media-play", { detail: event.currentTarget })); }}
+          onPlay={(event) => { setPlaying(true); window.dispatchEvent(new CustomEvent("ouj-chat:media-play", { detail: event.currentTarget })); }}
           onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)}
           onError={() => { setFailed(true); setPlaying(false); onLoaded?.(); }} />
         <button type="button" onClick={(event) => { event.stopPropagation(); void togglePlay(); }} disabled={!src || file.processing}

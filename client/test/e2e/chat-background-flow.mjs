@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
-if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with SONGBIRD_E2E_BASE_URL.");
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
+if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with OUJ_CHAT_E2E_BASE_URL.");
 const browser = await chromium.launch();
 const contexts = await Promise.all(Array.from({ length: 3 }, () => browser.newContext({ baseURL, viewport: { width: 1440, height: 1000 } })));
-for (const context of contexts) await context.addInitScript(() => { if (!localStorage.getItem("songbird-locale")) localStorage.setItem("songbird-locale", "en"); });
+for (const context of contexts) await context.addInitScript(() => { if (!localStorage.getItem("ouj-chat-locale")) localStorage.setItem("ouj-chat-locale", "en"); });
 const [owner, secondDevice, peer] = contexts;
 const errors = [], requests = [], assets = [];
 const suffix = Date.now().toString(36);
@@ -38,7 +38,7 @@ try {
   for (const context of contexts) {
     const page = await context.newPage(); pages.push(page);
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.addInitScript((id) => { if (!sessionStorage.getItem("songbird-open-chat-id")) sessionStorage.setItem("songbird-open-chat-id", id); }, group.id);
+    await page.addInitScript((id) => { if (!sessionStorage.getItem("ouj-chat-open-chat-id")) sessionStorage.setItem("ouj-chat-open-chat-id", id); }, group.id);
   }
   const [page, devicePage, peerPage] = pages;
   page.on("request", (request) => { if (request.url().includes("/api/profile/appearance")) requests.push(request.method()); });
@@ -73,7 +73,7 @@ try {
   const dm = await api(owner, "POST", "/api/chats/dm", { from: username, to: otherUsername });
   const channel = await api(owner, "POST", "/api/chats/group", { creator: username, type: "channel", nickname: "Agency updates", username: `wc${suffix}`, visibility: "private", members: [] });
   for (const id of [dm.id, channel.id, group.id]) {
-    await page.evaluate((chatId) => sessionStorage.setItem("songbird-open-chat-id", chatId), id);
+    await page.evaluate((chatId) => sessionStorage.setItem("ouj-chat-open-chat-id", chatId), id);
     await page.reload(); await canvas(page).waitFor({ state: "attached" });
     await until(async () => await canvas(page).getAttribute("data-wallpaper") === "courtyard", "wallpaper should be shared across DMs, channels and groups");
   }

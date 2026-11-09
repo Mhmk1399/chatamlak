@@ -6,7 +6,7 @@ We provide security updates and patches for the current release branch.
 
 ## Reporting a Vulnerability
 
-The Songbird team takes security seriously. If you discover a vulnerability or potential security flaw, please report it responsibly so we can address it before public disclosure.
+The Ouj Chat team takes security seriously. If you discover a vulnerability or potential security flaw, please report it responsibly so we can address it before public disclosure.
 
 **Please do not report security vulnerabilities via public GitHub issues, discussions, or pull requests.**
 
@@ -14,7 +14,7 @@ The Songbird team takes security seriously. If you discover a vulnerability or p
 
 You can privately report a vulnerability directly on GitHub:
 
-1. Go to the [Security Advisories](https://github.com/bllackbull/songbird/security/advisories/new) page.
+1. Go to the [Security Advisories](https://github.com/Mhmk1399/chatamlak/security/advisories/new) page.
 2. Click **Report a vulnerability**.
 3. Fill out the report form with full reproduction details.
 
@@ -23,7 +23,7 @@ You can privately report a vulnerability directly on GitHub:
 If you prefer email or cannot use GitHub Advisories, contact the maintainer directly:
 
 * **Email:** [pouyakhalili83@gmail.com](mailto:pouyakhalili83@gmail.com)
-* **Subject:** `[Songbird Security] <Summary of issue>`
+* **Subject:** `[Ouj Chat Security] <Summary of issue>`
 
 ### What to Include in Your Report
 

@@ -242,7 +242,7 @@ describe("SidebarHeader permission prompt banner", () => {
   });
 
   test("renders insecure connection banner in chats tab", async () => {
-    window.localStorage.removeItem("songbird-insecure-dismissed");
+    window.localStorage.removeItem("ouj-chat-insecure-dismissed");
     render(
       <SidebarHeader
         {...BASE_PROPS}
@@ -257,7 +257,7 @@ describe("SidebarHeader permission prompt banner", () => {
   });
 
   test("does not render insecure connection banner when mobileTab is calls", async () => {
-    window.localStorage.removeItem("songbird-insecure-dismissed");
+    window.localStorage.removeItem("ouj-chat-insecure-dismissed");
     render(
       <SidebarHeader
         {...BASE_PROPS}
@@ -272,7 +272,7 @@ describe("SidebarHeader permission prompt banner", () => {
   });
 
   test("does not render insecure connection banner when mobileTab is settings", async () => {
-    window.localStorage.removeItem("songbird-insecure-dismissed");
+    window.localStorage.removeItem("ouj-chat-insecure-dismissed");
     render(
       <SidebarHeader
         {...BASE_PROPS}

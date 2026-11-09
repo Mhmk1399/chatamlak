@@ -30,9 +30,9 @@ export function useChatAppearance(user, setUser) {
       if (event.key !== SESSION_USER_KEY || !event.newValue) return;
       try { const saved = JSON.parse(event.newValue); accept(saved.id, saved.chatAppearance); } catch { /* Ignore corrupted external cache entries. */ }
     };
-    window.addEventListener("songbird:realtime-event", receive);
+    window.addEventListener("ouj-chat:realtime-event", receive);
     window.addEventListener("storage", storage);
-    return () => { window.removeEventListener("songbird:realtime-event", receive); window.removeEventListener("storage", storage); };
+    return () => { window.removeEventListener("ouj-chat:realtime-event", receive); window.removeEventListener("storage", storage); };
   }, [accept]);
 
   const save = async (wallpaperId) => {

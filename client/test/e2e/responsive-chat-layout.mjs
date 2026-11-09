@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
 if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with a dedicated test database.");
 const browser = await chromium.launch({ channel: "chromium" });
 const context = await browser.newContext({ baseURL, viewport: { width: 1280, height: 850 } });
@@ -18,7 +18,7 @@ async function eventually(check, label) {
   throw new Error(label);
 }
 try {
-  await context.addInitScript(() => { if (!localStorage.getItem("songbird-locale")) localStorage.setItem("songbird-locale", "en"); });
+  await context.addInitScript(() => { if (!localStorage.getItem("ouj-chat-locale")) localStorage.setItem("ouj-chat-locale", "en"); });
   await api(context, "POST", "/api/register", { username, nickname: "Layout QA", password });
   await api(peer, "POST", "/api/register", { username: other, nickname: "Layout Peer", password });
   const groups = [];

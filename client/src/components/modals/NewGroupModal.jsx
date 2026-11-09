@@ -18,7 +18,7 @@ import {
   UserPlus,
   Users,
 } from "../../icons/lucide.js";
-import { SongbirdIcon, TelegramIcon } from "../../icons/BrandIcons.jsx";
+import { OujChatIcon, TelegramIcon } from "../../icons/BrandIcons.jsx";
 import { copyTextToClipboard } from "../../utils/clipboard.js";
 import { getAvatarStyle } from "../../utils/avatarColor.js";
 import { hasPersian } from "../../utils/fontUtils.js";
@@ -177,9 +177,9 @@ export default function NewGroupModal({
     fileUploadEnabled &&
     Boolean(groupForm.remoteChannelStreamMedia);
   const remoteProviderLabel =
-    groupForm.remoteChannelProvider === "songbird" ? "Songbird" : "Telegram";
+    groupForm.remoteChannelProvider === "ouj-chat" ? "Ouj Chat" : "Telegram";
   const remoteSourcePlaceholder =
-    groupForm.remoteChannelProvider === "songbird"
+    groupForm.remoteChannelProvider === "ouj-chat"
       ? "https://example.com/invite/channelname"
       : "@channel or https://t.me/channel";
   const privacyOptionClass = (locked = false) =>
@@ -529,8 +529,8 @@ export default function NewGroupModal({
                         aria-haspopup="listbox"
                       >
                         <span className="flex items-center gap-2">
-                          {groupForm.remoteChannelProvider === "songbird"
-                            ? <SongbirdIcon size={16} />
+                          {groupForm.remoteChannelProvider === "ouj-chat"
+                            ? <OujChatIcon size={16} />
                             : <TelegramIcon size={16} className="shrink-0" />}
                           {remoteProviderLabel}
                         </span>
@@ -582,15 +582,15 @@ export default function NewGroupModal({
                               setRemoteSourceMenuOpen(false);
                               setGroupForm((prev) => ({
                                 ...prev,
-                                remoteChannelProvider: "songbird",
+                                remoteChannelProvider: "ouj-chat",
                                 remoteChannelSource: "",
                               }));
                             }}
                             className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-start transition hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-500/10 dark:hover:text-brand-200"
                           >
                             <span className="flex items-center gap-2">
-                              <SongbirdIcon size={16} />{localize("Songbird")}</span>
-                            {groupForm.remoteChannelProvider === "songbird" ? (
+                              <OujChatIcon size={16} />{localize("Ouj Chat")}</span>
+                            {groupForm.remoteChannelProvider === "ouj-chat" ? (
                               <span className="h-2 w-2 rounded-full bg-brand-600" />
                             ) : null}
                           </button>

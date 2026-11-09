@@ -4,14 +4,14 @@ import path from "node:path";
 import { chromium } from "playwright";
 
 // Run against an isolated local server, never against a deployed account.
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
 if (!baseURL || !["127.0.0.1", "localhost"].includes(new URL(baseURL).hostname)) {
-  throw new Error("Set SONGBIRD_E2E_BASE_URL to an isolated local Songbird instance.");
+  throw new Error("Set OUJ_CHAT_E2E_BASE_URL to an isolated local Ouj Chat instance.");
 }
 const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
 const contextA = await browser.newContext({ baseURL, permissions: ["microphone", "camera"] });
 const contextB = await browser.newContext({ baseURL, permissions: ["microphone", "camera"] });
-for (const context of [contextA, contextB]) await context.addInitScript(() => localStorage.setItem("songbird-locale", "en"));
+for (const context of [contextA, contextB]) await context.addInitScript(() => localStorage.setItem("ouj-chat-locale", "en"));
 const failures = [];
 const suffix = Date.now().toString(36);
 const alice = `qa${suffix}`;
@@ -76,7 +76,7 @@ try {
   const pageB = await contextB.newPage();
   for (const page of [pageA, pageB]) {
     page.on("pageerror", (error) => failures.push(error.message));
-    await page.addInitScript((chatId) => sessionStorage.setItem("songbird-open-chat-id", chatId), chat.id);
+    await page.addInitScript((chatId) => sessionStorage.setItem("ouj-chat-open-chat-id", chatId), chat.id);
     await page.goto("/chat");
     await page.getByRole("button", { name: "Close what's new" }).waitFor({ timeout: 5000 }).then(() => page.getByRole("button", { name: "Close what's new" }).click()).catch(() => {});
   }
@@ -175,7 +175,7 @@ try {
   assert.equal(await pageA.getByRole("dialog").count(), 0);
   assert(await pageA.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "Persian mobile layout must fit the viewport");
   assert.deepEqual(failures, [], "No application runtime exceptions");
-  const screenshot = path.join(os.tmpdir(), "songbird-messaging-desktop.png");
+  const screenshot = path.join(os.tmpdir(), "ouj-chat-messaging-desktop.png");
   await pageA.screenshot({ path: screenshot, fullPage: true });
   console.log(`Screenshot: ${screenshot}`);
   console.log(`Isolated user: ${userA.id}`);

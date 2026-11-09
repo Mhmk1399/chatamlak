@@ -1,6 +1,6 @@
 # 📞 Voice & Video Calls
 
-Songbird supports real-time peer-to-peer 1-on-1 voice and video calling in direct messages using WebRTC with low-latency WebSocket signaling.
+Ouj Chat supports real-time peer-to-peer 1-on-1 voice and video calling in direct messages using WebRTC with low-latency WebSocket signaling.
 
 ## Architecture Overview
 
@@ -132,7 +132,7 @@ lt-cred-mech
 
 # Realm & static credentials
 realm=your-domain.com
-user=songbird:YourSecurePassword123
+user=ouj-chat:YourSecurePassword123
 
 # Public IP binding
 # If the server has a direct public IP:
@@ -166,22 +166,22 @@ Verify the listening socket:
 sudo ss -ulpn | grep 3478
 ```
 
-### 5. Songbird Integration
+### 5. Ouj Chat Integration
 
-Set the environment variables in your Songbird `.env`:
+Set the environment variables in your Ouj Chat `.env`:
 
 ```txt
 TURN_STUN_URL="stun:your-domain.com:3478"
 TURN_URL="turn:your-domain.com:3478"
-TURN_USERNAME="songbird"
+TURN_USERNAME="ouj-chat"
 TURN_CREDENTIAL="YourSecurePassword123"
 ```
 
-Restart your Songbird server to apply changes.
+Restart your Ouj Chat server to apply changes.
 
 ### 6. Verification
 
-- **Songbird Admin Panel:** Open **Admin Panel** → **Services** to test connectivity, reachability, and latency against your TURN relay.
+- **Ouj Chat Admin Panel:** Open **Admin Panel** → **Services** to test connectivity, reachability, and latency against your TURN relay.
 - **External ICE Test:** Test candidates via the [WebRTC Trickle ICE test](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/). A successful connection will output a candidate with type `relay`.
 
 

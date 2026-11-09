@@ -324,13 +324,13 @@ export const SETTING_DEFS = [
     nullable: true,
   },
   {
-    key: "REMOTE_CHANNEL_SONGBIRD_PROXY_URL",
+    key: "REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL",
     type: TYPE_STRING,
-    label: "Songbird proxy",
+    label: "Ouj Chat proxy",
     description:
-      "Proxy URL for outbound server-to-server requests to remote Songbird instances.",
+      "Proxy URL for outbound server-to-server requests to remote Ouj Chat instances.",
     group: "proxy",
-    envKey: "REMOTE_CHANNEL_SONGBIRD_PROXY_URL",
+    envKey: "REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL",
     defaultVal: "",
     nullable: true, // applied per-request; no restart needed
   },

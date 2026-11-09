@@ -10,7 +10,7 @@ export const migration043TransactionalChatEvents = {
     db.run("UPDATE chat_event_clock SET sequence = CASE WHEN sequence < COALESCE((SELECT MAX(id) FROM chat_event_log), 0) THEN (SELECT MAX(id) FROM chat_event_log) ELSE sequence END WHERE id = 1");
 
     if (isPostgres) {
-      db.exec(`CREATE OR REPLACE FUNCTION songbird_append_event(chat TEXT, event_payload TEXT, viewer TEXT DEFAULT NULL)
+      db.exec(`CREATE OR REPLACE FUNCTION ouj_chat_append_event(chat TEXT, event_payload TEXT, viewer TEXT DEFAULT NULL)
         RETURNS VOID LANGUAGE plpgsql AS $$
         DECLARE next_sequence BIGINT;
         BEGIN
@@ -32,7 +32,7 @@ export const migration043TransactionalChatEvents = {
     for (const definition of definitions) {
       for (const operation of ["INSERT", "UPDATE", "DELETE"]) {
         const row = operation === "DELETE" ? "OLD" : "NEW";
-        const name = `sb_event_${definition.table}_${operation.toLowerCase()}`;
+        const name = `ouj_event_${definition.table}_${operation.toLowerCase()}`;
         const chat = definition.chat(row);
         const viewer = definition.viewer?.(row) || "NULL";
         const message = definition.message?.(row) || "NULL";
@@ -44,7 +44,7 @@ export const migration043TransactionalChatEvents = {
               event_chat := ${chat};
               event_type := '${type}';
               ${definition.table === "chat_messages" && operation === "UPDATE" ? "IF NEW.hidden_everyone_at IS NOT NULL THEN event_type := 'chat_message_deleted'; END IF;" : ""}
-              PERFORM songbird_append_event(event_chat, json_build_object('type', event_type, 'chatId', event_chat, 'messageId', ${message})::text, ${viewer});
+              PERFORM ouj_chat_append_event(event_chat, json_build_object('type', event_type, 'chatId', event_chat, 'messageId', ${message})::text, ${viewer});
               RETURN ${row};
             END; $$`);
           db.run(`DROP TRIGGER IF EXISTS ${name} ON ${definition.table}`);

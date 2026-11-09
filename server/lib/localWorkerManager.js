@@ -24,7 +24,7 @@ export async function isLocalWorkerHealthy(
     if (!res || !res.ok) return false;
     const body = await res.json().catch(() => ({}));
     return (
-      body && (body.status === "ok" || body.service === "songbird-media-worker")
+      body && (body.status === "ok" || body.service === "ouj-chat-media-worker")
     );
   } catch {
     clearTimeout(timeoutId);
@@ -164,7 +164,7 @@ export async function ensureLocalWorkerRunning(options = {}) {
     process.once("SIGTERM", cleanup);
 
     console.log(
-      `[localWorkerManager] Auto-started local Songbird Media Worker on port ${workerPort} (PID: ${child.pid}, mode: ${storageProcessingMode})`,
+      `[localWorkerManager] Auto-started local Ouj Chat Media Worker on port ${workerPort} (PID: ${child.pid}, mode: ${storageProcessingMode})`,
     );
 
     return {

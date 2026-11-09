@@ -1,54 +1,14 @@
 export const ABOUT_CONTENT = {
   copyright: {
-    ownerLabel: "@bllackbull",
-    ownerHref: "https://github.com/bllackbull",
+    ownerLabel: "Ouj Real Estate",
+    ownerHref: "https://oujamlak.ir",
   },
+  description:
+    "Ouj Chat is the private collaboration space for the Ouj Real Estate team.",
   socials: [
     {
-      icon: "docker",
-      href: "https://hub.docker.com/r/bllackbull/songbird",
-    },
-    {
-      icon: "railway",
-      href: "https://railway.app/template/songbird",
-    },
-    {
-      icon: "github",
-      href: "https://github.com/bllackbull/Songbird",
-    },
-    {
-      icon: "telegram",
-      href: "https://t.me/songbirdapp",
-    },
-    {
-      icon: "songbird",
-      href: "https://chat.songbird.website/invite/songbird",
-    },
-    {
-      icon: "linkedin",
-      href: "https://www.linkedin.com/in/pouyakhalilii/",
-    },
-  ],
-  supportIntro:
-    "If Songbird is useful to you, you can support ongoing development with these wallets:",
-  donationLink: {
-    href: "https://nowpayments.io/donation/blackbull",
-    title: "NOWPAYMENTS",
-    description: "Donate with any currency",
-    buttonLabel: "Support",
-  },
-  wallets: [
-    {
-      label: "TRX",
-      address: "TPf1bEhipKpGkjo5N2Scj9nufNNh5TNrwX",
-    },
-    {
-      label: "BTC",
-      address: "bc1q9hupvcc39juhf0k7rgzn6phn8s8jez365kzmuj",
-    },
-    {
-      label: "TON",
-      address: "UQDzQ3xbWzKQvw8X8sWU82dksBeYqTHrT9sLzhBOyaESPjVy",
+      icon: "oujChat",
+      href: "https://oujamlak.ir",
     },
   ],
 };

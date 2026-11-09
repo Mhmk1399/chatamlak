@@ -45,7 +45,7 @@ describe("openDatabase Admin Utility", () => {
   });
 
   test("creates SQLite DATA_DIR when openDatabase runs instead of on import", () => {
-    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-data-"));
+    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-data-"));
     const dataDir = path.join(tempDataDir, "data");
     const dbAdminUrl = pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../scripts/_db-admin.js")).href;
     const script = `
@@ -54,10 +54,10 @@ describe("openDatabase Admin Utility", () => {
       const dataDir = process.env.DATA_DIR;
       const { openDatabase } = await import(${JSON.stringify(dbAdminUrl)});
       const createdOnImport = fs.existsSync(dataDir);
-      const sqliteExistsOnImport = fs.existsSync(path.join(dataDir, "songbird.db"));
+      const sqliteExistsOnImport = fs.existsSync(path.join(dataDir, "ouj-chat.db"));
       const db = await openDatabase({ skipMigrations: true });
       const createdOnOpen = fs.existsSync(dataDir);
-      const sqliteExistsOnOpen = fs.existsSync(path.join(dataDir, "songbird.db"));
+      const sqliteExistsOnOpen = fs.existsSync(path.join(dataDir, "ouj-chat.db"));
       await db.close();
       process.stdout.write(JSON.stringify({ createdOnImport, sqliteExistsOnImport, createdOnOpen, sqliteExistsOnOpen }));
     `;
@@ -71,9 +71,9 @@ describe("openDatabase Admin Utility", () => {
     }
   });
 
-  test("uses the PostgreSQL knex client for SELECT 1 without creating songbird.db", async () => {
-    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-postgres-"));
-    const sqliteDbPath = path.join(tempDataDir, "songbird.db");
+  test("uses the PostgreSQL knex client for SELECT 1 without creating ouj-chat.db", async () => {
+    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-postgres-"));
+    const sqliteDbPath = path.join(tempDataDir, "ouj-chat.db");
     const mockKnex = {
       raw: vi.fn(async (sql) => {
         if (typeof sql === "string" && sql.includes("user_version")) return { rows: [{ user_version: 0 }] };
@@ -99,7 +99,7 @@ describe("openDatabase Admin Utility", () => {
   });
 
   test("opens PostgreSQL mode without creating its default SQLite database path", () => {
-    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-postgres-data-"));
+    const tempDataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-postgres-data-"));
     const dataDir = path.join(tempDataDir, "data");
     const mockKnexPath = path.join(tempDataDir, "mock-knex.mjs");
     const loaderPath = path.join(tempDataDir, "mock-knex-loader.mjs");
@@ -110,7 +110,7 @@ describe("openDatabase Admin Utility", () => {
       const dataDir = process.env.DATA_DIR;
       const { openDatabase } = await import(${JSON.stringify(dbAdminUrl)});
       const db = await openDatabase({ skipMigrations: true });
-      const result = { createdDataDir: fs.existsSync(dataDir), createdSqliteFile: fs.existsSync(path.join(dataDir, "songbird.db")) };
+      const result = { createdDataDir: fs.existsSync(dataDir), createdSqliteFile: fs.existsSync(path.join(dataDir, "ouj-chat.db")) };
       await db.close();
       process.stdout.write(JSON.stringify(result));
     `;

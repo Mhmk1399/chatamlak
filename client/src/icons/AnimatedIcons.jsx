@@ -4,7 +4,7 @@
 //
 // Each icon accepts the same `size`/`className` props as a lucide icon so it
 // can be dropped in as a direct replacement. Animations are driven by CSS in
-// index.css (see the `.sb-icon-*` rules), triggered on the nearest hovered
+// index.css (see the `.ouj-icon-*` rules), triggered on the nearest hovered
 // button/label, matching the existing `icon-anim-*` pattern.
 
 const baseProps = (size) => ({
@@ -22,8 +22,8 @@ const baseProps = (size) => ({
 // Gauge — the needle sweeps around its pivot on hover.
 export function GaugeIcon({ size = 15, className = "" }) {
   return (
-    <svg {...baseProps(size)} className={`sb-gauge ${className}`}>
-      <path className="sb-gauge-needle" d="m12 14 4-4" />
+    <svg {...baseProps(size)} className={`ouj-gauge ${className}`}>
+      <path className="ouj-gauge-needle" d="m12 14 4-4" />
       <path d="M3.34 19a10 10 0 1 1 17.32 0" />
     </svg>
   );
@@ -33,11 +33,11 @@ export function GaugeIcon({ size = 15, className = "" }) {
 // swapping the grid's proportions. Each rect animates its y/height geometry.
 export function LayoutDashboardIcon({ size = 15, className = "" }) {
   return (
-    <svg {...baseProps(size)} className={`sb-dash ${className}`}>
-      <rect className="sb-dash-tl" width="7" height="9" x="3" y="3" rx="1" />
-      <rect className="sb-dash-tr" width="7" height="5" x="14" y="3" rx="1" />
-      <rect className="sb-dash-br" width="7" height="9" x="14" y="12" rx="1" />
-      <rect className="sb-dash-bl" width="7" height="5" x="3" y="16" rx="1" />
+    <svg {...baseProps(size)} className={`ouj-dash ${className}`}>
+      <rect className="ouj-dash-tl" width="7" height="9" x="3" y="3" rx="1" />
+      <rect className="ouj-dash-tr" width="7" height="5" x="14" y="3" rx="1" />
+      <rect className="ouj-dash-br" width="7" height="9" x="14" y="12" rx="1" />
+      <rect className="ouj-dash-bl" width="7" height="5" x="3" y="16" rx="1" />
     </svg>
   );
 }

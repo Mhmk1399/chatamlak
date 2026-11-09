@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
-if (!baseURL || !["127.0.0.1", "localhost"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with SONGBIRD_E2E_BASE_URL.");
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
+if (!baseURL || !["127.0.0.1", "localhost"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local server with OUJ_CHAT_E2E_BASE_URL.");
 const browser = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
 const context = await browser.newContext({ baseURL, permissions: ["camera", "microphone"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-await context.addInitScript(() => { if (!localStorage.getItem("songbird-locale")) localStorage.setItem("songbird-locale", "en"); });
+await context.addInitScript(() => { if (!localStorage.getItem("ouj-chat-locale")) localStorage.setItem("ouj-chat-locale", "en"); });
 const failures = [];
 const uploads = [];
 const suffix = Date.now().toString(36);
@@ -45,7 +45,7 @@ try {
   async function release() { await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); }
   page.on("pageerror", (error) => failures.push(error.message));
   page.on("response", (response) => { if (response.url().includes("/api/messages/upload")) uploads.push(response.status()); });
-  await page.addInitScript((id) => sessionStorage.setItem("songbird-open-chat-id", id), chat.id);
+  await page.addInitScript((id) => sessionStorage.setItem("ouj-chat-open-chat-id", id), chat.id);
   await page.goto("/chat");
   await page.getByRole("button", { name: "Close what's new" }).waitFor({ timeout: 5000 }).then(() => page.getByRole("button", { name: "Close what's new" }).click()).catch(() => {});
   await page.getByRole("button", { name: "Record voice message", exact: true }).tap();
@@ -176,7 +176,7 @@ try {
 } catch (error) {
   console.error("Upload responses:", uploads);
   console.error("Queue diagnostics:", await context.pages()[0]?.evaluate(async () => {
-    const db = await new Promise((resolve, reject) => { const req = indexedDB.open("songbird-cache"); req.onsuccess = () => resolve(req.result); req.onerror = reject; });
+    const db = await new Promise((resolve, reject) => { const req = indexedDB.open("ouj-chat-cache"); req.onsuccess = () => resolve(req.result); req.onerror = reject; });
     const rows = await new Promise((resolve, reject) => { const req = db.transaction("outbox").objectStore("outbox").getAll(); req.onsuccess = () => resolve(req.result); req.onerror = reject; });
     return { online: navigator.onLine, focus: document.hasFocus(), visibility: document.visibilityState, rows: rows.map(({ data }) => ({ delivery: data._delivery, attempts: data._attempts, nextAttempt: data._nextAttemptAt, error: data._lastError, files: data._files?.map(({ file }) => ({ bytes: file?.size, type: file?.type })) })) };
   }).catch(() => null));

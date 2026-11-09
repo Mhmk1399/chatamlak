@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchAppInfo } from "../api/appMetaApi.js";
 
-const WHATS_NEW_DISMISSED_VERSION_KEY = "songbird-whats-new-dismissed-version";
+const WHATS_NEW_DISMISSED_VERSION_KEY = "ouj-chat-whats-new-dismissed-version";
 
 async function parseJsonResponse(response, fallbackMessage) {
   let payload = null;

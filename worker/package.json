@@ -1,14 +1,14 @@
 {
-  "name": "songbird-worker",
+  "name": "ouj-chat-worker",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/bllackbull/songbird.git"
+    "url": "https://github.com/Mhmk1399/chatamlak.git"
   },
   "bugs": {
-    "url": "https://github.com/bllackbull/songbird/issues"
+    "url": "https://github.com/Mhmk1399/chatamlak/issues"
   },
-  "homepage": "https://github.com/bllackbull/songbird#readme",
+  "homepage": "https://oujamlak.ir",
   "type": "module",
   "scripts": {
     "dev": "node --watch --watch-path=. --watch-path=../.env index.js",

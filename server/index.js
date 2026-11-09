@@ -183,7 +183,7 @@ import {
   SETTING_DEFS,
 } from "./lib/appSettings.js";
 
-process.title = "songbird-server";
+process.title = "ouj-chat-server";
 
 const app = express();
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
@@ -382,8 +382,8 @@ const REMOTE_CHANNEL_TELEGRAM_SESSION_STRING = REMOTE_CHANNEL_SECRETS.sessionStr
 const REMOTE_CHANNEL_PROXY_URL = String(
   getSetting("REMOTE_CHANNEL_TELEGRAM_PROXY_URL") || "",
 ).trim();
-const REMOTE_CHANNEL_SONGBIRD_PROXY_URL = String(
-  getSetting("REMOTE_CHANNEL_SONGBIRD_PROXY_URL") || "",
+const REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL = String(
+  getSetting("REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL") || "",
 ).trim();
 const REMOTE_CHANNEL_TELEGRAM_CONFIGURED = Boolean(
   REMOTE_CHANNEL_TELEGRAM_API_ID &&
@@ -396,7 +396,7 @@ const REMOTE_CHANNEL_CONFIG = {
   mediaStreamEnabled: REMOTE_CHANNEL_MEDIA_STREAM,
   telegramConfigured: REMOTE_CHANNEL_TELEGRAM_CONFIGURED,
   proxyConfigured: Boolean(REMOTE_CHANNEL_PROXY_URL),
-  songbirdProxyUrl: REMOTE_CHANNEL_SONGBIRD_PROXY_URL,
+  oujChatProxyUrl: REMOTE_CHANNEL_OUJ_CHAT_PROXY_URL,
   telegramApiId: REMOTE_CHANNEL_TELEGRAM_API_ID,
   telegramApiHash: REMOTE_CHANNEL_TELEGRAM_API_HASH,
   telegramSessionString: REMOTE_CHANNEL_TELEGRAM_SESSION_STRING,
@@ -853,7 +853,7 @@ const apiDeps = {
     uiEnabled: REMOTE_CHANNEL_CONFIG.uiEnabled,
     mediaStreamEnabled: REMOTE_CHANNEL_CONFIG.mediaStreamEnabled,
     telegramConfigured: REMOTE_CHANNEL_CONFIG.telegramConfigured,
-    songbirdConfigured: REMOTE_CHANNEL_CONFIG.enabled,
+    oujChatConfigured: REMOTE_CHANNEL_CONFIG.enabled,
     proxyConfigured: REMOTE_CHANNEL_CONFIG.proxyConfigured,
   },
   USERNAME_REGEX,
@@ -1356,7 +1356,7 @@ if (REMOTE_CHANNEL) {
 }
 
 const server = app.listen(port, bindAddress, () => {
-  console.log(`Songbird server running on http://${bindAddress}:${port}`);
+  console.log(`Ouj Chat server running on http://${bindAddress}:${port}`);
   console.log(
     `[server] Media worker webhook callback URL: ${apiDeps.webhookCallbackUrl}`,
   );

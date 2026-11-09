@@ -123,7 +123,7 @@ async function copyWithFallback(provider, srcKey, destKey) {
   ) {
     const tmpPath = path.join(
       fs.realpathSync(os.tmpdir()),
-      `sb-migrate-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      `ouj-migrate-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     try {
       await provider.downloadToPath(srcKey, tmpPath);

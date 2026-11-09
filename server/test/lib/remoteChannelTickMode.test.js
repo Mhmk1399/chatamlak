@@ -38,18 +38,18 @@ describe("remote channel tick mode", () => {
     manager.stop();
   });
 
-  test("tickOnce polls songbird sources, drains queue, and disconnects", async () => {
-    const pollSongbird = vi.fn(async () => []);
+  test("tickOnce polls ouj-chat sources, drains queue, and disconnects", async () => {
+    const pollOujChat = vi.fn(async () => []);
     const manager = makeManager(
       { tickMode: true },
       {
-        listEnabledRemoteChannelSources: pollSongbird,
+        listEnabledRemoteChannelSources: pollOujChat,
       },
     );
     manager.start();
     const summary = await manager.tickOnce({ drainBatches: 1 });
-    expect(pollSongbird).toHaveBeenCalled();
-    expect(summary.songbird).toBe("polled");
+    expect(pollOujChat).toHaveBeenCalled();
+    expect(summary.oujChat).toBe("polled");
     expect(summary.telegram).toBe("not-configured");
     expect(summary.queueBatches).toBe(1);
     manager.stop();

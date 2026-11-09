@@ -26,7 +26,7 @@ describe("WebSocket Gateway", () => {
     gateway.broadcastAll({ type: "test" });
 
     expect(publishSpy).toHaveBeenCalledWith(
-      "songbird:events",
+      "ouj-chat:events",
       expect.stringContaining('"broadcast":true'),
     );
 

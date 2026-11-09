@@ -28,7 +28,7 @@ import AnchoredMenu from "../../common/AnchoredMenu.jsx";
 import UserMenuButton from "./UserMenuButton.jsx";
 
 // Preserve the existing storage key so previous dismissals still apply.
-const INSECURE_NOTICE_KEY = "songbird-insecure-dismissed";
+const INSECURE_NOTICE_KEY = "ouj-chat-insecure-dismissed";
 
 const iconButton =
   "ouj-sidebar-icon-button inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-brand-200 bg-white/80 text-brand-700 outline-none transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-brand-500/30 dark:bg-slate-950 dark:text-brand-200 dark:hover:bg-brand-500/10 motion-reduce:transition-none";

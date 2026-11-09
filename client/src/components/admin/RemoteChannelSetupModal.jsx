@@ -329,7 +329,7 @@ export default function RemoteChannelSetupModal({ open, onClose, onChanged }) {
           {(step === "credentials" || step === "code" || step === "password") && (
             <p className="text-center text-[11px] text-slate-400 dark:text-slate-500">{localize("For more information visit the")}{" "}
               <a
-                href="https://docs.songbird.website/Remote-Channel-Setup"
+                href="https://oujamlak.ir"
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-brand-600 hover:underline dark:text-brand-400"

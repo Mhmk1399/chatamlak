@@ -51,7 +51,7 @@ const port = Number(process.env.PORT || process.env.SERVER_PORT || 5174);
 const running = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1500) }).then((response) => response.ok, () => false);
 if (running) {
   console.error(
-    `Refusing to run storage:migrate while Songbird is running on port ${port}. Stop the server first so the bucket and database cannot race the migration.`,
+    `Refusing to run storage:migrate while Ouj Chat is running on port ${port}. Stop the server first so the bucket and database cannot race the migration.`,
   );
   process.exit(1);
 }

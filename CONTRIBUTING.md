@@ -1,4 +1,4 @@
-# Contributing to Songbird
+# Contributing to Ouj Chat
 
 Thanks for your interest in contributing!
 
@@ -73,4 +73,4 @@ All contributors and participants are expected to adhere to our [Code of Conduct
 
 ## ♿ Accessibility
 
-We strive to make Songbird accessible to everyone. Please consult our [Accessibility Statement](ACCESSIBILITY.md) for guidelines, conformance targets, and how to report barriers.
+We strive to make Ouj Chat accessible to everyone. Please consult our [Accessibility Statement](ACCESSIBILITY.md) for guidelines, conformance targets, and how to report barriers.

@@ -94,7 +94,7 @@ try {
     const payload = adminPayload(), adminAction = action === "chat:edit" && ["pauseQueue", "resumeQueue", "skipCurrent", "skipAll", "source", "enabled", "syncMetadata", "streamMedia"].some((key) => key in payload) ? "edit_remote_channel" : adminActions[action];
     if (await serverRunning()) {
       if (!process.env.ADMIN_API_TOKEN) throw new Error("ADMIN_API_TOKEN is required for online management.");
-      const response = await fetch(`${apiBase}/api/admin/db-tools`, { method: "POST", headers: { "Content-Type": "application/json", "x-songbird-admin-token": process.env.ADMIN_API_TOKEN }, body: JSON.stringify({ action: adminAction, payload }) });
+      const response = await fetch(`${apiBase}/api/admin/db-tools`, { method: "POST", headers: { "Content-Type": "application/json", "x-ouj-chat-admin-token": process.env.ADMIN_API_TOKEN }, body: JSON.stringify({ action: adminAction, payload }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Admin action failed.");
       console.log(JSON.stringify(body.result, null, 2));

@@ -1,12 +1,11 @@
 ---
-# Songbird for the Doprax App Market (installMethod: repo_playbook).
+# Ouj Chat for the Doprax App Market (installMethod: repo_playbook).
 #
 # What it does on the target VM (Ubuntu, hosts: all, become: yes):
 #   1. Installs Docker Engine + compose plugin, git and openssl.
-#   2. Clones bllackbull/Songbird into /root/songbird at the latest GitHub
-#      release (falls back to a pinned tag if the API is unreachable).
+#   2. Clones the configured Ouj Chat repository into /root/ouj-chat.
 #   3. Generates a self-signed TLS cert (certs/) if none exists, so the
-#      bundled nginx (443 -> songbird:5174) comes up without manual steps.
+#      bundled nginx (443 -> ouj-chat:5174) comes up without manual steps.
 #      Replace certs/cert.pem + certs/key.pem with real certs for production.
 #   4. Writes a minimal .env (only if missing) and starts the stack.
 #   5. Waits for 443 and verifies https://127.0.0.1/api/health.
@@ -18,20 +17,17 @@
 # Local test (Ubuntu VM, Ansible installed):
 #   ansible-playbook -i <host>, -u root playbook.yaml
 #   curl -sk https://<host>/api/health
-- name: Deploy Songbird chat platform with Docker Compose
+- name: Deploy Ouj Chat chat platform with Docker Compose
   hosts: all
   become: true
   vars:
-    songbird_repo: "https://github.com/bllackbull/Songbird.git"
-    # "latest" resolves to the newest GitHub release tag at install time.
-    # Set to an explicit tag (e.g. "v0.12.1") to pin a version instead.
-    songbird_version: "latest"
-    # Used only when "latest" is requested but the GitHub API is unreachable.
-    songbird_version_fallback: "v0.13.2"
-    songbird_src: "/root/songbird"
-    songbird_domain: "{{ external_domain | default('') }}"
-    songbird_http_port: 80
-    songbird_https_port: 443
+    ouj_chat_repo: "{{ ouj_chat_repository | default('https://github.com/Mhmk1399/chatamlak.git', true) }}"
+    # Override ouj_chat_ref to deploy a tested tag or commit instead of main.
+    ouj_chat_version: "{{ ouj_chat_ref | default('main', true) }}"
+    ouj_chat_src: "/root/ouj-chat"
+    ouj_chat_domain: "{{ external_domain | default('') }}"
+    ouj_chat_http_port: 80
+    ouj_chat_https_port: 443
   tasks:
     - name: Install prerequisites
       ansible.builtin.apt:
@@ -71,34 +67,24 @@
         state: started
         enabled: yes
 
-    - name: Resolve latest Songbird release
-      ansible.builtin.uri:
-        url: https://api.github.com/repos/bllackbull/Songbird/releases/latest
-        return_content: yes
-      register: songbird_release
-      failed_when: false
-      when: songbird_version == 'latest'
+    - name: Require the Ouj Chat MongoDB URI
+      ansible.builtin.assert:
+        that:
+          - mongodb_uri | default('', true) | length > 0
+        fail_msg: >-
+          Set the private mongodb_uri extra variable to a dedicated MongoDB
+          replica-set or Atlas URI before deploying Ouj Chat.
 
-    - name: Pin Songbird version to latest release (or fallback)
-      ansible.builtin.set_fact:
-        songbird_resolved_version: "{{ songbird_release.json.tag_name | default(songbird_version_fallback, true) }}"
-      when: songbird_version == 'latest'
-
-    - name: Use explicit Songbird version
-      ansible.builtin.set_fact:
-        songbird_resolved_version: "{{ songbird_version }}"
-      when: songbird_version != 'latest'
-
-    - name: Clone Songbird at resolved version
+    - name: Clone Ouj Chat at the requested version
       ansible.builtin.git:
-        repo: "{{ songbird_repo }}"
-        dest: "{{ songbird_src }}"
-        version: "{{ songbird_resolved_version }}"
+        repo: "{{ ouj_chat_repo }}"
+        dest: "{{ ouj_chat_src }}"
+        version: "{{ ouj_chat_version }}"
         update: yes
 
     - name: Create certs directory
       ansible.builtin.file:
-        path: "{{ songbird_src }}/certs"
+        path: "{{ ouj_chat_src }}/certs"
         state: directory
         mode: "0755"
 
@@ -106,60 +92,62 @@
       ansible.builtin.command:
         cmd: >
           openssl req -x509 -nodes -days 825 -newkey rsa:2048
-          -keyout {{ songbird_src }}/certs/key.pem
-          -out {{ songbird_src }}/certs/cert.pem
-          -subj "/CN={{ songbird_domain if (songbird_domain | length > 0) else 'localhost' }}"
+          -keyout {{ ouj_chat_src }}/certs/key.pem
+          -out {{ ouj_chat_src }}/certs/cert.pem
+          -subj "/CN={{ ouj_chat_domain if (ouj_chat_domain | length > 0) else 'localhost' }}"
           -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
-        creates: "{{ songbird_src }}/certs/cert.pem"
+        creates: "{{ ouj_chat_src }}/certs/cert.pem"
 
     - name: Write minimal .env
       ansible.builtin.copy:
-        dest: "{{ songbird_src }}/.env"
+        dest: "{{ ouj_chat_src }}/.env"
         force: no
         mode: "0600"
         content: |
           APP_ENV=production
           SERVER_PORT=5174
           BIND_ADDRESS=0.0.0.0
-          DB_CLIENT=sqlite3
-          APP_PUBLIC_URL={{ 'https://' + songbird_domain if (songbird_domain | length > 0) else '' }}
+          DB_CLIENT=mongodb
+          MONGODB_URI='{{ mongodb_uri }}'
+          MONGODB_DATABASE={{ mongodb_database | default('ouj_chat', true) }}
+          APP_PUBLIC_URL={{ 'https://' + ouj_chat_domain if (ouj_chat_domain | length > 0) else '' }}
 
     - name: Pull images and start the stack
       ansible.builtin.shell:
         cmd: docker compose up -d
-        chdir: "{{ songbird_src }}"
-      register: songbird_compose
-      changed_when: "'Started' in songbird_compose.stdout or 'Creating' in songbird_compose.stdout"
+        chdir: "{{ ouj_chat_src }}"
+      register: ouj_chat_compose
+      changed_when: "'Started' in ouj_chat_compose.stdout or 'Creating' in ouj_chat_compose.stdout"
 
     - name: Wait for HTTPS port
       ansible.builtin.wait_for:
         host: 127.0.0.1
-        port: "{{ songbird_https_port }}"
+        port: "{{ ouj_chat_https_port }}"
         delay: 10
         timeout: 180
-      register: songbird_port_wait
+      register: ouj_chat_port_wait
       failed_when: false
 
-    - name: Wait for Songbird health endpoint
+    - name: Wait for Ouj Chat health endpoint
       ansible.builtin.uri:
         url: "https://127.0.0.1/api/health"
         validate_certs: no
         status_code: 200
-      register: songbird_health
-      until: songbird_health.status == 200
+      register: ouj_chat_health
+      until: ouj_chat_health.status == 200
       retries: 12
       delay: 10
       failed_when: false
 
     - name: Build deployment summary
       ansible.builtin.set_fact:
-        songbird_success: "{{ songbird_port_wait is succeeded and songbird_health.status is defined and songbird_health.status == 200 }}"
-        songbird_access_url: "{{ 'https://' + songbird_domain if (songbird_domain | length > 0) else 'https://' + (ansible_default_ipv4.address | default('SERVER_IP')) }}"
+        ouj_chat_success: "{{ ouj_chat_port_wait is succeeded and ouj_chat_health.status is defined and ouj_chat_health.status == 200 }}"
+        ouj_chat_access_url: "{{ 'https://' + ouj_chat_domain if (ouj_chat_domain | length > 0) else 'https://' + (ansible_default_ipv4.address | default('SERVER_IP')) }}"
 
     - name: Print deployment summary
       ansible.builtin.debug:
         msg:
-          - "Songbird {{ songbird_resolved_version }} deployment {{ 'succeeded' if songbird_success else ('may be incomplete — check logs in ' + songbird_src) }}."
-          - "Access URL: {{ songbird_access_url }} (self-signed cert until you replace certs/cert.pem + certs/key.pem)."
-          - "First steps: create the owner account, then set SIGN_UP=false in {{ songbird_src }}/.env if the instance is public."
-          - "Notes: SQLite persists in the songbird-data volume; the container mounts /var/run/docker.sock for the admin panel's service controls."
+          - "Ouj Chat {{ ouj_chat_version }} deployment {{ 'succeeded' if ouj_chat_success else ('may be incomplete — check logs in ' + ouj_chat_src) }}."
+          - "Access URL: {{ ouj_chat_access_url }} (self-signed cert until you replace certs/cert.pem + certs/key.pem)."
+          - "First steps: create the owner account, then set SIGN_UP=false in {{ ouj_chat_src }}/.env if the instance is public."
+          - "Notes: MongoDB data is external to this stack; the container mounts /var/run/docker.sock for the admin panel's service controls."

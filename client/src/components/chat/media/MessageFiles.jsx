@@ -501,7 +501,7 @@ const VoiceMessageChip = memo(
         }
         if (
           typeof window !== "undefined" &&
-          window.localStorage?.getItem("sb-debug-voice") === "1"
+          window.localStorage?.getItem("ouj-debug-voice") === "1"
         ) {
           setDebugInfo({
             ct: Number(getCurrentTimeEstimate(audio) || 0),
@@ -579,7 +579,7 @@ const VoiceMessageChip = memo(
       };
       const handlePlay = () => {
         if (!isCurrentAudio()) return;
-        window.dispatchEvent(new CustomEvent("songbird:media-play", { detail: audio }));
+        window.dispatchEvent(new CustomEvent("ouj-chat:media-play", { detail: audio }));
         userPausedRef.current = false;
         autoResumeAttemptsRef.current = 0;
         playInFlightRef.current = false;
@@ -669,9 +669,9 @@ const VoiceMessageChip = memo(
         playRequestTokenRef.current += 1;
         audio.pause();
       };
-      window.addEventListener("songbird:media-play", pauseOther);
+      window.addEventListener("ouj-chat:media-play", pauseOther);
       return () => {
-        window.removeEventListener("songbird:media-play", pauseOther);
+        window.removeEventListener("ouj-chat:media-play", pauseOther);
         audio.removeEventListener("timeupdate", handleTime);
         audio.removeEventListener("ended", handleEnded);
         audio.removeEventListener("play", handlePlay);

@@ -1,4 +1,4 @@
-# Agent Guidance: Songbird Server
+# Agent Guidance: Ouj Chat Server
 
 Node.js Express 5 backend (WebSocket/SSE realtime updates, native MongoDB driver, Vitest + Supertest).
 

@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress';
 
 const enSidebar = [
   {
-    text: '💬 Using Songbird',
+    text: '💬 Using Ouj Chat',
     collapsed: false,
     items: [
       {text: '💬 Chat Features', link: '/Chat-Features'},
@@ -49,7 +49,7 @@ const enSidebar = [
 
 const faSidebar = [
   {
-    text: '💬 استفاده از Songbird',
+    text: '💬 استفاده از گفتگوی اوج',
     collapsed: false,
     items: [
       {text: '💬 قابلیت‌های گفتگو', link: '/fa/Chat-Features'},
@@ -96,10 +96,10 @@ const faSidebar = [
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: 'Songbird Docs',
-  description: 'Documentation of Songbird, a secure, lightweight, self-hosted chat platform.',
+  title: 'Ouj Chat Docs',
+  description: 'Documentation of Ouj Chat, a secure, lightweight, self-hosted chat platform.',
 
-  // Served from a custom domain at the site root.
+  // Set the documentation host and base path for each deployment.
   base: '/',
 
   cleanUrls: true,
@@ -107,21 +107,12 @@ export default defineConfig({
   ignoreDeadLinks: false,
 
   head: [
-    ['link', {rel: 'icon', href: '/favicon.ico'}],
+    ['link', {rel: 'icon', type: 'image/png', href: '/ouj-chat-icon.png'}],
   ],
 
   themeConfig: {
     // Shared across locales
-    logo: '/songbird-logo.svg',
-
-    socialLinks: [
-      {icon: 'docker', link: 'https://hub.docker.com/r/bllackbull/songbird'},
-      {icon: 'railway', link: 'https://railway.app/template/songbird'},
-      {icon: 'github', link: 'https://github.com/bllackbull/Songbird'},
-      {icon: 'telegram', link: 'https://t.me/songbirdapp'},
-      {icon: 'linkedin', link: 'https://www.linkedin.com/in/pouyakhalilii/'},
-
-    ],
+    logo: '/ouj-chat-icon.png',
 
     search: {
       provider: 'local',
@@ -136,16 +127,12 @@ export default defineConfig({
         nav: [
           {text: 'Home', link: '/'},
           {text: 'Guide', link: '/Deployment-Script'},
-          {text: 'Releases', link: 'https://github.com/bllackbull/Songbird/releases'},
+          {text: 'Chat Features', link: '/Chat-Features'},
         ],
         sidebar: enSidebar,
-        editLink: {
-          pattern: 'https://github.com/bllackbull/Songbird/edit/main/docs/:path',
-          text: 'Edit this page on GitHub',
-        },
         footer: {
           message: 'Released under the MIT License.',
-          copyright: 'Copyright © 2026 Songbird',
+          copyright: 'Copyright © 2026 Ouj Chat',
         },
       },
     },
@@ -153,21 +140,19 @@ export default defineConfig({
     fa: {
       label: 'فارسی',
       lang: 'fa-IR',
+      title: 'راهنمای گفتگوی اوج',
+      description: 'مستندات گفتگوی اوج، پیام‌رسان سبک و امن برای میزبانی شخصی.',
       link: '/fa/',
       themeConfig: {
         nav: [
           {text: 'خانه', link: '/fa/'},
           {text: 'راهنما', link: '/fa/Deployment-Script'},
-          {text: 'نسخه‌ها', link: 'https://github.com/bllackbull/Songbird/releases'},
+          {text: 'قابلیت‌های گفتگو', link: '/fa/Chat-Features'},
         ],
         sidebar: faSidebar,
-        editLink: {
-          pattern: 'https://github.com/bllackbull/Songbird/edit/main/docs/:path',
-          text: 'ویرایش این صفحه در GitHub',
-        },
         footer: {
           message: 'تحت لایسنس MIT منتشر شده است.',
-          copyright: 'کپی‌رایت © ۲۰۲۶ Songbird',
+          copyright: 'کپی‌رایت © ۲۰۲۶ گفتگوی اوج',
         },
         docFooter: {
           prev: 'صفحه قبل',

@@ -20,12 +20,12 @@ import {
 } from './utils/sessionStorage.js'
 
 const API_BASE = ''
-const AUTH_REDIRECT_KEY = 'songbird-auth-redirect'
-const OPEN_CHAT_ID_KEY = 'songbird-open-chat-id'
-const PWA_INSTALL_DISMISS_KEY = 'songbird-pwa-install-dismissed'
-const PWA_PERMISSIONS_PROMPT_KEY = 'songbird-pwa-permissions-prompt'
-const ROUTE_CHUNK_TELEMETRY_KEY = 'songbird-route-chunk-telemetry-v1'
-const CHUNK_RECOVERY_ATTEMPT_KEY = 'songbird-chunk-recovery-attempted'
+const AUTH_REDIRECT_KEY = 'ouj-chat-auth-redirect'
+const OPEN_CHAT_ID_KEY = 'ouj-chat-open-chat-id'
+const PWA_INSTALL_DISMISS_KEY = 'ouj-chat-pwa-install-dismissed'
+const PWA_PERMISSIONS_PROMPT_KEY = 'ouj-chat-pwa-permissions-prompt'
+const ROUTE_CHUNK_TELEMETRY_KEY = 'ouj-chat-route-chunk-telemetry-v1'
+const CHUNK_RECOVERY_ATTEMPT_KEY = 'ouj-chat-chunk-recovery-attempted'
 const loadAuthPage = () => import('./pages/AuthPage.jsx')
 const loadChatPage = () => import('./pages/ChatPage.jsx')
 const loadInvitePage = () => import('./pages/InvitePage.jsx')
@@ -136,7 +136,7 @@ export default function App() {
         const keys = await window.caches.keys()
         await Promise.all(
           keys
-            .filter((key) => key.startsWith('songbird-'))
+            .filter((key) => key.startsWith('ouj-chat-'))
             .map((key) => window.caches.delete(key)),
         )
       }
@@ -159,7 +159,7 @@ export default function App() {
   }
 
   const [isDark, setIsDark] = useState(() => {
-    const stored = localStorage.getItem('songbird-theme')
+    const stored = localStorage.getItem('ouj-chat-theme')
     if (stored === 'light') return false
     if (stored === 'dark') return true
     return resolveAutoThemeIsDark()
@@ -311,10 +311,10 @@ export default function App() {
     root.classList.add('theme-switching')
     if (nextIsDark) {
       root.classList.add('dark')
-      localStorage.setItem('songbird-theme', 'dark')
+      localStorage.setItem('ouj-chat-theme', 'dark')
     } else {
       root.classList.remove('dark')
-      localStorage.setItem('songbird-theme', 'light')
+      localStorage.setItem('ouj-chat-theme', 'light')
     }
     root.style.colorScheme = nextIsDark ? 'dark' : 'light'
 
@@ -437,13 +437,13 @@ export default function App() {
     const handleShowInstall = () => setInstallForceHidden(false)
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     window.addEventListener('appinstalled', handleInstalled)
-    window.addEventListener('songbird-hide-install-bar', handleHideInstall)
-    window.addEventListener('songbird-show-install-bar', handleShowInstall)
+    window.addEventListener('ouj-chat-hide-install-bar', handleHideInstall)
+    window.addEventListener('ouj-chat-show-install-bar', handleShowInstall)
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleInstalled)
-      window.removeEventListener('songbird-hide-install-bar', handleHideInstall)
-      window.removeEventListener('songbird-show-install-bar', handleShowInstall)
+      window.removeEventListener('ouj-chat-hide-install-bar', handleHideInstall)
+      window.removeEventListener('ouj-chat-show-install-bar', handleShowInstall)
     }
   }, [isStandaloneDisplay])
 

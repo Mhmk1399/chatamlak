@@ -41,7 +41,7 @@ There are two primary ways to grant an account **owner** or **admin** privileges
 
 For deployments on PaaS providers (such as Render, Railway, or Fly.io) or container platforms where terminal access is unavailable, authenticated users can claim privileges directly via the web UI:
 
-1. Configure `ADMIN_API_TOKEN` in your environment variables (e.g., in your PaaS dashboard settings). If not set, Songbird auto-generates a token on first boot and saves it in `.env`.
+1. Configure `ADMIN_API_TOKEN` in your environment variables (e.g., in your PaaS dashboard settings). If not set, Ouj Chat auto-generates a token on first boot and saves it in `.env`.
 2. Log in to your registered user account.
 3. Open your browser and navigate directly to `/admin`.
 4. Enter the `ADMIN_API_TOKEN` in the Emergency Admin Access prompt.
@@ -62,7 +62,7 @@ Do not share `ADMIN_API_TOKEN` and keep it private. Anyone can access the admin 
 
 ## Dashboard Tab
 
-The Dashboard provides an overview of your Songbird instance:
+The Dashboard provides an overview of your Ouj Chat instance:
 
 - **Statistics**: Total users, chats, messages, and uploaded files
 - **System Info**: Uptime, and environment
@@ -70,7 +70,7 @@ The Dashboard provides an overview of your Songbird instance:
 
 ## Users Tab
 
-Manage all users in your Songbird instance:
+Manage all users in your Ouj Chat instance:
 
 ### Features
 
@@ -187,7 +187,7 @@ Configure runtime settings through the UI (replaces most `.env` variables):
 - Push notification proxy URL (nullable) — restart required
 - Object storage proxy URL (nullable) — restart required
 - Telegram proxy URL (nullable) — restart required
-- Songbird server-to-server proxy URL (nullable, live)
+- Ouj Chat server-to-server proxy URL (nullable, live)
 
 #### Calls
 
@@ -259,19 +259,19 @@ See [Database Commands](./Database-Commands.md) and [MongoDB](./MongoDB.md) for 
 - See if update is available
 
 **Restart Service**
-- Restart the Songbird server
+- Restart the Ouj Chat server
 - Applies pending changes
 - Reconnects all clients
 
 **Stop Service**
-- Gracefully stop the Songbird server
+- Gracefully stop the Ouj Chat server
 - Requires manual start via systemd/Docker
 
 :::warning Permission Requirements
 
 Service control (restart/stop) requires the right setup depending on deployment:
 
-- **Docker**: The `songbird` container must have the Docker socket mounted (`/var/run/docker.sock`). This is included in the default `docker-compose.yaml`. The `SONGBIRD_CONTAINER_NAME` environment variable tells the app which container to target (defaults to `songbird`). See [Install via Docker](./Installation-Docker.md#admin-panel-service-control).
+- **Docker**: The `ouj-chat` container must have the Docker socket mounted (`/var/run/docker.sock`). This is included in the default `docker-compose.yaml`. The `OUJ_CHAT_CONTAINER_NAME` environment variable tells the app which container to target (defaults to `ouj-chat`). See [Install via Docker](./Installation-Docker.md#admin-panel-service-control).
 - **Systemd**: The service user must have `sudo` privileges for `systemctl`. See [Troubleshooting](./Troubleshooting.md#admin-panel-issues).
 
 :::

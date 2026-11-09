@@ -293,7 +293,7 @@ describe("CallScreen controls layout", () => {
       );
       await expect.element(page.getByRole("dialog")).toBeInTheDocument();
       expect(page.getByRole("dialog").element().className).toContain(
-        "sb-call-exit",
+        "ouj-call-exit",
       );
     });
   });
@@ -675,7 +675,7 @@ describe("CallScreen controls layout", () => {
       await expect.element(box).toBeInTheDocument();
       expect(box.element().className).toContain("top-6");
       expect(box.element().className).toContain("right-6");
-      expect(box.element().className).toContain("sb-pip-enter");
+      expect(box.element().className).toContain("ouj-pip-enter");
       expect(box.element().getAttribute("role")).toBe("button");
       expect(box.element().getAttribute("aria-label")).toBe("Return to call");
 
@@ -726,7 +726,7 @@ describe("CallScreen controls layout", () => {
 
       // Fullscreen dialog is back with reverse expansion animation
       await expect.element(page.getByRole("dialog")).toBeInTheDocument();
-      expect(page.getByRole("dialog").element().className).toContain("sb-call-modal-enter");
+      expect(page.getByRole("dialog").element().className).toContain("ouj-call-modal-enter");
       await expect.element(page.getByTestId("floating-call-box")).not.toBeInTheDocument();
     });
 

@@ -568,7 +568,7 @@ server/index.js → api/ → lib/services/ → db.js → db/mongoRepository.js �
 | `client/public/sw.js` | دریافت Push در پس‌زمینه، اعلان، badge و کش برنامه در محدودهٔ پشتیبانی مرورگر. |
 | `client/public/ouj-logo.png` و `ouj-icons/` | لوگو و آیکون‌های نصب اوج. |
 | `client/public/icons/icon-192.png` | هنوز در راهنمای نصب برنامه مصرف می‌شود؛ هشت آیکون دیگر در همین پوشه مصرف‌کننده‌ای در کد و پیکربندی فعلی ندارند. |
-| `client/public/songbird-logo.svg` | تصویر پروژهٔ اصلی در READMEها؛ با لوگوی جاری برنامه اشتباه نشود. |
+| `client/public/ouj-chat-logo.svg` | تصویر پروژهٔ اصلی در READMEها؛ با لوگوی جاری برنامه اشتباه نشود. |
 | `client/public/sounds/` | صدای تماس و پایان تماس. |
 | `client/public/licenses/` | مجوز دادهٔ Unicode و انتخابگر ایموجی. |
 | `docs/public/` | دارایی‌های سایت مستقل مستندات؛ تکرار بعضی فونت‌ها با فرانت‌اند، مصرف مستقل دارد. |

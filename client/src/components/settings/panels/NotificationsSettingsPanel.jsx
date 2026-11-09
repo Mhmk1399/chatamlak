@@ -22,7 +22,7 @@ export function NotificationsSettingsPanel({
     "cursor-not-allowed opacity-60 hover:bg-transparent hover:shadow-none";
   const showDebug =
     typeof window !== "undefined" &&
-    window.localStorage?.getItem("sb-debug-push") === "1";
+    window.localStorage?.getItem("ouj-debug-push") === "1";
 
   const previewDisabled = notificationsDisabled || !notificationsActive;
 

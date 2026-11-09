@@ -3,7 +3,7 @@ import { fa } from "./fa.js";
 
 const listeners = new Set();
 export const DEFAULT_LOCALE = "fa";
-export const LOCALE_STORAGE_KEY = "songbird-locale";
+export const LOCALE_STORAGE_KEY = "ouj-chat-locale";
 const readLocale = () => {
   try { return localStorage.getItem(LOCALE_STORAGE_KEY) === "en" ? "en" : DEFAULT_LOCALE; }
   catch { return DEFAULT_LOCALE; }

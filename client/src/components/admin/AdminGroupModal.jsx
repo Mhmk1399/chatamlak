@@ -25,7 +25,7 @@ const emptyFormFor = (type) => ({
   allowMemberInvites: true,
   // Remote-channel fields are unused in the admin flow but kept for shape parity.
   remoteChannelEnabled: false,
-  remoteChannelProvider: "songbird",
+  remoteChannelProvider: "ouj-chat",
   remoteChannelSource: "",
   remoteChannelSyncMetadata: false,
   remoteChannelStreamMedia: false,
@@ -218,7 +218,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
       // Default provider to telegram only when configured (mirrors ChatPage).
       setForm((f) => ({
         ...f,
-        remoteChannelProvider: rc.telegramConfigured ? "telegram" : "songbird",
+        remoteChannelProvider: rc.telegramConfigured ? "telegram" : "ouj-chat",
       }));
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -246,7 +246,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
       setForm((f) => ({
         ...f,
         remoteChannelEnabled: Boolean(source?.enabled),
-        remoteChannelProvider: source?.provider || (remoteFlags.telegramConfigured ? "telegram" : "songbird"),
+        remoteChannelProvider: source?.provider || (remoteFlags.telegramConfigured ? "telegram" : "ouj-chat"),
         remoteChannelSource: source?.sourceRaw
           || (source?.sourceUsername ? `@${source.sourceUsername}` : "")
           || source?.sourceChatId || "",
@@ -375,7 +375,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
       // Remote channel payload (channels only, mirrors ChatPage logic).
       const remoteSource = String(form.remoteChannelSource || "").trim();
       const remoteEnabled = form.visibility !== "private" && Boolean(form.remoteChannelEnabled);
-      const remoteProvider = String(form.remoteChannelProvider || "songbird").toLowerCase();
+      const remoteProvider = String(form.remoteChannelProvider || "ouj-chat").toLowerCase();
       const remoteSync = remoteEnabled && Boolean(form.remoteChannelSyncMetadata);
       const remoteStream = remoteEnabled && fileUploadEnabled && remoteFlags.mediaStreamEnabled
         && Boolean(form.remoteChannelStreamMedia);
@@ -385,7 +385,7 @@ export default function AdminGroupModal({ mode, chat, initialType = "group", onC
         || original?.sourceChatId || "";
       const remoteChanged = original
         ? (remoteEnabled !== Boolean(original.enabled)
-          || remoteProvider !== String(original.provider || "songbird").toLowerCase()
+          || remoteProvider !== String(original.provider || "ouj-chat").toLowerCase()
           || remoteSource !== origSource
           || remoteSync !== Boolean(original.syncMetadata)
           || remoteStream !== Boolean(original.streamMedia))

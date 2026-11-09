@@ -34,7 +34,7 @@ describe("voice playback controls", () => {
     expect(onSeek).toHaveBeenCalledWith(35);
   });
   test("retains the selected speed when browser storage rejects writes", async () => {
-    localStorage.setItem("songbird-voice-speed", "1");
+    localStorage.setItem("ouj-chat-voice-speed", "1");
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("Storage unavailable"); });
     const audioRef = { current: new Audio() };
     const screen = await render(<VoicePlaybackControls audioRef={audioRef} duration={60} progress={0} onSeek={vi.fn()} />);

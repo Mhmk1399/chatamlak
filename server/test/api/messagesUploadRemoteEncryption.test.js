@@ -9,7 +9,7 @@ import { createStorageEncryption } from "../../lib/storageEncryption.js";
 import { RemoteStorageProvider } from "../../lib/storage/RemoteStorageProvider.js";
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const ENC_MAGIC = Buffer.from("SBENC1\0", "utf8");
+const ENC_MAGIC = Buffer.from("OUJENC1\0", "utf8");
 
 function buildPlainPngBuffer() {
   const header = PNG_MAGIC;
@@ -53,7 +53,7 @@ describe("POST /api/messages/upload with remote storage + file encryption", () =
   let createMessageFilesMock;
 
   beforeEach(() => {
-    tmpDir = realFs.mkdtempSync(realPath.join(os.tmpdir(), "sb-upload-test-"));
+    tmpDir = realFs.mkdtempSync(realPath.join(os.tmpdir(), "ouj-upload-test-"));
     storedName = "photo-test.png";
     plainBytes = buildPlainPngBuffer();
 
@@ -176,7 +176,7 @@ describe("POST /api/messages/upload with remote storage + file encryption", () =
 
     expect(bytes.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)).toBe(true);
     expect(bytes.subarray(0, ENC_MAGIC.length).equals(ENC_MAGIC)).toBe(false);
-    expect(String(bytes.subarray(0, 32))).not.toContain("SBENC1");
+    expect(String(bytes.subarray(0, 32))).not.toContain("OUJENC1");
   });
 
   test("records encryptionType none when the bucket bytes are plaintext", async () => {

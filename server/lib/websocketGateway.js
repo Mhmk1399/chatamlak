@@ -55,9 +55,9 @@ export function createWebSocketGateway({
   // PubSub subscriber for cross-instance message routing
   const pubsubSub = redisClient ? redisClient.duplicate() : null;
   if (pubsubSub) {
-    pubsubSub.subscribe("songbird:events");
+    pubsubSub.subscribe("ouj-chat:events");
     pubsubSub.on("message", (channel, message) => {
-      if (channel === "songbird:events") {
+      if (channel === "ouj-chat:events") {
         try {
           const { username, chatId, payload, broadcast, senderInstance } = JSON.parse(message);
           if (senderInstance === instanceId) return;
@@ -114,7 +114,7 @@ export function createWebSocketGateway({
     sendToUsernameLocal(username, payload);
     if (redisClient) {
       redisClient.publish(
-        "songbird:events",
+        "ouj-chat:events",
         JSON.stringify({ username, payload, senderInstance: instanceId }),
       );
     }
@@ -136,7 +136,7 @@ export function createWebSocketGateway({
     }
     if (redisClient) {
       redisClient.publish(
-        "songbird:events",
+        "ouj-chat:events",
         JSON.stringify({ chatId, payload, senderInstance: instanceId }),
       );
     }
@@ -153,7 +153,7 @@ export function createWebSocketGateway({
     broadcastLocal(payload);
     if (redisClient) {
       redisClient.publish(
-        "songbird:events",
+        "ouj-chat:events",
         JSON.stringify({ broadcast: true, payload, senderInstance: instanceId }),
       );
     }

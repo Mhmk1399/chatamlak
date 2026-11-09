@@ -11,7 +11,7 @@ const COMPLEX_MARKDOWN_INLINE_PATTERN = /[`*_#[\]()>|~]/;
 const COMPLEX_MARKDOWN_LINE_PATTERN = /(^|\n)\s*(?:[-+*]\s+|\d+\.\s+|>)/;
 const MAX_CACHE_ENTRIES = 350;
 const MAX_CACHEABLE_TEXT_LENGTH = 8192;
-const BLANK_LINE_MARKER = "[[SB_BLANK_LINE]]";
+const BLANK_LINE_MARKER = "[[OUJ_BLANK_LINE]]";
 
 const blockCache = new Map();
 const inlineCache = new Map();
@@ -23,7 +23,7 @@ const COPY_ICON_HTML = renderToStaticMarkup(
     size: 14,
     strokeWidth: 2,
     "aria-hidden": "true",
-    className: "sb-code-copy-lucide",
+    className: "ouj-code-copy-lucide",
   }),
 );
 const CHECK_ICON_HTML = renderToStaticMarkup(
@@ -31,7 +31,7 @@ const CHECK_ICON_HTML = renderToStaticMarkup(
     size: 14,
     strokeWidth: 2.3,
     "aria-hidden": "true",
-    className: "sb-code-copy-lucide",
+    className: "ouj-code-copy-lucide",
   }),
 );
 
@@ -200,7 +200,7 @@ const configureMarkdown = () => {
     const sameTabInvite = /\/invite\/[A-Za-z0-9]+/.test(safeHref);
     const target = sameTabInvite ? "_self" : "_blank";
     const rel = sameTabInvite ? "" : "noopener noreferrer";
-    return `<a href="${safeHrefEscaped}" target="${target}" rel="${rel}" class="sb-link">${escapeHtml(safeText)}</a>`;
+    return `<a href="${safeHrefEscaped}" target="${target}" rel="${rel}" class="ouj-link">${escapeHtml(safeText)}</a>`;
   };
   renderer.code = (code, infostring) => {
     const token = typeof code === "object" && code !== null ? code : null;
@@ -226,7 +226,7 @@ const configureMarkdown = () => {
     }
     const safeLang = lang ? `language-${escapeHtml(lang)}` : "language-plain";
     const langLabel = escapeHtml(lang || "text");
-    return `<div class="sb-code-block" data-copyable="1"><div class="sb-code-header"><span class="sb-code-lang">${langLabel}</span><button type="button" class="sb-code-copy" aria-label="Copy code" data-state="idle"><span class="sb-code-copy-icons" aria-hidden="true"><span class="sb-code-copy-icon-host sb-code-copy-icon-copy-host">${COPY_ICON_HTML}</span><span class="sb-code-copy-icon-host sb-code-copy-icon-check-host">${CHECK_ICON_HTML}</span></span><span class="sb-sr-only">Copy code</span></button></div><pre class="sb-code"><code class="hljs ${safeLang}">${highlighted}</code></pre></div>`;
+    return `<div class="ouj-code-block" data-copyable="1"><div class="ouj-code-header"><span class="ouj-code-lang">${langLabel}</span><button type="button" class="ouj-code-copy" aria-label="Copy code" data-state="idle"><span class="ouj-code-copy-icons" aria-hidden="true"><span class="ouj-code-copy-icon-host ouj-code-copy-icon-copy-host">${COPY_ICON_HTML}</span><span class="ouj-code-copy-icon-host ouj-code-copy-icon-check-host">${CHECK_ICON_HTML}</span></span><span class="ouj-sr-only">Copy code</span></button></div><pre class="ouj-code"><code class="hljs ${safeLang}">${highlighted}</code></pre></div>`;
   };
 
   const autoLinkExtension = {
@@ -255,7 +255,7 @@ const configureMarkdown = () => {
     renderer(token) {
       const safeHref = escapeHtml(token.href);
       const safeText = escapeHtml(token.text);
-      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="sb-link" data-auto-link="1">${safeText}</a>`;
+      return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer" class="ouj-link" data-auto-link="1">${safeText}</a>`;
     },
   };
 
@@ -280,7 +280,7 @@ const configureMarkdown = () => {
     renderer(token) {
       const username = String(token.username || "").toLowerCase();
       if (!username) return token.raw;
-      return `<span class="sb-mention sb-mention-active" data-mention="${escapeHtml(username)}" dir="ltr">@${escapeHtml(token.username)}</span>`;
+      return `<span class="ouj-mention ouj-mention-active" data-mention="${escapeHtml(username)}" dir="ltr">@${escapeHtml(token.username)}</span>`;
     },
   };
 
@@ -360,7 +360,7 @@ const cleanupMarkdownHtml = (html) =>
 const restoreMarkdownBlankLines = (html) =>
   String(html || "").replace(
     new RegExp(`<p>${escapeRegex(BLANK_LINE_MARKER)}</p>`, "g"),
-    '<div class="sb-markdown-spacer" aria-hidden="true"></div>',
+    '<div class="ouj-markdown-spacer" aria-hidden="true"></div>',
   );
 
 const restoreFallbackMarkdownBlankLines = (raw) =>

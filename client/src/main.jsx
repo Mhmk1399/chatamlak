@@ -1,6 +1,13 @@
-﻿import { createRoot } from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
+import {
+  clearRetiredAppCaches,
+  migrateRetiredBrowserStorage,
+} from './utils/brandStorageMigration.js'
 import App from './App.jsx'
 import './index.css'
+
+migrateRetiredBrowserStorage()
+void clearRetiredAppCaches()
 
 const rootElement = document.getElementById('root')
 

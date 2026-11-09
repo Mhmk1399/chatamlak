@@ -1,4 +1,4 @@
-# Agent Guidance: Songbird Client
+# Agent Guidance: Ouj Chat Client
 
 React 19 SPA (JSX, Vite, Tailwind CSS 4, Vitest + Playwright).
 

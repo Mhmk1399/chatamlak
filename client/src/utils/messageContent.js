@@ -41,7 +41,7 @@ export const getMessageFiles = (message) =>
 export const hasMessageText = (message) => {
   const bodyText = extractMessageBodyText(message?.body).trim();
   if (!bodyText) return false;
-  if (bodyText.startsWith("sb-enc-v1:")) return false;
+  if (/^[a-z]{2,8}-enc-v1:/i.test(bodyText)) return false;
   if (isCallLogBody(bodyText)) return false;
   const files = getMessageFiles(message);
   if (!files.length) return true;

@@ -10,9 +10,9 @@ const config = {
   postgres: {
     host: "db.example.test",
     port: 5433,
-    user: "songbird",
+    user: "ouj-chat",
     password: "super-secret",
-    database: "songbird_prod",
+    database: "ouj-chat_prod",
     url: null,
     ssl: true,
   },
@@ -28,8 +28,8 @@ describe("postgresMaintenance", () => {
       },
     });
 
-    await maintenance.backup("/tmp/songbird.dump");
-    await maintenance.restore("/tmp/songbird.dump");
+    await maintenance.backup("/tmp/ouj-chat.dump");
+    await maintenance.restore("/tmp/ouj-chat.dump");
     await maintenance.vacuum();
     await maintenance.dropDatabase();
     await maintenance.createDatabase();
@@ -43,17 +43,17 @@ describe("postgresMaintenance", () => {
       "createdb",
     ]);
     expect(calls[0].args).toContain("--format=custom");
-    expect(calls[0].args).toContain(`--file=${path.resolve("/tmp/songbird.dump")}`);
+    expect(calls[0].args).toContain(`--file=${path.resolve("/tmp/ouj-chat.dump")}`);
     expect(calls[2].args).toContain("--single-transaction");
     expect(calls[4].args).toContain("--force");
-    expect(calls[5].args).toContain("--owner=songbird");
+    expect(calls[5].args).toContain("--owner=ouj-chat");
     expect(JSON.stringify(calls.map((call) => call.args))).not.toContain(
       "super-secret",
     );
     expect(calls[0].options.env).toMatchObject({
       PGHOST: "db.example.test",
       PGPORT: "5433",
-      PGUSER: "songbird",
+      PGUSER: "ouj-chat",
       PGPASSWORD: "super-secret",
       PGSSLMODE: "require",
     });
@@ -83,10 +83,10 @@ describe("postgresMaintenance", () => {
       config,
       execute: async () => {},
     });
-    await expect(maintenance.backup("/tmp/songbird.db")).rejects.toThrow(
+    await expect(maintenance.backup("/tmp/ouj-chat.db")).rejects.toThrow(
       ".dump",
     );
-    await expect(maintenance.restore("/tmp/songbird.db")).rejects.toThrow(
+    await expect(maintenance.restore("/tmp/ouj-chat.db")).rejects.toThrow(
       ".dump",
     );
   });
@@ -105,11 +105,11 @@ describe("postgresMaintenance", () => {
       },
     });
 
-    await maintenance.verifyArchive("/tmp/songbird.dump");
+    await maintenance.verifyArchive("/tmp/ouj-chat.dump");
 
     const listCall = calls.find((call) => call.args.includes("--list"));
-    expect(listCall.args).toContain(path.resolve("/tmp/songbird.dump"));
-    expect(listCall.args).not.toContain("--file=/tmp/songbird.dump");
+    expect(listCall.args).toContain(path.resolve("/tmp/ouj-chat.dump"));
+    expect(listCall.args).not.toContain("--file=/tmp/ouj-chat.dump");
   });
 
   test("rejects unsafe system databases and redacts native tool failures", async () => {

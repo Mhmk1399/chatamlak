@@ -4,14 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { chromium } from "playwright";
 
-const baseURL = process.env.SONGBIRD_E2E_BASE_URL;
-if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local Songbird instance.");
+const baseURL = process.env.OUJ_CHAT_E2E_BASE_URL;
+if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) throw new Error("Use an isolated local Ouj Chat instance.");
 const browser = await chromium.launch();
 const contexts = [];
 const errors = [];
 async function context() {
   const value = await browser.newContext({ baseURL, viewport: { width: 1440, height: 1000 } });
-  await value.addInitScript(() => { localStorage.setItem("songbird-pwa-install-dismissed", "1"); if (!localStorage.getItem("songbird-theme")) localStorage.setItem("songbird-theme", "light"); });
+  await value.addInitScript(() => { localStorage.setItem("ouj-chat-pwa-install-dismissed", "1"); if (!localStorage.getItem("ouj-chat-theme")) localStorage.setItem("ouj-chat-theme", "light"); });
   contexts.push(value); return value;
 }
 async function api(client, method, url, data) {
@@ -68,7 +68,7 @@ try {
   await api(bob, "POST", "/api/register", { username: peerUsername, nickname: "علی رضایی", password: "ouj-qa-password" });
   const group = await api(alice, "POST", "/api/chats/group", { creator: username, nickname: "گزارش‌های مشاوران", username: `oujg${suffix}`, visibility: "private", members: [peerUsername] });
   const workspace = await pageFor(alice);
-  await workspace.addInitScript((id) => sessionStorage.setItem("songbird-open-chat-id", id), group.id);
+  await workspace.addInitScript((id) => sessionStorage.setItem("ouj-chat-open-chat-id", id), group.id);
   await workspace.goto("/chat");
   await workspace.getByRole("button", { name: "بستن تازه‌ها", exact: true }).waitFor({ timeout: 5000 }).then(() => workspace.getByRole("button", { name: "بستن تازه‌ها", exact: true }).click()).catch(() => {});
   const composer = workspace.locator('textarea[name="message"]');

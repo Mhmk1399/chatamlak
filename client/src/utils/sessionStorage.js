@@ -1,7 +1,7 @@
 import { normalizeUuid } from "./uuidUtils.js";
 import { normalizeChatAppearance } from "../../../shared/chatAppearance.js";
 
-export const SESSION_USER_KEY = "songbird-session-user";
+export const SESSION_USER_KEY = "ouj-chat-session-user";
 
 function getStorage() {
   if (typeof localStorage !== "undefined") return localStorage;

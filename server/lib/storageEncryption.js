@@ -4,13 +4,26 @@ import os from "node:os";
 import path from "node:path";
 import { normalizeEnvSecret, updateEnvValue } from "./secrets.js";
 
-const TEXT_PREFIX = "sb-enc-v1:";
-const FILE_MAGIC = Buffer.from("SBENC1\0", "utf8");
+const TEXT_PREFIX = "ouj-enc-v1:";
+const LEGACY_TEXT_PREFIX = String.fromCharCode(
+  115,
+  98,
+  45,
+  101,
+  110,
+  99,
+  45,
+  118,
+  49,
+  58,
+);
+const FILE_MAGIC = Buffer.from("OUJENC1\0", "utf8");
+const LEGACY_FILE_MAGIC = Buffer.from([83, 66, 69, 78, 67, 49, 0]);
 const FILE_HEADER_LENGTH = FILE_MAGIC.length + 12 + 16;
 const FILE_IV_OFFSET = FILE_MAGIC.length;
 const FILE_TAG_OFFSET = FILE_IV_OFFSET + 12;
 const FILE_DATA_OFFSET = FILE_HEADER_LENGTH;
-const FILE_TEMP_DIR_NAME = "songbird-secure";
+const FILE_TEMP_DIR_NAME = "ouj-chat-secure";
 
 function ensureStorageEncryptionKey({
   projectRootDir,
@@ -57,8 +70,19 @@ const isSystemMessageBody = (value = "") => {
   );
 };
 
-  const isEncryptedText = (value = "") =>
-    String(value || "").startsWith(TEXT_PREFIX);
+  const getTextPrefix = (value = "") => {
+    const input = String(value || "");
+    if (input.startsWith(TEXT_PREFIX)) return TEXT_PREFIX;
+    if (input.startsWith(LEGACY_TEXT_PREFIX)) return LEGACY_TEXT_PREFIX;
+    return "";
+  };
+
+  const isEncryptedText = (value = "") => Boolean(getTextPrefix(value));
+
+  const hasEncryptedFileMagic = (buffer) =>
+    Buffer.isBuffer(buffer) &&
+    (buffer.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC) ||
+      buffer.subarray(0, LEGACY_FILE_MAGIC.length).equals(LEGACY_FILE_MAGIC));
 
   const encryptBuffer = (buffer) => {
     const key = resolveKey();
@@ -123,7 +147,7 @@ const isSystemMessageBody = (value = "") => {
     const key = resolveKey();
     if (!key || !isEncryptedText(input)) return input;
 
-    const payload = input.slice(TEXT_PREFIX.length);
+    const payload = input.slice(getTextPrefix(input).length);
     const [ivPart, tagPart, cipherPart] = payload.split(".");
     if (!ivPart || !tagPart || !cipherPart) return input;
 
@@ -152,7 +176,7 @@ const isSystemMessageBody = (value = "") => {
   const isEncryptedFileBuffer = (buffer) =>
     Buffer.isBuffer(buffer) &&
     buffer.length >= FILE_HEADER_LENGTH &&
-    buffer.subarray(0, FILE_MAGIC.length).equals(FILE_MAGIC);
+    hasEncryptedFileMagic(buffer);
 
   const isEncryptedFilePath = (filePath) => {
     try {
@@ -164,7 +188,7 @@ const isSystemMessageBody = (value = "") => {
       } finally {
         fsImpl.closeSync(fd);
       }
-      return header.equals(FILE_MAGIC);
+      return hasEncryptedFileMagic(header);
     } catch {
       return false;
     }

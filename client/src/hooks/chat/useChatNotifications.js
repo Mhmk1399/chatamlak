@@ -4,7 +4,7 @@ import { NOTIFICATIONS_ENABLED_KEY, NOTIFICATION_MESSAGE_PREVIEW_KEY } from "../
 
 const PUSH_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const PUSH_RESUBSCRIBE_DEBOUNCE_MS = 2 * 60 * 1000;
-const PUSH_SUB_CREATED_KEY = "sb-push-sub-ts";
+const PUSH_SUB_CREATED_KEY = "ouj-push-sub-ts";
 
 const toBase64 = (value) =>
   String(value || "")

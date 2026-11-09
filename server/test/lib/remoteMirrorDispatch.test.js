@@ -44,7 +44,7 @@ describe("dispatchMirrorJob", () => {
     expect(body.callbackUrl).toContain(
       "/api/remote-channel/webhook/mirror-done",
     );
-    expect(opts.headers["x-songbird-webhook-secret"]).toBe("shh");
+    expect(opts.headers["x-ouj-chat-webhook-secret"]).toBe("shh");
     registry.sweep();
   });
 

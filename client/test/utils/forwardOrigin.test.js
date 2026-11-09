@@ -11,16 +11,16 @@ describe("resolveForwardedTarget", () => {
     const target = resolveForwardedTarget({
       forwardedFromChatId: null,
       forwardedFromUserId: null,
-      forwardedFromLabel: "songbirdtest",
+      forwardedFromLabel: "ouj-chattest",
       remoteForwardedChatId: UUID,
-      storedForwardedLabel: "songbirdtest",
+      storedForwardedLabel: "ouj-chattest",
       chatName: "Mirror",
       chatColor: "#10b981",
     });
     expect(target).toMatchObject({ kind: "chat", chatId: UUID });
   });
 
-  test("remote songbird message with a UUID channel id opens the channel", () => {
+  test("remote ouj-chat message with a UUID channel id opens the channel", () => {
     const target = resolveForwardedTarget({
       forwardedFromChatId: null,
       forwardedFromUserId: null,

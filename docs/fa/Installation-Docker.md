@@ -57,10 +57,12 @@ docker run hello-world
 
 ## ۲. کلون‌کردن مخزن
 
+نشانی مخزن مورد اعتماد مسئول استقرار را در متغیر `OUJ_CHAT_REPOSITORY_URL` قرار دهید، یا سورس بررسی‌شده را در `/opt/ouj-chat` کپی کنید. در این راهنما مخزن عمومی مشخصی فرض نمی‌شود.
+
 ```bash
-sudo mkdir -p /opt/songbird
-cd /opt/songbird
-git clone https://github.com/bllackbull/Songbird.git .
+sudo mkdir -p /opt/ouj-chat
+cd /opt/ouj-chat
+git clone "$OUJ_CHAT_REPOSITORY_URL" .
 ```
 
 ## ۳. پیکربندی محیط
@@ -77,7 +79,7 @@ nano .env
 
 فایل جداگانهٔ `docker-compose.mongo.yaml` برای توسعه با اجرای Node.js **روی میزبان** است. MongoDB را روی `127.0.0.1:27017` منتشر و `localhost:27017` را اعلام می‌کند؛ این آدرس از کانتینر برنامه به دیتابیس میزبان اشاره نمی‌کند. این دو فایل Compose را به‌عنوان یک مجموعهٔ برنامه و دیتابیس ترکیب نکنید. به‌جای آن، [راه‌اندازی توسعه روی میزبان](./MongoDB#mongodb-محلی-با-docker) را دنبال کنید.
 
-volume با نام `songbird-data` همچنان باینری آپلود محلی و فایل‌های محلی زمان اجرا را حفظ می‌کند و volume دیتابیس MongoDB نیست. از استقرار MongoDB و volume فایل‌ها جداگانه پشتیبان بگیرید.
+volume با نام `ouj-chat-data` همچنان باینری آپلود محلی و فایل‌های محلی زمان اجرا را حفظ می‌کند و volume دیتابیس MongoDB نیست. از استقرار MongoDB و volume فایل‌ها جداگانه پشتیبان بگیرید.
 :::
 
 :::info کانتینر Media Worker
@@ -98,7 +100,7 @@ volume با نام `songbird-data` همچنان باینری آپلود محلی
 سورس همین نسخه را بسازید و کانتینرها را اجرا کنید:
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 docker compose up -d --build
 ```
 
@@ -125,43 +127,43 @@ docker compose restart nginx
 
 ## کاربر runtime و داده پایدار
 
-استقرارهای Docker از `songbird.service` استفاده نمیکنند. Songbird با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
+استقرارهای Docker از `ouj-chat.service` استفاده نمیکنند. گفتگوی اوج با کاربر پیکربندی شده برای container اجرا میشود (در image فعلی root است، مگر آنکه `user:` در Compose آن را override کند) و دستورهای پایگاه داده با همان UID/GID ‏container اجرا میشوند:
 
 ```bash
-docker compose exec songbird npm --prefix /app/server run db:inspect
+docker compose exec ouj-chat npm --prefix /app/server run db:inspect
 ```
 
 برای اجرای container با یک UID/GID غیر root مشخص، `user:` را در service ‏Compose پیکربندی کنید:
 
 ```yaml
 services:
-  songbird:
-    user: "songbird:songbird"
+  ouj-chat:
+    user: "ouj-chat:ouj-chat"
 ```
 
-اگر به جای named volume پیشفرض از bind mount استفاده میکنید، پیش از راه اندازی Songbird، پوشه host را برای همان UID:GID قابل نوشتن کنید. Songbird مالکیت bind mount روی host را به صورت خودکار تغییر نمیدهد:
+اگر به جای named volume پیشفرض از bind mount استفاده میکنید، پیش از راه اندازی گفتگوی اوج، پوشه host را برای همان UID:GID قابل نوشتن کنید. گفتگوی اوج مالکیت bind mount روی host را به صورت خودکار تغییر نمیدهد:
 
 ```bash
 mkdir -p ./data
-sudo chown -R songbird:songbird ./data
+sudo chown -R ouj-chat:ouj-chat ./data
 ```
 
 ## کنترل سرویس در پنل مدیریت
 
-اقدامات **ریستارت سرویس** و **توقف سرویس** در پنل مدیریت برای استقرار Docker با فراخوانی Docker Engine API از طریق سوکت mount‌شده (`/var/run/docker.sock`) کار می‌کنند. فایل compose متغیر `SONGBIRD_CONTAINER_NAME=songbird` را تنظیم می‌کند تا اپلیکیشن بداند کدام کانتینر را هدف قرار دهد.
+اقدامات **ریستارت سرویس** و **توقف سرویس** در پنل مدیریت برای استقرار Docker با فراخوانی Docker Engine API از طریق سوکت mount‌شده (`/var/run/docker.sock`) کار می‌کنند. فایل compose متغیر `OUJ_CHAT_CONTAINER_NAME=ouj-chat` را تنظیم می‌کند تا اپلیکیشن بداند کدام کانتینر را هدف قرار دهد.
 
 اگر نام کانتینر را تغییر دادید یا از نام سفارشی استفاده می‌کنید، متغیر env را به‌روز کنید:
 
 ```yaml
 # docker-compose.yaml
 environment:
-  SONGBIRD_CONTAINER_NAME: my-custom-name
+  OUJ_CHAT_CONTAINER_NAME: my-custom-name
 ```
 
 اگر به کنترل سرویس از پنل مدیریت نیاز ندارید، می‌توانید mount سوکت را از `docker-compose.yaml` حذف کنید:
 
 ```yaml
-# این خط را در بخش volumes مربوط به songbird حذف یا کامنت کنید:
+# این خط را در بخش volumes مربوط به ouj-chat حذف یا کامنت کنید:
 # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
@@ -170,7 +172,7 @@ environment:
 سورس را به‌روز کنید؛ سپس دوباره بسازید و راه‌اندازی کنید:
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 docker compose up -d --build
 ```
 

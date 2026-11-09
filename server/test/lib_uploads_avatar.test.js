@@ -14,7 +14,7 @@ describe("server/lib/uploads.js avatar storage enhancements", () => {
   let mockStorageEncryption;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sb-avatar-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-avatar-test-"));
     avatarUploadRootDir = path.join(tmpDir, "avatars");
     fs.mkdirSync(avatarUploadRootDir, { recursive: true });
 

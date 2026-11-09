@@ -22,7 +22,7 @@ export const faSettings = {
   "Queue concurrency": "پردازش هم‌زمان صف", "Number of queue items processed concurrently.": "تعداد موارد صف که هم‌زمان پردازش می‌شوند.",
   "Queue stale lock timeout": "مهلت قفل متوقف‌شدهٔ صف", "Milliseconds before a stuck queue lock is released. (ms)": "زمان آزادسازی قفل متوقف‌شدهٔ صف، برحسب میلی‌ثانیه.",
   "Telegram proxy": "پروکسی تلگرام", "Proxy URL for the Telegram MTProto connection (http/https/socks4/socks5/mtproxy).": "نشانی پروکسی اتصال MTProto تلگرام با پشتیبانی از http/https/socks4/socks5/mtproxy.",
-  "Songbird proxy": "پروکسی Songbird", "Proxy URL for outbound server-to-server requests to remote Songbird instances.": "نشانی پروکسی درخواست‌های خروجی سرور به نمونه‌های راه دور Songbird.",
+  "Ouj Chat proxy": "پروکسی Ouj Chat", "Proxy URL for outbound server-to-server requests to remote Ouj Chat instances.": "نشانی پروکسی درخواست‌های خروجی سرور به نمونه‌های راه دور Ouj Chat.",
   "Message fetch limit": "سقف دریافت پیام", "Maximum number of messages the client fetches from the server per request.": "بیشترین تعداد پیام دریافتی از سرور در هر درخواست.",
   "Message page size": "اندازهٔ صفحهٔ پیام‌ها", "Number of messages loaded per page when scrolling up in a chat.": "تعداد پیام‌های هر صفحه هنگام رفتن به تاریخچهٔ قدیمی‌تر.",
   "Client cache lifetime": "عمر حافظهٔ موقت دستگاه", "Hours to keep chat data cached on the client before it's considered stale.": "مدت معتبرماندن حافظهٔ موقت گفتگوها روی دستگاه، برحسب ساعت.",

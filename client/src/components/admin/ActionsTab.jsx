@@ -236,7 +236,7 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
       }
       const blob = await res.blob();
       const contentDisposition = res.headers.get("content-disposition");
-      let filename = "songbird-backup.db";
+      let filename = "ouj-chat-backup.db";
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="?([^";]+)"?/);
         if (match && match[1]) filename = match[1];
@@ -436,12 +436,12 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
               icon={Trash}
               iconAnim="icon-anim-slide"
               label={localize("Delete PostgreSQL database")}
-              description={maintenanceInfo.offlineDeleteRequired ? localize("Requires Songbird to be stopped; use the db:delete CLI command.") : localize("Drop the entire PostgreSQL database. Songbird will stop working until it is recreated.")}
+              description={maintenanceInfo.offlineDeleteRequired ? localize("Requires Ouj Chat to be stopped; use the db:delete CLI command.") : localize("Drop the entire PostgreSQL database. Ouj Chat will stop working until it is recreated.")}
               onClick={() =>
                 setDanger({
                   key: "deleteDb",
                   title: "Delete PostgreSQL database",
-                  message: "This permanently drops the PostgreSQL database. All Songbird data will be unavailable until a new database is created and migrated.",
+                  message: "This permanently drops the PostgreSQL database. All Ouj Chat data will be unavailable until a new database is created and migrated.",
                   phrase: "delete postgres database",
                   endpoint: "/api/admin/maintenance/delete",
                   busyLabel: "Deleting…",
@@ -489,8 +489,8 @@ const ActionsTab = forwardRef(function ActionsTab({ serviceStatus }, ref) {
         title={serviceAction === "stop" ? localize("Stop service") : localize("Restart service")}
         message={
           serviceAction === "stop"
-            ? "Stop the Songbird service? The app will go offline until it is started again from the server."
-            : "Restart the Songbird service? The app will be briefly unavailable while it restarts."
+            ? "Stop the Ouj Chat service? The app will go offline until it is started again from the server."
+            : "Restart the Ouj Chat service? The app will be briefly unavailable while it restarts."
         }
         confirmLabel={
           rowStatus[serviceAction]?.type === "busy"

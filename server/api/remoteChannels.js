@@ -1,4 +1,4 @@
-import { normalizeSongbirdSource, normalizeTelegramSource, resolveSongbirdSource } from "../lib/remoteChannels.js";
+import { normalizeOujChatSource, normalizeTelegramSource, resolveOujChatSource } from "../lib/remoteChannels.js";
 import { validateUuidParams } from "../lib/uuidMiddleware.js";
 
 function registerRemoteChannelRoutes(app, deps) {
@@ -51,13 +51,13 @@ function registerRemoteChannelRoutes(app, deps) {
     }
   };
 
-  // Telegram requires API credentials; Songbird just needs the feature enabled.
+  // Telegram requires API credentials; Ouj Chat just needs the feature enabled.
   const isTelegramAvailable = () =>
     Boolean(REMOTE_CHANNELS?.enabled && REMOTE_CHANNELS?.telegramConfigured);
-  const isSongbirdAvailable = () =>
+  const isOujChatAvailable = () =>
     Boolean(REMOTE_CHANNELS?.enabled);
   const isRemoteChannelAvailable = () =>
-    isTelegramAvailable() || isSongbirdAvailable();
+    isTelegramAvailable() || isOujChatAvailable();
   // REMOTE_CHANNEL_UI=false hides the user-facing UI; only server admins
   // (admin panel routes) may configure mirroring then.
   const isUiEnabled = () => Boolean(getSetting("REMOTE_CHANNEL_UI"));
@@ -213,7 +213,7 @@ function registerRemoteChannelRoutes(app, deps) {
     return res.json({
       available: isRemoteChannelAvailable(),
       telegramConfigured: Boolean(REMOTE_CHANNELS?.telegramConfigured),
-      songbirdConfigured: isSongbirdAvailable(),
+      oujChatConfigured: isOujChatAvailable(),
       proxyConfigured: Boolean(REMOTE_CHANNELS?.proxyConfigured),
       source: serialized,
     });
@@ -261,7 +261,7 @@ function registerRemoteChannelRoutes(app, deps) {
     const streamMedia = Boolean(getSetting("FILE_UPLOAD") && req.body?.streamMedia);
     const provider = String(req.body?.provider || "telegram").toLowerCase();
 
-    if (provider !== "telegram" && provider !== "songbird") {
+    if (provider !== "telegram" && provider !== "ouj-chat") {
       return res.status(400).json({ error: "Remote Channel provider is invalid." });
     }
 
@@ -297,15 +297,15 @@ function registerRemoteChannelRoutes(app, deps) {
         return res.status(400).json({ error: "Telegram source is required." });
       }
     } else {
-      // provider === "songbird"
+      // provider === "ouj-chat"
       if (enabled) {
-        normalized = normalizeSongbirdSource(rawSource);
+        normalized = normalizeOujChatSource(rawSource);
         if (!normalized.ok) {
           return res.status(400).json({ error: normalized.error });
         }
         // Resolve the actual channel username from the target server.
         // This also validates the server is public and the channel exists.
-        const resolved = await resolveSongbirdSource(
+        const resolved = await resolveOujChatSource(
           normalized.sourceUrl,
           normalized.inviteTarget,
         );
@@ -314,11 +314,11 @@ function registerRemoteChannelRoutes(app, deps) {
         }
         normalized = { ...normalized, sourceUsername: resolved.sourceUsername };
       } else if (rawSource) {
-        const optionalNormalized = normalizeSongbirdSource(rawSource);
+        const optionalNormalized = normalizeOujChatSource(rawSource);
         if (optionalNormalized.ok) normalized = optionalNormalized;
       }
       if (enabled && !normalized.sourceUrl) {
-        return res.status(400).json({ error: "Songbird source URL is required." });
+        return res.status(400).json({ error: "Ouj Chat source URL is required." });
       }
     }
 
@@ -345,7 +345,7 @@ function registerRemoteChannelRoutes(app, deps) {
       syncMetadata &&
       typeof remoteChannelManager?.syncSourceMetadata === "function"
     ) {
-      // Run metadata sync in the background — works for both Telegram and Songbird.
+      // Run metadata sync in the background — works for both Telegram and Ouj Chat.
       const sourceId = source?.id;
       remoteChannelManager.syncSourceMetadata(sourceId).catch(() => {
         // Errors are recorded on the source record by syncSourceMetadata itself.

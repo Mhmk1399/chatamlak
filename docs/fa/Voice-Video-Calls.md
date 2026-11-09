@@ -137,7 +137,7 @@ lt-cred-mech
 
 # نام دامنه یا قلمرو (Realm) و اطلاعات کاربری ثابت
 realm=your-domain.com
-user=songbird:YourSecurePassword123
+user=ouj-chat:YourSecurePassword123
 
 # تنظیم IP عمومی سرور
 # اگر سرور شما مستقیماً دارای IP عمومی روی کارت شبکه است:
@@ -179,7 +179,7 @@ sudo ss -ulpn | grep 3478
 ```txt
 TURN_STUN_URL="stun:your-domain.com:3478"
 TURN_URL="turn:your-domain.com:3478"
-TURN_USERNAME="songbird"
+TURN_USERNAME="ouj-chat"
 TURN_CREDENTIAL="YourSecurePassword123"
 ```
 

@@ -2,19 +2,19 @@
 layout: home
 
 hero:
-  name: Songbird
+  name: Ouj Chat
   text: Self-hosted chat
   tagline: A secure, lightweight chat platform designed to empower digital freedom worldwide.
   image:
-    src: /songbird-hero.svg
-    alt: Songbird
+    src: /ouj-chat-icon.png
+    alt: Ouj Chat
   actions:
     - theme: brand
       text: Get Started
       link: /Deployment-Script
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/bllackbull/Songbird
+      text: Chat Features
+      link: /Chat-Features
 
 features:
   - icon: 🍃
@@ -27,11 +27,11 @@ features:
     link: /Chat-Features
   - icon: 🚀
     title: Easy Install
-    details: One-line deployment script handles dependencies, build, Nginx, and SSL for you.
+    details: Run the reviewed deployment script from your local project checkout to configure dependencies, build, Nginx, and SSL.
     link: /Deployment-Script
   - icon: 🐳
     title: Docker Ready
-    details: Official ready-to-use Docker images and Docker Compose setup for fast, scalable deployment anywhere.
+    details: Build your checked-out source with Docker Compose and configure the database, storage, and reverse proxy for your deployment.
     link: /Installation-Docker
   - icon: 🛡️
     title: Admin Panel
@@ -47,7 +47,7 @@ features:
     link: /Object-Storage
   - icon: 📡
     title: Remote Channels
-    details: Mirror Telegram channels or other Songbird channels into your own channels.
+    details: Mirror Telegram channels or other Ouj Chat channels into your own channels.
     link: /Remote-Channel-Setup
   - icon: 📞
     title: Voice & Video Calls

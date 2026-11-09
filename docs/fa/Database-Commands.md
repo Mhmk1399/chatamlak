@@ -15,7 +15,7 @@
 | `npm --prefix server run db:help` | راهنمای فعلی دستورهای نگه‌داری بومی. |
 | `npm --prefix server run db:backup -- --file ./backups/ouj.backup.json.gz` | نوشتن آرشیو gzip Extended JSON برنامه. |
 | `npm --prefix server run db:restore -- --file ./backups/ouj.backup.json.gz --yes --offline` | بازیابی آرشیو با برنامهٔ متوقف‌شده. |
-| `npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run` | بررسی SQLite قدیمی پیش از ورود. |
+| `npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run` | بررسی SQLite قدیمی پیش از ورود. |
 | `npm --prefix server run db:import-sql -- --postgres --dry-run` | بررسی PostgreSQL قدیمی با تنظیم `LEGACY_POSTGRES_URI`. |
 
 مسیرها نمونه‌اند. پوشهٔ پشتیبان قابل‌نوشتن و خارج از دیسک موقت کانتینر انتخاب کنید. دیتابیس از تنظیم محیط MongoDB می‌آید، نه `DATA_DIR`، `DB_CLIENT` یا نام فایل `.db`.
@@ -60,8 +60,8 @@ SQLite و PostgreSQL فقط منبع خواندنی انتقال داده‌ان
 3. اجرای آزمایشی را انجام دهید، شمارش‌ها و اعتبارسنجی را بررسی و سپس صریحاً اعمال کنید:
 
 ```sh
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --apply
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --apply
 ```
 
 برای PostgreSQL، مقدار `LEGACY_POSTGRES_URI` را در محیط خصوصی قرار دهید و از پرچم بدون آرگومان دارای رمز استفاده کنید:

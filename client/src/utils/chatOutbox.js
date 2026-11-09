@@ -12,13 +12,13 @@ export async function saveOutboxMessage(username, message) {
     ...message, files: [], _files: files, owner: owner(username),
   });
   if (!result) throw new Error("Unable to save this message on your device. Free some storage and try again.");
-  window.dispatchEvent(new Event("songbird:outbox-changed"));
+  window.dispatchEvent(new Event("ouj-chat:outbox-changed"));
 }
 
 export async function removeOutboxMessage(username, clientId) {
   if (!username || !clientId) return;
   if (!await idbDelete(CACHE_STORES.outbox, keyFor(username, clientId))) throw new Error("Unable to remove this queued message. Try again.");
-  window.dispatchEvent(new Event("songbird:outbox-changed"));
+  window.dispatchEvent(new Event("ouj-chat:outbox-changed"));
 }
 
 export async function readOutboxMessages(username, chatId, { hydrate = true } = {}) {

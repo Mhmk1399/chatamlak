@@ -23,7 +23,7 @@ function Harness({ initial = alice }) {
   </ChatAppearanceContext.Provider>;
 }
 function current() { return page.getByTestId("current-background").element().querySelector("[data-wallpaper]").dataset.wallpaper; }
-function event(userId, wallpaperId, revision) { window.dispatchEvent(new CustomEvent("songbird:realtime-event", { detail: { type: "chat_appearance_updated", userId, chatAppearance: { wallpaperId, revision } } })); }
+function event(userId, wallpaperId, revision) { window.dispatchEvent(new CustomEvent("ouj-chat:realtime-event", { detail: { type: "chat_appearance_updated", userId, chatAppearance: { wallpaperId, revision } } })); }
 afterEach(async () => { vi.restoreAllMocks(); setLocale("en"); document.documentElement.classList.remove("dark"); await page.viewport(1280, 720); });
 
 describe("private chat background settings", () => {

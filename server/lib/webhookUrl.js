@@ -33,8 +33,8 @@ export function resolveWebhookCallbackUrl(env = process.env) {
   const explicit = [
     source.WEBHOOK_URL,
     source.WEBHOOK_CALLBACK_URL,
-    source.SONGBIRD_WEBHOOK_URL,
-    source.SONGBIRD_WEBHOOK_CALLBACK_URL,
+    source.OUJ_CHAT_WEBHOOK_URL,
+    source.OUJ_CHAT_WEBHOOK_CALLBACK_URL,
   ]
     .map(clean)
     .find(Boolean);

@@ -265,7 +265,7 @@ const IN_MEMORY_MESSAGES_CACHE_STALE_MS = 20 * 60 * 1000;
 const TYPING_IDLE_TIMEOUT_MS = 3000;
 const TYPING_SIGNAL_THROTTLE_MS = 1500;
 const TYPING_REMOTE_TTL_MS = 5000;
-const PERMISSION_DISMISS_PREFIX = "songbird-permission-dismiss-";
+const PERMISSION_DISMISS_PREFIX = "ouj-chat-permission-dismiss-";
 const PERMISSION_DISMISS_MS = 3 * 24 * 60 * 60 * 1000;
 const PERMISSION_PROMPT_DELAY_MS = 1000;
 const DEFAULT_AVATAR_COLOR = "#66308d";
@@ -1581,8 +1581,8 @@ function ChatPageView({ model }) {
                 remoteChannelTelegramAvailable={Boolean(
                   appInfo?.remoteChannels?.telegramConfigured,
                 )}
-                remoteChannelSongbirdAvailable={Boolean(
-                  appInfo?.remoteChannels?.songbirdConfigured,
+                remoteChannelOujChatAvailable={Boolean(
+                  appInfo?.remoteChannels?.oujChatConfigured,
                 )}
                 remoteChannelMediaStreamAllowed={Boolean(
                   appInfo?.remoteChannels?.mediaStreamEnabled,
@@ -4481,7 +4481,7 @@ export default function ChatPage({
       remoteChannelEnabled: false,
       remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured
         ? "telegram"
-        : "songbird",
+        : "ouj-chat",
       remoteChannelSource: "",
       remoteChannelSyncMetadata: false,
       remoteChannelStreamMedia: false,
@@ -4584,7 +4584,7 @@ export default function ChatPage({
       remoteChannelEnabled: false,
       remoteChannelProvider: appInfo?.remoteChannels?.telegramConfigured
         ? "telegram"
-        : "songbird",
+        : "ouj-chat",
       remoteChannelSource: "",
       remoteChannelSyncMetadata: false,
       remoteChannelStreamMedia: false,
@@ -4631,7 +4631,7 @@ export default function ChatPage({
         setNewGroupForm((previous) => ({
           ...previous,
           remoteChannelEnabled: Boolean(source?.enabled),
-          remoteChannelProvider: source?.provider || "songbird",
+          remoteChannelProvider: source?.provider || "ouj-chat",
           remoteChannelSource:
             source?.sourceRaw ||
             (source?.sourceUsername ? `@${source.sourceUsername}` : "") ||
@@ -4704,7 +4704,7 @@ export default function ChatPage({
       newGroupForm.visibility !== "private" &&
       Boolean(newGroupForm.remoteChannelEnabled);
     const provider = String(
-      newGroupForm.remoteChannelProvider || "songbird",
+      newGroupForm.remoteChannelProvider || "ouj-chat",
     ).toLowerCase();
     const syncMetadata =
       enabled && Boolean(newGroupForm.remoteChannelSyncMetadata);
@@ -6772,8 +6772,8 @@ export default function ChatPage({
     window.dispatchEvent(
       new Event(
         activeChatId
-          ? "songbird-hide-install-bar"
-          : "songbird-show-install-bar",
+          ? "ouj-chat-hide-install-bar"
+          : "ouj-chat-show-install-bar",
       ),
     );
   }, [activeChatId, isMobileViewport]);
@@ -8317,7 +8317,7 @@ export default function ChatPage({
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
           window.dispatchEvent(
-            new CustomEvent("songbird:jump-to-message", {
+            new CustomEvent("ouj-chat:jump-to-message", {
               detail: { id: target.id },
             }),
           );

@@ -81,7 +81,7 @@ describe("mirror-media endpoint", () => {
     });
     const res = await request(server)
       .post("/mirror-media")
-      .set("x-songbird-webhook-secret", "valid-secret")
+      .set("x-ouj-chat-webhook-secret", "valid-secret")
       .send({
         jobId: "job-1",
         storageKey: "uploads/messages/a.jpg",

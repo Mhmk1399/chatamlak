@@ -16,7 +16,7 @@ import path from "node:path";
  */
 
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
-const TEMP_PREFIX = "songbird-mirror-";
+const TEMP_PREFIX = "ouj-chat-mirror-";
 
 function randomHex(bytes = 16) {
   return crypto.randomBytes(bytes).toString("hex");

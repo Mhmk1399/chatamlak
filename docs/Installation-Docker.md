@@ -57,10 +57,12 @@ docker run hello-world
 
 ## 2. Clone repository
 
+Set `OUJ_CHAT_REPOSITORY_URL` to the trusted repository URL supplied by your deployment maintainer, or copy a reviewed source checkout to `/opt/ouj-chat`. No public project repository is assumed here.
+
 ```bash
-sudo mkdir -p /opt/songbird
-cd /opt/songbird
-git clone https://github.com/bllackbull/Songbird.git .
+sudo mkdir -p /opt/ouj-chat
+cd /opt/ouj-chat
+git clone "$OUJ_CHAT_REPOSITORY_URL" .
 ```
 
 ## 3. Configure environment
@@ -77,7 +79,7 @@ The main `docker-compose.yaml` runs the application and nginx against an **exter
 
 The separate `docker-compose.mongo.yaml` is for development with Node.js running **on the host**. It publishes MongoDB on `127.0.0.1:27017` and advertises `localhost:27017`; that address does not point from the application container to the host database. Do not combine the two Compose files as an application/database stack. Follow the [host development setup](./MongoDB#local-mongodb-with-docker) instead.
 
-The `songbird-data` volume still preserves local upload binaries and local runtime files; it is not the MongoDB database volume. Back up the configured MongoDB deployment and file volume separately.
+The `ouj-chat-data` volume still preserves local upload binaries and local runtime files; it is not the MongoDB database volume. Back up the configured MongoDB deployment and file volume separately.
 :::
 
 :::info Media Worker Container
@@ -98,7 +100,7 @@ See [SSL Certificates](./SSL-Certificates.md) for the available options.
 Build the checked-out source and start the containers:
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 docker compose up -d --build
 ```
 
@@ -125,43 +127,43 @@ docker compose restart nginx
 
 ## Runtime User and Persistent Data
 
-Docker deployments do not use `songbird.service`. Songbird runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
+Docker deployments do not use `ouj-chat.service`. Ouj Chat runs as the user configured for the container (root in the current image unless Compose `user:` overrides it), and database commands run as that same container UID/GID:
 
 ```bash
-docker compose exec songbird npm --prefix /app/server run db:inspect
+docker compose exec ouj-chat npm --prefix /app/server run db:inspect
 ```
 
 To run the container as a specific non-root UID/GID, configure `user:` in your Compose service:
 
 ```yaml
 services:
-  songbird:
-    user: "songbird:songbird"
+  ouj-chat:
+    user: "ouj-chat:ouj-chat"
 ```
 
-When using a bind mount instead of the default named volume, make the host directory writable by that same UID:GID before starting Songbird. Songbird does not change host bind-mount ownership automatically:
+When using a bind mount instead of the default named volume, make the host directory writable by that same UID:GID before starting Ouj Chat. Ouj Chat does not change host bind-mount ownership automatically:
 
 ```bash
 mkdir -p ./data
-sudo chown -R songbird:songbird ./data
+sudo chown -R ouj-chat:ouj-chat ./data
 ```
 
 ## Admin panel service control
 
-The admin panel's **Restart service** and **Stop service** actions work in Docker deployments by calling the Docker Engine API through the mounted socket (`/var/run/docker.sock`). The compose file sets `SONGBIRD_CONTAINER_NAME=songbird` so the app knows which container to target.
+The admin panel's **Restart service** and **Stop service** actions work in Docker deployments by calling the Docker Engine API through the mounted socket (`/var/run/docker.sock`). The compose file sets `OUJ_CHAT_CONTAINER_NAME=ouj-chat` so the app knows which container to target.
 
 If you rename the container or use a custom name, set the env var to match:
 
 ```yaml
 # docker-compose.yaml
 environment:
-  SONGBIRD_CONTAINER_NAME: my-custom-name
+  OUJ_CHAT_CONTAINER_NAME: my-custom-name
 ```
 
 If you do not need service control from the admin panel, you can remove the socket mount from `docker-compose.yaml`:
 
 ```yaml
-# Remove or comment out this line under songbird volumes:
+# Remove or comment out this line under ouj-chat volumes:
 # - /var/run/docker.sock:/var/run/docker.sock
 ```
 
@@ -170,7 +172,7 @@ If you do not need service control from the admin panel, you can remove the sock
 Update your source checkout, then rebuild and restart:
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 docker compose up -d --build
 ```
 

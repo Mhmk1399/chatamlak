@@ -1,14 +1,14 @@
 services:
-  songbird:
+  ouj-chat:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: songbird
+    container_name: ouj-chat
     restart: unless-stopped
     expose:
       - "${SERVER_PORT:-5174}"
     env_file:
-      - path: ${SONGBIRD_ENV_FILE:-.env}
+      - path: ${OUJ_CHAT_ENV_FILE:-.env}
         required: false
     environment:
       NODE_ENV: production
@@ -19,8 +19,8 @@ services:
       MONGODB_URI: ${MONGODB_URI:?Set your MongoDB replica-set or Atlas URI in the selected environment file}
       MONGODB_DATABASE: ${MONGODB_DATABASE:-ouj_chat}
       # Tell the admin panel which container to use via the Docker API.
-      # Defaults to "songbird" which matches the container_name above.
-      SONGBIRD_CONTAINER_NAME: ${SONGBIRD_CONTAINER_NAME:-songbird}
+      # Defaults to "ouj-chat" which matches the container_name above.
+      OUJ_CHAT_CONTAINER_NAME: ${OUJ_CHAT_CONTAINER_NAME:-ouj-chat}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
@@ -30,7 +30,7 @@ services:
       WEBHOOK_URL: ${WEBHOOK_URL:-}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
     volumes:
-      - songbird-data:/app/data
+      - ouj-chat-data:/app/data
       # Required for the admin panel's services.
       # The container uses the Docker Engine API (via this socket) to control itself.
       # Remove this mount if you do not need service control from the admin panel.
@@ -50,16 +50,16 @@ services:
     # Wait for the app to pass its healthcheck before nginx starts accepting traffic.
     # This avoids 502s during database connection and index initialization.
     depends_on:
-      songbird:
+      ouj-chat:
         condition: service_healthy
 
 volumes:
-  songbird-data:
+  ouj-chat-data:
 
 # Optional Standalone Media Worker container service (uncomment to run worker in a separate container):
 #  media-worker:
-#    image: ${SONGBIRD_WORKER_IMAGE:-bllackbull/songbird-worker:latest}
-#    container_name: songbird-media-worker
+#    image: ${OUJ_CHAT_WORKER_IMAGE:-ouj-chat-worker:latest}
+#    container_name: ouj-chat-media-worker
 #    restart: unless-stopped
 #    environment:
 #      APP_ENV: ${APP_ENV:-production}
@@ -76,7 +76,7 @@ volumes:
 #      STORAGE_ENCRYPTION_KEY: ${STORAGE_ENCRYPTION_KEY:-}
 #      DATA_DIR: /app/data
 #    volumes:
-#      - songbird-data:/app/data
+#      - ouj-chat-data:/app/data
 #    expose:
 #      - "${WORKER_PORT:-8080}"
 

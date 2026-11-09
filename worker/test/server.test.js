@@ -18,7 +18,7 @@ describe("Media Worker HTTP Server", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("ok");
-    expect(res.body.service).toBe("songbird-media-worker");
+    expect(res.body.service).toBe("ouj-chat-media-worker");
     expect(res.body.queue).toBeDefined();
     expect(typeof res.body.queue.concurrency).toBe("number");
   });
@@ -54,7 +54,7 @@ describe("Media Worker HTTP Server", () => {
 
     const res = await request(server)
       .post("/transcode")
-      .set("x-songbird-webhook-secret", "valid-secret")
+      .set("x-ouj-chat-webhook-secret", "valid-secret")
       .send({
         fileId: "file-99",
         storageKey: "uploads/video.mp4",
@@ -83,7 +83,7 @@ describe("Media Worker HTTP Server", () => {
     });
 
     it("identifies public/remote domains as non-loopback", () => {
-      expect(isLoopbackUrl("https://songbird-web.onrender.com/api/uploads/webhook/processed")).toBe(false);
+      expect(isLoopbackUrl("https://ouj-chat-web.onrender.com/api/uploads/webhook/processed")).toBe(false);
       expect(isLoopbackUrl("https://api.example.com/webhook")).toBe(false);
       expect(isLoopbackUrl(null)).toBe(false);
       expect(isLoopbackUrl("not-a-valid-url")).toBe(false);
@@ -93,17 +93,17 @@ describe("Media Worker HTTP Server", () => {
   describe("hasEncryptedMagic", () => {
     let tmpDir;
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sb-magic-test-"));
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-magic-test-"));
     });
     afterEach(() => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it("detects SBENC1-prefixed ciphertext regardless of the flag", () => {
+    it("detects the encrypted-file header regardless of the flag", () => {
       const p = path.join(tmpDir, "enc.mov");
       fs.writeFileSync(
         p,
-        Buffer.concat([Buffer.from("SBENC1\0", "utf8"), Buffer.alloc(64, 1)]),
+        Buffer.concat([Buffer.from("OUJENC1\0", "utf8"), Buffer.alloc(64, 1)]),
       );
       expect(hasEncryptedMagic(p)).toBe(true);
     });
@@ -124,7 +124,7 @@ describe("Media Worker HTTP Server", () => {
     let tmpDir;
     const originalKey = process.env.STORAGE_ENCRYPTION_KEY;
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "sb-thumbenc-test-"));
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-thumbenc-test-"));
       process.env.STORAGE_ENCRYPTION_KEY = "thumb-test-key";
     });
     afterEach(() => {

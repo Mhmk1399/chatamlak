@@ -79,7 +79,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "edit_user",
         payload: { userSelector: "alice", nickname: "Alice Updated" },
@@ -109,7 +109,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "edit_chat",
         payload: { chatSelector: "general", name: "Team General" },
@@ -152,7 +152,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({ action: "delete_users", payload: { selectors: ["7"] } });
 
     expect(res.status).toBe(200);
@@ -198,7 +198,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "create_chat",
         payload: {
@@ -234,7 +234,7 @@ describe("POST /api/admin/db-tools database edits", () => {
     ]) {
       const res = await request(app)
         .post("/api/admin/db-tools")
-        .set("x-songbird-admin-token", "test-admin-token")
+        .set("x-ouj-chat-admin-token", "test-admin-token")
         .send({ action, payload: { userSelector: "alice" } });
     if (res.status !== 200) {
       console.log("TEST FAILURE ERROR BODY:", res.body);
@@ -263,7 +263,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const verifyRes = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "toggle_chat_verified",
         payload: { chatSelector: "general" },
@@ -276,7 +276,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const addRes = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "add_chat_members",
         payload: { chatSelector: "general", userSelectors: ["alice"] },
@@ -298,7 +298,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({ action: "reset_db" });
 
     expect(res.status).toBe(200);
@@ -309,7 +309,7 @@ describe("POST /api/admin/db-tools database edits", () => {
   test("edits a user with UUID string id without returning id=null or passing NaN", async () => {
     const uuidUser = {
       id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-      username: "songbird.admin",
+      username: "ouj-chat.admin",
       nickname: "Admin",
       avatar_url: null,
       color: "#10b981",
@@ -320,7 +320,7 @@ describe("POST /api/admin/db-tools database edits", () => {
     const adminGetRow = vi.fn(async (sql, params = []) => {
       const lower = String(sql || "").toLowerCase();
       if (lower.includes("users")) {
-        if (params.includes("songbird.admin") || params.includes("f47ac10b-58cc-4372-a567-0e02b2c3d479")) {
+        if (params.includes("ouj-chat.admin") || params.includes("f47ac10b-58cc-4372-a567-0e02b2c3d479")) {
           return uuidUser;
         }
       }
@@ -330,15 +330,15 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "edit_user",
-        payload: { userSelector: "songbird.admin", nickname: "Updated Admin", role: "owner" },
+        payload: { userSelector: "ouj-chat.admin", nickname: "Updated Admin", role: "owner" },
       });
 
     expect(res.status).toBe(200);
     expect(res.body.result.id).toBe("f47ac10b-58cc-4372-a567-0e02b2c3d479");
-    expect(res.body.result.username).toBe("songbird.admin");
+    expect(res.body.result.username).toBe("ouj-chat.admin");
     expect(adminRun).toHaveBeenCalledWith(
       expect.stringMatching(/UPDATE users/i),
       expect.arrayContaining(["f47ac10b-58cc-4372-a567-0e02b2c3d479"]),
@@ -351,7 +351,7 @@ describe("POST /api/admin/db-tools database edits", () => {
 
     const res = await request(app)
       .post("/api/admin/db-tools")
-      .set("x-songbird-admin-token", "test-admin-token")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "generate_users",
         payload: {

@@ -6,11 +6,11 @@
 
 | منبع | دستور | برای چه چیزی |
 |---|---|---|
-| لاگ های سرویس (systemd) | `sudo journalctl -u songbird -f` | کرش اپلیکیشن، خطاهای راه اندازی، استثناهای زمان اجرا. |
+| لاگ های سرویس (systemd) | `sudo journalctl -u ouj-chat -f` | کرش اپلیکیشن، خطاهای راه اندازی، استثناهای زمان اجرا. |
 | لاگ های Docker | `docker compose -f docker-compose.yaml logs -f` | همانند بالا، برای نصب های Docker. |
 | لاگ خطای Nginx | `sudo tail -f /var/log/nginx/error.log` | خطاهای 502/504، مشکلات پراکسی و TLS. |
 | لاگ دسترسی Nginx | `sudo tail -f /var/log/nginx/access.log` | تأیید رسیدن درخواست ها به سرور و کدهای وضعیت آنها. |
-| لاگ اسکریپت نصب | `cat /opt/songbird/logs/install.log` | شکست ها در حین نصب/به روزرسانی از طریق `songbird-deploy`. |
+| لاگ اسکریپت نصب | `cat /opt/ouj-chat/logs/install.log` | شکست ها در حین نصب/به روزرسانی از طریق `ouj-chat-deploy`. |
 
 :::tip
 
@@ -38,7 +38,7 @@
 
 ## توقف نصب هنگام دانلود بسته ها {#installation-stuck-downloading-packages}
 
-در حین نصب، Songbird نیاز به دانلود بسته های سیستمی و وابستگی ها دارد: بسته های apt، پکیج Node.js (از طریق NodeSource)، بسته های npm و برای نصب های Docker، ایمیج ها و بسته های Docker. در سرورهایی با شبکه های دارای محدودیت شدید یا فیلترشده، این دانلودها ممکن است متوقف شوند، با timeout مواجه گردند یا کاملاً شکست بخورند.
+در حین نصب، گفتگوی اوج نیاز به دانلود بسته های سیستمی و وابستگی ها دارد: بسته های apt، پکیج Node.js (از طریق NodeSource)، بسته های npm و برای نصب های Docker، ایمیج ها و بسته های Docker. در سرورهایی با شبکه های دارای محدودیت شدید یا فیلترشده، این دانلودها ممکن است متوقف شوند، با timeout مواجه گردند یا کاملاً شکست بخورند.
 
 نشانه های معمول:
 
@@ -69,17 +69,17 @@
 
 ## اپلیکیشن راه اندازی نمیشود / 502 Bad Gateway {#app-wont-start--502-bad-gateway}
 
-خطای `502 Bad Gateway` از Nginx یعنی Nginx در حال اجراست اما نمیتواند به بکاند Songbird متصل شود.
+خطای `502 Bad Gateway` از Nginx یعنی Nginx در حال اجراست اما نمیتواند به بکاند گفتگوی اوج متصل شود.
 
 ```bash
 # 1. وضعیت بکاند را بررسی کنید
 # استقرار Systemd:
-sudo systemctl status songbird
-sudo journalctl -u songbird -n 50 --no-pager
+sudo systemctl status ouj-chat
+sudo journalctl -u ouj-chat -n 50 --no-pager
 
 # استقرار Docker:
 docker compose -f docker-compose.yaml ps
-docker compose -f docker-compose.yaml logs --tail=50 songbird
+docker compose -f docker-compose.yaml logs --tail=50 ouj-chat
 
 # 2. بررسی کنید بکاند روی پورت مورد انتظار گوش میدهد (پیشفرض: 5174)
 ss -tulpn | grep 5174
@@ -92,7 +92,7 @@ sudo tail -n 50 /var/log/nginx/error.log
 
 - **تداخل پورت**: سرویس دیگری از قبل روی پورت 5174 گوش میدهد. `SERVER_PORT` را در `.env` تغییر دهید و بلوک `proxy_pass` در Nginx را همسو کنید.
 - **Node.js پشتیبانی نشده**: نسخه Node را تأیید کنید (`node -v` — به Node.js 24+ نیاز دارد).
-- **مجوزهای دایرکتوری data**: مطمئن شوید کاربر سرویس مالک `data/` است (`sudo chown -R songbird:songbird /opt/songbird/data`).
+- **مجوزهای دایرکتوری data**: مطمئن شوید کاربر سرویس مالک `data/` است (`sudo chown -R ouj-chat:ouj-chat /opt/ouj-chat/data`).
 - **فایل `.env` نامعتبر**: خطاهای نحوی، کاراکترهای نقل قول نامعتبر یا متغیرهای گمشده در `.env`.
 - **کانفیگ Nginx به پورت اشتباه اشاره میکند**: پورت `proxy_pass` در کانفیگ Nginx را با `SERVER_PORT` مقایسه کنید.
 
@@ -120,7 +120,7 @@ sudo systemctl reload nginx
 
 ## به روزرسانی های بیدرنگ نمیرسند {#real-time-updates-not-arriving}
 
-پلتفرم Songbird از یک اتصال دائمی WebSocket برای پیام های زنده، وضعیت آنلاین بودن و وضعیت در حال تایپ استفاده میکند و جریان Server-Sent Events (SSE) را به عنوان پشتیبان در نظر میگیرد. کاربر تا زمانی که هرگونه اتصال زنده برقرار باشد آنلاین نشان داده میشود و با بسته شدن آخرین اتصال آفلاین خواهد شد. اگر پیام ها فقط پس از رفرش صفحه ظاهر میشوند، احتمالاً جریان SSE توسط Nginx بافر میشود.
+پلتفرم گفتگوی اوج از یک اتصال دائمی WebSocket برای پیام های زنده، وضعیت آنلاین بودن و وضعیت در حال تایپ استفاده میکند و جریان Server-Sent Events (SSE) را به عنوان پشتیبان در نظر میگیرد. کاربر تا زمانی که هرگونه اتصال زنده برقرار باشد آنلاین نشان داده میشود و با بسته شدن آخرین اتصال آفلاین خواهد شد. اگر پیام ها فقط پس از رفرش صفحه ظاهر میشوند، احتمالاً جریان SSE توسط Nginx بافر میشود.
 
 - مطمئن شوید بلوک location مربوط به `/api/events` وجود دارد و بافرینگ را غیرفعال میکند (`proxy_buffering off;`، `add_header X-Accel-Buffering no;`). به [کانفیگ Nginx](./Nginx-Configuration.md) مراجعه کنید.
 - تأیید کنید هر پراکسی بالادستی یا CDN اتصال را بافر یا timeout نمیکند.
@@ -163,15 +163,15 @@ curl -x http://your-proxy:3128 https://fcm.googleapis.com
 
 ## مشکلات ترنسکد ویدیو {#video-transcoding-issues}
 
-پلتفرم Songbird هنگام فعال بودن `FILE_UPLOAD_TRANSCODE_VIDEOS=true`، ویدیوهای آپلودشده را به فرمت سازگار وب H.264/AAC MP4 بهینه سازی و ترنسکد میکند.
+پلتفرم گفتگوی اوج هنگام فعال بودن `FILE_UPLOAD_TRANSCODE_VIDEOS=true`، ویدیوهای آپلودشده را به فرمت سازگار وب H.264/AAC MP4 بهینه سازی و ترنسکد میکند.
 
 - **بررسی سلامت Media Worker**: در صورت استفاده از Media Worker مستقل، وضعیت آن را با `curl http://localhost:8080/health` (یا استفاده از پورت تنظیم شده `WORKER_PORT` / نشانی `WORKER_URL/health`) بررسی کنید. پاسخ باید حاوی `{"status": "ok", ...}` باشد. برای راهنمای جامع به [ورکر مدیا](./Media-Worker.md) مراجعه کنید.
-- **همگام بودن Webhook Secret**: مطمئن شوید مقدار `WEBHOOK_SECRET` در سرور Songbird با مقدار تنظیم شده در Media Worker یکسان است. در صورت عدم تطابق، درخواست ها با خطای `401 Unauthorized` رد میشوند.
-- **دسترسی به Callback سرور**: ورکر باید بتواند به اندپوینت کالبک سرور Songbird (`POST /api/uploads/webhook/processed`) متصل شود. در صورتی که سرور پشت ریورس پروکسی قرار دارد، متغیر `WEBHOOK_URL` (یا نام جایگزین `WEBHOOK_CALLBACK_URL`) را تنظیم کنید یا از صحت ارتباط شبکه ای میان ورکر و سرور اطمینان حاصل نمایید.
+- **همگام بودن Webhook Secret**: مطمئن شوید مقدار `WEBHOOK_SECRET` در سرور گفتگوی اوج با مقدار تنظیم شده در Media Worker یکسان است. در صورت عدم تطابق، درخواست ها با خطای `401 Unauthorized` رد میشوند.
+- **دسترسی به Callback سرور**: ورکر باید بتواند به اندپوینت کالبک سرور گفتگوی اوج (`POST /api/uploads/webhook/processed`) متصل شود. در صورتی که سرور پشت ریورس پروکسی قرار دارد، متغیر `WEBHOOK_URL` (یا نام جایگزین `WEBHOOK_CALLBACK_URL`) را تنظیم کنید یا از صحت ارتباط شبکه ای میان ورکر و سرور اطمینان حاصل نمایید.
 - **بررسی نصب FFmpeg**: در صورت استفاده از حالت پردازش محلی (`local`) یا اجرای مستقیم ورکر از سورس، از نصب بودن `ffmpeg` و `ffprobe` روی سیستم اطمینان حاصل کنید (`ffmpeg -version`).
 - **فضای دیسک موقت**: اطمینان حاصل کنید که گره ورکر یا سرور فضای دیسک موقت کافی (در دایرکتوری موقت سیستم) برای دانلود، پردازش، ترنسکد و تولید تصویر thumbnail در اختیار دارد.
 - **بررسی لاگ های سرویس و ورکر**: لاگ های سرور و ورکر را برای پیام های `[worker]` یا `[app-debug]` بررسی کنید.
-- **فعال سازی لاگ دیباگ**: مقدار `APP_DEBUG=true` را در فایل `.env` سرور Songbird فعال کنید تا جزئیات کامل فرآیند آپلود، ارسال به ورکر و به روزرسانی زنده رویدادها را در کنسول مشاهده نمایید.
+- **فعال سازی لاگ دیباگ**: مقدار `APP_DEBUG=true` را در فایل `.env` سرور گفتگوی اوج فعال کنید تا جزئیات کامل فرآیند آپلود، ارسال به ورکر و به روزرسانی زنده رویدادها را در کنسول مشاهده نمایید.
 
 ## مشکلات بیلد Docker {#docker-build-issues}
 
@@ -192,7 +192,7 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 |---|---|
 | مرورگر درباره گواهینامه نامعتبر هشدار میدهد | تأیید کنید که مسیرهای `ssl_certificate` / `ssl_certificate_key` در Nginx به فایل های معتبر اشاره میکنند. |
 | تمدید Certbot شکست میخورد | `sudo certbot renew --dry-run` را اجرا کنید و قابلیت دسترسی DNS/پورت 80 را بررسی کنید. |
-| گواهینامه مبتنی بر IP منقضی شده | روند گواهینامه IP از گواهینامه های کوتاه مدت (۶ روزه) استفاده میکند که توسط یک تایمر به طور خودکار تمدید میشوند؛ فعال بودن تایمر `songbird-lego-renew` را تأیید کنید. |
+| گواهینامه مبتنی بر IP منقضی شده | روند گواهینامه IP از گواهینامه های کوتاه مدت (۶ روزه) استفاده میکند که توسط یک تایمر به طور خودکار تمدید میشوند؛ فعال بودن تایمر `ouj-chat-lego-renew` را تأیید کنید. |
 | هشدار خودامضا (پیشفرض Docker) | با گواهینامه خودامضای پیشفرض موردانتظار است. برای محیط تولید با گواهینامه های واقعی جایگزین کنید. |
 
 برای گزینه های کامل راه اندازی به [گواهینامه های SSL](./SSL-Certificates.md) مراجعه کنید.
@@ -227,7 +227,7 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 
 ## مشکلات پنل مدیریت {#مشکلات-پنل-مدیریت}
 
-قابلیت های کنترل سرویس (ریستارت/توقف) و مشاهده لاگ های سیستم در پنل مدیریت بسته به نحوه استقرار Songbird به مجوزهای خاصی نیاز دارند.
+قابلیت های کنترل سرویس (ریستارت/توقف) و مشاهده لاگ های سیستم در پنل مدیریت بسته به نحوه استقرار گفتگوی اوج به مجوزهای خاصی نیاز دارند.
 
 :::tip
 
@@ -240,30 +240,30 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 **استقرارهای Systemd:**
 
 - کاربر سرویس به مجوزهای `sudo` برای دستورات `systemctl` نیاز دارد
-- یک فایل sudoers برای کاربر songbird ایجاد کنید:
+- یک فایل sudoers برای کاربر ouj-chat ایجاد کنید:
 
   ```bash
-  sudo visudo -f /etc/sudoers.d/songbird
+  sudo visudo -f /etc/sudoers.d/ouj-chat
   ```
 
-- این خطوط را اضافه کنید (اگر از کاربر سرویس متفاوتی استفاده میکنید `songbird` را جایگزین کنید):
+- این خطوط را اضافه کنید (اگر از کاربر سرویس متفاوتی استفاده میکنید `ouj-chat` را جایگزین کنید):
 
   ```txt
-  songbird ALL=(ALL) NOPASSWD: /bin/systemctl restart songbird.service
-  songbird ALL=(ALL) NOPASSWD: /bin/systemctl stop songbird.service
-  songbird ALL=(ALL) NOPASSWD: /bin/systemctl status songbird.service
+  ouj-chat ALL=(ALL) NOPASSWD: /bin/systemctl restart ouj-chat.service
+  ouj-chat ALL=(ALL) NOPASSWD: /bin/systemctl stop ouj-chat.service
+  ouj-chat ALL=(ALL) NOPASSWD: /bin/systemctl status ouj-chat.service
   ```
 
 - ذخیره کنید و مطمئن شوید مجوزها صحیح هستند:
 
   ```bash
-  sudo chmod 0440 /etc/sudoers.d/songbird
+  sudo chmod 0440 /etc/sudoers.d/ouj-chat
   ```
 
 **استقرارهای PM2:**
 
 - پروسه باید به runtime PM2 دسترسی داشته باشد
-- اطمینان حاصل کنید PM2 با همان کاربری که Songbird را اجرا میکند، در حال اجراست
+- اطمینان حاصل کنید PM2 با همان کاربری که گفتگوی اوج را اجرا میکند، در حال اجراست
 - کاربر باید مجوز اجرای `pm2 restart` و `pm2 stop` را داشته باشد
 
 ### لاگ های سیستم نمایش داده نمیشوند
@@ -274,19 +274,19 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 - کاربر را به گروه `systemd-journal` اضافه کنید:
 
   ```bash
-  sudo usermod -a -G systemd-journal songbird
+  sudo usermod -a -G systemd-journal ouj-chat
   ```
 
 - کاربر را به گروه `adm` اضافه کنید:
 
   ```bash
-  sudo usermod -a -G adm songbird
+  sudo usermod -a -G adm ouj-chat
   ```
 
 - سرویس را راه اندازی مجدد کنید:
 
   ```bash
-  sudo systemctl restart songbird
+  sudo systemctl restart ouj-chat
   ```
 
 **Docker:**
@@ -296,4 +296,4 @@ docker compose -f docker-compose.yaml build --no-cache --progress=plain
 
 ## هنوز گیر کرده اید؟
 
-اگر هیچ یک از موارد بالا مشکل را حل نکرد، خروجی لاگ مرتبط را جمع آوری کرده و یک issue در [مخزن پروژه](https://github.com/bllackbull/Songbird/issues) باز کنید.
+اگر هیچ‌یک از موارد بالا مشکل را حل نکرد، لاگ‌های مرتبط را بدون اسرار و پیام‌های خصوصی جمع‌آوری کنید و از مسیر پشتیبانی تعیین‌شدهٔ پروژه با مسئول استقرار تماس بگیرید.

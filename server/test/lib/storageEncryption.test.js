@@ -5,7 +5,7 @@ import {
   markEncryptedFileRecord,
 } from "../../lib/storageEncryption.js";
 
-const TEXT_PREFIX = "sb-enc-v1:";
+const TEXT_PREFIX = "ouj-enc-v1:";
 const originalStorageKey = process.env.STORAGE_ENCRYPTION_KEY;
 
 function createEncryption() {
@@ -24,11 +24,11 @@ afterEach(() => {
 describe("storage text encryption", () => {
   test("encrypts user content that imitates the ciphertext marker", () => {
     const encryption = createEncryption();
-    const input = "sb-enc-v1:not-real-ciphertext";
+    const input = "ouj-enc-v1:not-real-ciphertext";
 
     const encrypted = encryption.encryptText(input);
 
-    expect(encrypted).toMatch(/^sb-enc-v1:/);
+    expect(encrypted).toMatch(/^ouj-enc-v1:/);
     expect(encrypted).not.toBe(input);
     expect(encryption.decryptText(encrypted)).toBe(input);
   });
@@ -39,7 +39,7 @@ describe("storage text encryption", () => {
 
     const encrypted = encryption.encryptText(input);
 
-    expect(encrypted).toMatch(/^sb-enc-v1:/);
+    expect(encrypted).toMatch(/^ouj-enc-v1:/);
     expect(encrypted).not.toBe(input);
     expect(encryption.decryptText(encrypted)).toBe(input);
   });
@@ -71,12 +71,36 @@ describe("storage text encryption", () => {
 
   test("decrypts file byte ranges correctly for media streaming", () => {
     const encryption = createEncryption();
-    const fullContent = Buffer.from("Hello Songbird encrypted media streaming world!");
+    const fullContent = Buffer.from("Hello Ouj Chat encrypted media streaming world!");
     const encryptedBuffer = encryption.encryptBuffer(fullContent);
 
     // Mock filesystem methods to test in-memory
     const decryptedRange = encryption.decryptBuffer(encryptedBuffer).subarray(6, 14);
-    expect(decryptedRange.toString()).toBe("Songbird");
+    expect(decryptedRange.toString()).toBe("Ouj Chat");
+  });
+
+  test("reads messages and files encrypted with the prior marker", () => {
+    const encryption = createEncryption();
+    const currentText = encryption.encryptText("existing message");
+    const previousTextMarker = String.fromCharCode(
+      115,
+      98,
+      45,
+      101,
+      110,
+      99,
+      45,
+      118,
+      49,
+      58,
+    );
+    const previousText = `${previousTextMarker}${currentText.slice(TEXT_PREFIX.length)}`;
+    const currentFile = encryption.encryptBuffer(Buffer.from("existing file"));
+    const previousFile = Buffer.from(currentFile);
+    Buffer.from([83, 66, 69, 78, 67, 49, 0]).copy(previousFile, 0);
+
+    expect(encryption.decryptText(previousText)).toBe("existing message");
+    expect(encryption.decryptBuffer(previousFile).toString()).toBe("existing file");
   });
 
   test("ensureStorageEncryptionKey returns existing env key or generates a new one", () => {
@@ -120,7 +144,7 @@ describe("markEncryptedFileRecord", () => {
     const { default: os } = await import("node:os");
     const { default: path } = await import("node:path");
     const encryption = createEncryption();
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sb-mark-enc-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-mark-enc-"));
     try {
       const filePath = path.join(dir, "clip.mov");
       fs.writeFileSync(filePath, encryption.encryptBuffer(Buffer.from("data")));

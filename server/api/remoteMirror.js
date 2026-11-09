@@ -35,7 +35,7 @@ function registerRemoteMirrorRoutes(app, deps) {
     const entry = mirrorJobRegistry?.get?.(req.params?.jobId);
     if (!entry || entry.settled)
       return res.status(404).json({ error: "Not found." });
-    const provided = String(req.headers["x-songbird-mirror-secret"] || "");
+    const provided = String(req.headers["x-ouj-chat-mirror-secret"] || "");
     const expected = String(entry.secret || "");
     if (!expected || !provided)
       return res.status(401).json({ error: "Unauthorized." });
@@ -63,7 +63,7 @@ function registerRemoteMirrorRoutes(app, deps) {
   // ─── Worker result callback ───────────────────────────────────────────────
   app.post("/api/remote-channel/webhook/mirror-done", async (req, res) => {
     if (expectedWebhookSecret) {
-      const headerSecret = req.headers["x-songbird-webhook-secret"];
+      const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
       if (headerSecret !== expectedWebhookSecret) {
         return res.status(401).json({ error: "Unauthorized webhook request." });
       }

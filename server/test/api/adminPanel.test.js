@@ -129,7 +129,7 @@ describe("PostgreSQL maintenance actions", () => {
   });
 
   test("uses native PostgreSQL maintenance dependencies for backup, vacuum, and reset", async () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-admin-panel-"));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-admin-panel-"));
     temporaryPaths.push(directory);
     const backup = vi.fn(async (target) => fs.writeFileSync(target, "archive"));
     const vacuum = vi.fn(async () => {});
@@ -197,7 +197,7 @@ describe("PostgreSQL maintenance actions", () => {
     const restoreRes = await request(app)
       .post("/api/admin/maintenance/restore")
       .set("Cookie", "sid=admin-session")
-      .attach("database", Buffer.from("archive"), "songbird.dump");
+      .attach("database", Buffer.from("archive"), "ouj-chat.dump");
     expect(restoreRes.status).toBe(409);
     expect(restore).not.toHaveBeenCalled();
 
@@ -235,9 +235,9 @@ describe("PostgreSQL maintenance actions", () => {
   });
 
   test("cleans up stale WAL and SHM files in SQLite restore fallback", async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-admin-restore-"));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-admin-restore-"));
     temporaryPaths.push(tempDir);
-    const dbPath = path.join(tempDir, "songbird.db");
+    const dbPath = path.join(tempDir, "ouj-chat.db");
     const walPath = `${dbPath}-wal`;
     const shmPath = `${dbPath}-shm`;
     fs.writeFileSync(dbPath, "OLD_DB");

@@ -1,6 +1,6 @@
 # Deployment Script
 
-The deployment script (`songbird-deploy`) is an interactive, menu-driven tool for dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates. Its menus depend on the installed script version. For this MongoDB branch, use the current [MongoDB guide](./MongoDB.md) and verify the generated environment before starting the server.
+The deployment script (`ouj-chat-deploy`) is an interactive, menu-driven tool for dependencies, builds, Nginx, SSL certificates, environment configuration, database management, and updates. Its menus depend on the installed script version. For this MongoDB branch, use the current [MongoDB guide](./MongoDB.md) and verify the generated environment before starting the server.
 
 :::info
 
@@ -10,28 +10,28 @@ The script targets Ubuntu (22.04+) and needs root privileges (it uses `sudo` aut
 
 ## First run
 
-Run the one-liner on your server:
+Obtain the reviewed Ouj Chat source from your deployment maintainer. From the repository root on your server, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bllackbull/Songbird/main/scripts/install.sh | bash
+bash scripts/install.sh
 ```
 
-This downloads the script, opens the menu, and installs a global `songbird-deploy` command. From then on, launch it anytime with:
+This runs the local script, opens the menu, and installs a global `ouj-chat-deploy` command. From then on, launch it anytime with:
 
 ```bash
-songbird-deploy
+ouj-chat-deploy
 ```
 
 ## Main menu
 
 | Option | Action | Description |
 |---|---|---|
-| 1 | 📥 Install Songbird | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
-| 2 | 🔄 Update Songbird | Update to latest version or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
-| 3 | ♻️ Restart Songbird | Restart the `songbird.service`. |
+| 1 | 📥 Install Ouj Chat | Full guided install: dependencies, build, Nginx, SSL, and `.env`. |
+| 2 | 🔄 Update Ouj Chat | Update to latest version or downgrade to a specific version, rebuild, and restart (optional pre-update backup). |
+| 3 | ♻️ Restart Ouj Chat | Restart the `ouj-chat.service`. |
 | 4 | ⚙️ Edit Settings (.env) | Change ports, uploads, retention, sign-up, and other env values, then rebuild/apply. |
 | 5 | 🗃️ Manage Database | Open the database submenu (see below). |
-| 6 | 🗑️ Remove Songbird | Uninstall Songbird, optionally removing the global command. |
+| 6 | 🗑️ Remove Ouj Chat | Uninstall Ouj Chat, optionally removing the global command. |
 | 7 | 🔄 Update menu | Check GitHub for newer script versions and update the global command (or reinstall current). |
 | 8 | 🌐 Configure mirrors | Set NodeSource, apt, and npm registry mirrors for restricted networks. |
 | 9 | 📋 View Logs | Open the logs submenu (script, service, Nginx access/error). |
@@ -52,8 +52,8 @@ When you choose **Install**, the script walks you through a series of prompts:
 
 | Mode | Description |
 |---|---|
-| Domain | Serve Songbird on a domain name (e.g. `example.com`). |
-| IP | Serve Songbird directly on the server's public IP. |
+| Domain | Serve Ouj Chat on a domain name (e.g. `example.com`). |
+| IP | Serve Ouj Chat directly on the server's public IP. |
 
 ### 3. Certificate mode
 
@@ -91,7 +91,7 @@ Encryption and push keys (`STORAGE_ENCRYPTION_KEY`, `VAPID_*`) are generated aut
 
 ### 6. Coturn TURN/STUN relay (Optional)
 
-Songbird supports audio and video calls via WebRTC. When users are behind symmetric NATs or restrictive firewalls, a TURN/STUN relay server is necessary to establish peer-to-peer media connections.
+Ouj Chat supports audio and video calls via WebRTC. When users are behind symmetric NATs or restrictive firewalls, a TURN/STUN relay server is necessary to establish peer-to-peer media connections.
 
 The deployment script can automatically install and configure a dedicated [Coturn](https://github.com/coturn/coturn) relay server on the host.
 
@@ -114,7 +114,7 @@ Option **5** opens the installed script's database manager. The following table 
 
 ## Updating and downgrading
 
-Choose **Update Songbird** (Option 2) from the menu to update or downgrade your installation:
+Choose **Update Ouj Chat** (Option 2) from the menu to update or downgrade your installation:
 
 The flow below describes the deployment menu. A downgrade across the SQL-to-MongoDB boundary requires the matching old application and its SQL backup; the menu does not convert MongoDB data back to SQL. Follow [Updating & Downgrading](./Updating.md) before changing database generations.
 
@@ -130,10 +130,10 @@ See [Updating & Downgrading](./Updating.md) for full details and manual alternat
 
 ## Updating the deployment menu
 
-Choose **Update menu** (Option 7) to check for updates to the `songbird-deploy` script itself:
+Choose **Update menu** (Option 7) to check for updates to the `ouj-chat-deploy` script itself:
 
 1. **Check for updates**: The script queries the official GitHub repository to check if a newer version of `scripts/install.sh` is available.
-2. **Automatic update**: If a newer version is found, it downloads and replaces the global `songbird-deploy` command (`/usr/local/bin/songbird-deploy`), updating it to the latest version.
+2. **Automatic update**: If a newer version is found, it downloads and replaces the global `ouj-chat-deploy` command (`/usr/local/bin/ouj-chat-deploy`), updating it to the latest version.
 3. **Reinstall prompt**: If the menu is already up to date, or if fetching from GitHub fails (such as in restricted network environments), it prompts:
    ```txt
    Do you want to reinstall the current menu again? [y/N]
@@ -176,8 +176,8 @@ The **View Logs** submenu surfaces the most useful logs without remembering path
 
 | Option | Source |
 |---|---|
-| Script logs | The installer's own log at `/opt/songbird/logs/install.log`. |
-| Service logs | `journalctl` output for `songbird.service`. |
+| Script logs | The installer's own log at `/opt/ouj-chat/logs/install.log`. |
+| Service logs | `journalctl` output for `ouj-chat.service`. |
 | Nginx access logs | Nginx access log. |
 | Nginx error logs | Nginx error log. |
 

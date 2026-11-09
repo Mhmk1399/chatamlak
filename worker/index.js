@@ -18,7 +18,7 @@ import {
 const workerDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRootDir = path.resolve(workerDir, "..");
 
-process.title = "songbird-worker";
+process.title = "ouj-chat-worker";
 
 if (typeof process.loadEnvFile === "function") {
   try { process.loadEnvFile(path.join(projectRootDir, ".env")); } catch {}
@@ -84,7 +84,7 @@ class AsyncQueue {
 
 const jobQueue = new AsyncQueue(WORKER_CONCURRENCY);
 
-const tmpDir = path.join(os.tmpdir(), "songbird-media-worker");
+const tmpDir = path.join(os.tmpdir(), "ouj-chat-media-worker");
 fs.mkdirSync(tmpDir, { recursive: true });
 
 const tempPath = (suffix = "") =>
@@ -141,7 +141,7 @@ export const encryptThumbnail = (thumbPath, shouldEncrypt) => {
 };
 
 /**
- * Sniff the SBENC1 magic header directly from disk. The server is supposed
+ * Sniff the encrypted-file header directly from disk. The server is supposed
  * to send the right encryptionType flag, but records written before the
  * flag was recorded correctly (encryption_type='none' with ciphertext on
  * disk) would otherwise make the worker ffprobe ciphertext and fail with
@@ -217,7 +217,7 @@ async function notifyCallback(url, payload, secret, maxRetries = 5) {
         headers: {
           "Content-Type": "application/json",
           ...(effectiveSecret
-            ? { "x-songbird-webhook-secret": effectiveSecret }
+            ? { "x-ouj-chat-webhook-secret": effectiveSecret }
             : {}),
         },
         body: JSON.stringify(payload),
@@ -502,7 +502,7 @@ export async function processMirrorJob({
   try {
     await downloadWithRetry(async () => {
       const headers = downloadSecret
-        ? { "x-songbird-mirror-secret": downloadSecret }
+        ? { "x-ouj-chat-mirror-secret": downloadSecret }
         : {};
       const res = await fetch(downloadUrl, { headers });
       if (!res.ok) {
@@ -613,7 +613,7 @@ export function createWorkerServer(options = {}) {
   const processMirrorFn = options.processMirrorJob || processMirrorJob;
 
   const checkSecret = (req, res) => {
-    const incomingSecret = req.headers["x-songbird-webhook-secret"];
+    const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
     if (effectiveWebhookSecret && incomingSecret !== effectiveWebhookSecret) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Unauthorized" }));
@@ -634,7 +634,7 @@ export function createWorkerServer(options = {}) {
       return res.end(
         JSON.stringify({
           status: "ok",
-          service: "songbird-media-worker",
+          service: "ouj-chat-media-worker",
           queue: {
             pending: effectiveQueue.pending,
             queued: effectiveQueue.size,
@@ -647,7 +647,7 @@ export function createWorkerServer(options = {}) {
     // Transcode dispatch endpoint
     if (req.method === "POST" && url.pathname === "/transcode") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-songbird-webhook-secret"];
+      const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
 
       let payload;
       try {
@@ -713,7 +713,7 @@ export function createWorkerServer(options = {}) {
     // Mirror dispatch endpoint (Remote Channel media handoff)
     if (req.method === "POST" && url.pathname === "/mirror-media") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-songbird-webhook-secret"];
+      const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
 
       let payload;
       try {
@@ -800,7 +800,7 @@ if (
 ) {
   server.listen(PORT, () => {
     console.log(
-      `[songbird-worker] listening on port ${PORT} (storage: ${storage.type})`,
+      `[ouj-chat-worker] listening on port ${PORT} (storage: ${storage.type})`,
     );
   });
 

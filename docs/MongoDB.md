@@ -128,8 +128,8 @@ Keep MongoDB available. Configure the media worker/storage as described in their
 Stop the old application and take database, file-storage and encryption-key backups first. Use a new, empty MongoDB target, then inspect a dry run:
 
 ```sh
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --dry-run
-npm --prefix server run db:import-sql -- --source ./backups/songbird.db --apply
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --dry-run
+npm --prefix server run db:import-sql -- --source ./backups/ouj-chat.db --apply
 ```
 
 For PostgreSQL, put the old connection URI in the private `LEGACY_POSTGRES_URI` environment variable; do not pass a password-bearing URI as an argument:

@@ -85,7 +85,7 @@ export function createMediaQueueManager({
 
         // Broadcast SSE notification
         if (typeof emitChatEvent === "function") {
-          emitChatEvent("songbird:realtime-event", {
+          emitChatEvent("ouj-chat:realtime-event", {
             type: "video:ready",
             fileId,
             storageKey: row.storage_key || storageKey,

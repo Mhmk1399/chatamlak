@@ -1,5 +1,5 @@
 export const VOICE_SPEEDS = [1, 1.25, 1.5, 1.75, 2];
-export const VOICE_SPEED_KEY = "songbird-voice-speed";
+export const VOICE_SPEED_KEY = "ouj-chat-voice-speed";
 let sessionSpeed = null;
 export function readVoiceSpeed() {
   if (sessionSpeed !== null) return sessionSpeed;
@@ -16,5 +16,5 @@ export function writeVoiceSpeed(speed) {
     localStorage.setItem(VOICE_SPEED_KEY, String(speed));
     sessionSpeed = null;
   } catch { /* Keep the preference for this document when persistence fails. */ }
-  window.dispatchEvent(new Event("songbird:voice-speed"));
+  window.dispatchEvent(new Event("ouj-chat:voice-speed"));
 }

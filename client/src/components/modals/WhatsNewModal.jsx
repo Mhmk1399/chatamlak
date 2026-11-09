@@ -116,7 +116,7 @@ export default function WhatsNewModal({
       codeEl.setAttribute("aria-label", label);
     };
     const enhanceCodeElements = () => {
-      const blocks = container.querySelectorAll(".sb-code-block");
+      const blocks = container.querySelectorAll(".ouj-code-block");
       blocks.forEach((block) => {
         if (block.dataset.sbEnhanced === "1") return;
         block.dataset.sbEnhanced = "1";
@@ -129,7 +129,7 @@ export default function WhatsNewModal({
         codeEl.tabIndex = 0;
         codeEl.setAttribute("role", "button");
         codeEl.setAttribute("aria-label", "Copy inline code");
-        codeEl.classList.add("sb-inline-code-copyable");
+        codeEl.classList.add("ouj-inline-code-copyable");
       });
     };
     const handleCodeCopy = async ({ codeEl, button }) => {
@@ -159,39 +159,39 @@ export default function WhatsNewModal({
     const handleCodeBlockClick = (event) => {
       const target = resolveTargetElement(event?.target);
       if (!target || typeof target.closest !== "function") return;
-      const button = target.closest(".sb-code-copy");
-      const inlineCode = target.closest(".sb-inline-code-copyable");
+      const button = target.closest(".ouj-code-copy");
+      const inlineCode = target.closest(".ouj-inline-code-copyable");
       if (inlineCode && container.contains(inlineCode)) {
         event.preventDefault();
         void handleCodeCopy({ codeEl: inlineCode, button: null });
         return;
       }
-      const block = button?.closest(".sb-code-block");
+      const block = button?.closest(".ouj-code-block");
       if (!button || !block || !container.contains(block)) return;
       event.preventDefault();
       event.stopPropagation();
       void handleCodeCopy({
-        codeEl: block.querySelector("pre.sb-code > code"),
+        codeEl: block.querySelector("pre.ouj-code > code"),
         button,
       });
     };
     const handleCodeBlockKeyDown = (event) => {
       const target = resolveTargetElement(event?.target);
       if (!target || typeof target.closest !== "function") return;
-      const inlineCode = target.closest(".sb-inline-code-copyable");
+      const inlineCode = target.closest(".ouj-inline-code-copyable");
       if (inlineCode && container.contains(inlineCode)) {
         if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         void handleCodeCopy({ codeEl: inlineCode, button: null });
         return;
       }
-      const button = target.closest(".sb-code-copy");
-      const block = button?.closest(".sb-code-block");
+      const button = target.closest(".ouj-code-copy");
+      const block = button?.closest(".ouj-code-block");
       if (!button || !block || !container.contains(block)) return;
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
       void handleCodeCopy({
-        codeEl: block.querySelector("pre.sb-code > code"),
+        codeEl: block.querySelector("pre.ouj-code > code"),
         button,
       });
     };
@@ -243,7 +243,7 @@ export default function WhatsNewModal({
         <div className="flex items-start justify-between gap-4 border-b border-brand-100/70 px-6 py-5 dark:border-brand-500/20">
           <div>
             <p className="text-[10px] uppercase tracking-[0.28em] text-brand-500/80">{localize("What's New")}</p>
-            <h3 id="whats-new-modal-title" className="mt-2 text-2xl font-bold text-brand-700 dark:text-brand-200">{localize("Songbird ")}{activeSection?.heading || version || ""}
+            <h3 id="whats-new-modal-title" className="mt-2 text-2xl font-bold text-brand-700 dark:text-brand-200">{localize("Ouj Chat ")}{activeSection?.heading || version || ""}
             </h3>
           </div>
           <button
@@ -262,7 +262,7 @@ export default function WhatsNewModal({
         >
           {activeSection?.body ? (
             <div
-              className="sb-markdown wrap-break-word text-start text-sm text-slate-700 wrap-anywhere dark:text-slate-100"
+              className="ouj-markdown wrap-break-word text-start text-sm text-slate-700 wrap-anywhere dark:text-slate-100"
               dangerouslySetInnerHTML={{ __html: String(markdownHtml || "") }}
             />
           ) : (

@@ -24,7 +24,7 @@ function makeManager({ emitChatEvent, claimImpl }) {
     updateRemoteChannelSourceError: async () => {},
     getRemoteChannelSourceById: async () => ({
       id: 5,
-      provider: "songbird",
+      provider: "ouj-chat",
       enabled: 1,
       source_version: 1,
       chat_id: "c1",
@@ -49,12 +49,12 @@ function makeManager({ emitChatEvent, claimImpl }) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const songbirdItem = {
+const oujChatItem = {
   id: 1,
   source_id: 5,
   source_version: 1,
   chat_id: "c1",
-  provider: "songbird",
+  provider: "ouj-chat",
   telegram_message_id: 11,
   payload_json: JSON.stringify({ message: { id: 11, body: "hello" } }),
 };
@@ -67,7 +67,7 @@ describe("queue change events", () => {
       emitChatEvent,
       claimImpl: async () => {
         calls += 1;
-        return calls === 1 ? songbirdItem : null;
+        return calls === 1 ? oujChatItem : null;
       },
     });
     manager.start();

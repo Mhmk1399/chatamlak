@@ -468,7 +468,7 @@ export const CallScreen = memo(function CallScreen({
         title={localize("Click to expand")}
         onPointerDown={handlePointerDown}
         onClick={handleBoxClick}
-        className={`fixed z-[9999] sb-pip-enter select-none touch-none ${
+        className={`fixed z-[9999] ouj-pip-enter select-none touch-none ${
           remoteAspect >= 1 ? "w-48 sm:w-64" : "w-36 sm:w-44"
         } rounded-2xl border-2 border-white/20 shadow-2xl overflow-hidden bg-slate-900 cursor-grab active:cursor-grabbing ${
           isDragging
@@ -501,7 +501,7 @@ export const CallScreen = memo(function CallScreen({
             <div className="mt-2 flex max-w-[90%] items-center justify-center gap-0.5 min-w-0">
               <span
                 className={`truncate text-xs font-semibold text-white/90 ${
-                  hasPersian(peerName) ? "font-fa sb-fa-baseline-fix" : ""
+                  hasPersian(peerName) ? "font-fa ouj-fa-baseline-fix" : ""
                 }`}
                 dir="auto"
               >
@@ -520,8 +520,8 @@ export const CallScreen = memo(function CallScreen({
       <div
         className={`fixed inset-0 z-[9999] flex items-center justify-center ${
           isConnected ? "" : "md:bg-black/45 md:px-5"
-        } ${restoredFromPip ? "sb-backdrop-enter" : ""} ${
-          isCallClosing ? "sb-call-exit-backdrop" : ""
+        } ${restoredFromPip ? "ouj-backdrop-enter" : ""} ${
+          isCallClosing ? "ouj-call-exit-backdrop" : ""
         }`}
       >
         <div
@@ -533,8 +533,8 @@ export const CallScreen = memo(function CallScreen({
               ? "md:rounded-none"
               : "md:aspect-square md:h-auto md:w-[400px] md:rounded-3xl md:shadow-xl"
           } ${
-            restoredFromPip ? "sb-call-modal-enter" : ""
-          } ${isCallClosing ? "sb-call-exit" : ""}`}
+            restoredFromPip ? "ouj-call-modal-enter" : ""
+          } ${isCallClosing ? "ouj-call-exit" : ""}`}
           style={restoredFromPip ? pipOriginStyle : undefined}
         >
         {isConnected && !remoteOn ? (
@@ -565,7 +565,7 @@ export const CallScreen = memo(function CallScreen({
                 <div className="flex min-w-0 items-center gap-0.5">
                   <h2
                     className={`truncate text-lg font-semibold text-white ${
-                      hasPersian(peerName) ? "font-fa sb-fa-baseline-fix" : ""
+                      hasPersian(peerName) ? "font-fa ouj-fa-baseline-fix" : ""
                     }`}
                     dir="auto"
                   >
@@ -612,7 +612,7 @@ export const CallScreen = memo(function CallScreen({
           <div className="mt-4 flex max-w-[20rem] items-center justify-center gap-0.5 px-4 min-w-0">
             <h2
               className={`max-w-[20rem] truncate text-xl font-semibold text-white ${
-                hasPersian(peerName) ? "font-fa sb-fa-baseline-fix" : ""
+                hasPersian(peerName) ? "font-fa ouj-fa-baseline-fix" : ""
               }`}
               dir="auto"
             >

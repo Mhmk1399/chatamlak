@@ -5,12 +5,12 @@ import { openDatabase, runAdminActionViaServer } from "./_db-admin.js";
 import { createPostgresMaintenance } from "../lib/postgresMaintenance.js";
 import { readDbConfig } from "../settings/env.js";
 
-const dbPath = path.join(dataDir, "songbird.db");
+const dbPath = path.join(dataDir, "ouj-chat.db");
 const uploadsDir = path.join(dataDir, "uploads", "messages");
 
 async function main() {
   const args = getCliArgs();
-  const hasForceFlag = hasForceYes(args) || process.env.SONGBIRD_FORCE_RESET === "1";
+  const hasForceFlag = hasForceYes(args) || process.env.OUJ_CHAT_FORCE_RESET === "1";
   const hasNoRecreateFlag = args.includes("--no-recreate");
   const hasRecreateFlag = args.includes("--recreate");
   const dbConfig = readDbConfig();
@@ -22,7 +22,7 @@ async function main() {
   });
   if (!confirmed) return console.log("Aborted.");
 
-  // When Songbird is running, reset through its authenticated loopback API.
+  // When Ouj Chat is running, reset through its authenticated loopback API.
   // This preserves schema/settings and uses PostgreSQL TRUNCATE when applicable.
   const remoteResult = await runAdminActionViaServer("reset_db");
   if (remoteResult) {

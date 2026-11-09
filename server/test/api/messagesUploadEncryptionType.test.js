@@ -6,7 +6,7 @@ import os from "node:os";
 import { makeApp, makeUserStore } from "../helpers/makeApp.js";
 import { createStorageEncryption } from "../../lib/storageEncryption.js";
 
-const ENC_MAGIC = Buffer.from("SBENC1\0", "utf8");
+const ENC_MAGIC = Buffer.from("OUJENC1\0", "utf8");
 
 // Fake .mov payload — content does not need to be a valid video because the
 // route only encrypts + records the file; transcoding is stubbed out.
@@ -51,7 +51,7 @@ describe("POST /api/messages/upload local video with encryption enabled", () => 
 
   beforeEach(() => {
     tmpDir = realFs.mkdtempSync(
-      realPath.join(os.tmpdir(), "sb-enc-type-test-"),
+      realPath.join(os.tmpdir(), "ouj-enc-type-test-"),
     );
     storedName = "clip-test.mov";
     plainBytes = buildFakeMovBuffer();

@@ -41,7 +41,7 @@ describe("isCallSupported", () => {
   it("returns true on HTTPS with mediaDevices", () => {
     vi.stubGlobal("window", {
       isSecureContext: true,
-      location: { protocol: "https:", hostname: "songbird.example.com" },
+      location: { protocol: "https:", hostname: "ouj-chat.example.com" },
     });
     vi.stubGlobal("navigator", {
       mediaDevices: { getUserMedia: () => Promise.resolve() },

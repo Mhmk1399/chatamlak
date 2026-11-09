@@ -1,6 +1,6 @@
 # Running behind a domain + subpath
 
-By default Songbird is served from the root of a domain (e.g. `https://chat.example.com/`). If you instead want to host it under a subpath (e.g. `https://example.com/songbird/`), you need to align three things: the Vite build `base`, the client asset references, and the Nginx location block.
+By default Ouj Chat is served from the root of a domain (e.g. `https://chat.example.com/`). If you instead want to host it under a subpath (e.g. `https://example.com/ouj-chat/`), you need to align three things: the Vite build `base`, the client asset references, and the Nginx location block.
 
 :::info
 
@@ -14,7 +14,7 @@ Root-domain hosting is the supported default and needs none of the steps below. 
 |---|---|---|
 | Vite build | Set `base` to the subpath | So built asset URLs are prefixed with the subpath. |
 | `client/index.html` | Ensure icon/manifest links resolve under the subpath | Absolute `/...` paths break when served from a subpath. |
-| Nginx | Add a `location` block for the subpath that proxies to the Node server | So requests under the subpath reach Songbird. |
+| Nginx | Add a `location` block for the subpath that proxies to the Node server | So requests under the subpath reach Ouj Chat. |
 | `.env` | Keep `SERVER_PORT` / `CLIENT_PORT` aligned with the proxy | Same as a normal install. |
 
 ## 1. Set the Vite `base`
@@ -25,7 +25,7 @@ In `client/vite.config.js`, add a `base` option matching your subpath (note the 
 export default defineConfig(({ mode }) => {
   // ...
   return {
-    base: "/songbird/",
+    base: "/ouj-chat/",
     // ...plugins, build, server config unchanged
   };
 });
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
 Then rebuild the client:
 
 ```bash
-cd /opt/songbird/client
+cd /opt/ouj-chat/client
 npm run build
 ```
 
@@ -47,7 +47,7 @@ npm run build
 Proxy the subpath to the Node server. The SSE endpoint still needs its own buffering-disabled block. Adapt the [base Nginx config](./Nginx-Configuration.md) like this:
 
 ```nginx
-location /songbird/api/events {
+location /ouj-chat/api/events {
   proxy_pass http://127.0.0.1:5174;
   proxy_http_version 1.1;
   proxy_set_header Host $host;
@@ -61,7 +61,7 @@ location /songbird/api/events {
   add_header X-Accel-Buffering no;
 }
 
-location /songbird/ {
+location /ouj-chat/ {
   proxy_pass http://127.0.0.1:5174/;
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
@@ -83,6 +83,6 @@ sudo systemctl reload nginx
 
 :::info
 
-The trailing slash on `proxy_pass http://127.0.0.1:5174/;` strips the `/songbird/` prefix before forwarding to the Node server. Keep the `base` in Vite and the `location` prefix in Nginx in sync; a mismatch is the most common cause of broken assets or blank pages on subpath setups.
+The trailing slash on `proxy_pass http://127.0.0.1:5174/;` strips the `/ouj-chat/` prefix before forwarding to the Node server. Keep the `base` in Vite and the `location` prefix in Nginx in sync; a mismatch is the most common cause of broken assets or blank pages on subpath setups.
 
 :::

@@ -7,7 +7,7 @@ import { RemoteStorageProvider } from "../../lib/storage/RemoteStorageProvider.j
 
 describe("storage provider checkHealth (admin Services probe)", () => {
   test("local: writable upload dir is healthy", async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "songbird-storage-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ouj-chat-storage-"));
     try {
       const provider = new LocalStorageProvider({ uploadDir: dir });
       await expect(provider.checkHealth()).resolves.toBe(true);
@@ -18,14 +18,14 @@ describe("storage provider checkHealth (admin Services probe)", () => {
 
   test("local: missing upload dir is unhealthy, never throws", async () => {
     const provider = new LocalStorageProvider({
-      uploadDir: path.join(os.tmpdir(), "songbird-does-not-exist-xyz"),
+      uploadDir: path.join(os.tmpdir(), "ouj-chat-does-not-exist-xyz"),
     });
     await expect(provider.checkHealth()).resolves.toBe(false);
   });
 
   test("remote: answering bucket is healthy even on 404 (authenticated miss)", async () => {
     const provider = new RemoteStorageProvider({
-      bucket: "songbird",
+      bucket: "ouj-chat",
       s3Client: {
         // HeadObject 404 → exists() resolves false → bucket still answered.
         send: async () => {
@@ -41,7 +41,7 @@ describe("storage provider checkHealth (admin Services probe)", () => {
 
   test("remote: present key is healthy", async () => {
     const provider = new RemoteStorageProvider({
-      bucket: "songbird",
+      bucket: "ouj-chat",
       s3Client: { send: async () => ({}) },
     });
     await expect(provider.checkHealth()).resolves.toBe(true);
@@ -49,7 +49,7 @@ describe("storage provider checkHealth (admin Services probe)", () => {
 
   test("remote: auth/network failure rejects (unreachable)", async () => {
     const provider = new RemoteStorageProvider({
-      bucket: "songbird",
+      bucket: "ouj-chat",
       s3Client: {
         send: async () => {
           const err = new Error("Forbidden");

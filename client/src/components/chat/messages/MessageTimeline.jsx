@@ -119,8 +119,8 @@ export function MessageTimeline({
       if (virtualized) virtualizer.scrollToIndex(index, { align: detail.align || "center" });
       else document.getElementById(detail.id ? `message-${detail.id}` : `day-group-${detail.dayKey}`)?.scrollIntoView({ block: "center" });
     };
-    window.addEventListener("songbird:jump-to-message", jump);
-    return () => window.removeEventListener("songbird:jump-to-message", jump);
+    window.addEventListener("ouj-chat:jump-to-message", jump);
+    return () => window.removeEventListener("ouj-chat:jump-to-message", jump);
   }, [timelineRows, virtualized, virtualizer]);
   const visibleRows = virtualized ? virtualizer.getVirtualItems().map((item) => ({ row: timelineRows[item.index], item })) : timelineRows.map((row) => ({ row, item: null }));
 
@@ -411,7 +411,7 @@ export function MessageTimeline({
                 key={row.key}
                 className={
                   !virtualized && row.type === "message" && row.key === animateRowKey
-                    ? "sb-message-build-in"
+                    ? "ouj-message-build-in"
                     : undefined
                 }
               >

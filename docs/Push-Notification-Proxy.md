@@ -25,13 +25,13 @@ PUSH_PROXY_URL="http://your-proxy-server:3128"
 **2. Restart service**
 
 ```bash
-sudo systemctl restart songbird
+sudo systemctl restart ouj-chat
 ```
 
 **3. Verify in logs**
 
 ```bash
-journalctl -u songbird -f | grep push
+journalctl -u ouj-chat -f | grep push
 # Should show: [push] Using proxy: http://your-proxy-server:3128
 ```
 

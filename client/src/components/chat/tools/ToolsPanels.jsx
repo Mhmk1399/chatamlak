@@ -43,10 +43,10 @@ export function OutboxPanel() {
       if (!cancelled) setMessages(queued);
     };
     void load();
-    window.addEventListener("songbird:outbox-changed", load);
+    window.addEventListener("ouj-chat:outbox-changed", load);
     return () => {
       cancelled = true;
-      window.removeEventListener("songbird:outbox-changed", load);
+      window.removeEventListener("ouj-chat:outbox-changed", load);
     };
   }, [context.user.id, context.user.username]);
   return (

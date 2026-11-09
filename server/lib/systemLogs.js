@@ -6,13 +6,13 @@ import { fileURLToPath } from "node:url";
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRootDir = path.resolve(serverDir, "..", "..");
 
-const SERVICE_NAME = process.env.SONGBIRD_SERVICE_NAME || "songbird.service";
-const WORKER_SERVICE_NAME = process.env.SONGBIRD_WORKER_SERVICE_NAME || "songbird-worker.service";
+const SERVICE_NAME = process.env.OUJ_CHAT_SERVICE_NAME || "ouj-chat.service";
+const WORKER_SERVICE_NAME = process.env.OUJ_CHAT_WORKER_SERVICE_NAME || "ouj-chat-worker.service";
 
 // Candidate paths for each log source. The first readable one wins.
 const INSTALLER_LOG_CANDIDATES = [
   path.join(projectRootDir, "logs", "install.log"),
-  "/opt/songbird/logs/install.log",
+  "/opt/ouj-chat/logs/install.log",
 ];
 
 const NGINX_LOG_CANDIDATES = [
@@ -22,7 +22,7 @@ const NGINX_LOG_CANDIDATES = [
 
 // Hint shown when a log is unavailable due to OS-level permission restrictions.
 const PERMISSION_HINT =
-  "To fix: add the songbird user to the adm and systemd-journal groups, " +
+  "To fix: add the ouj-chat user to the adm and systemd-journal groups, " +
   "and add a sudoers drop-in for service control. " +
   "Re-run the installer or see the README for manual steps.";
 

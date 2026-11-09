@@ -23,7 +23,7 @@ dotenv.config({ path: path.join(serverRootDir, ".env"), quiet: true });
 const dataDir = path.resolve(
   process.env.DATA_DIR || path.resolve(projectRootDir, "data"),
 );
-const dbPath = path.join(dataDir, "songbird.db");
+const dbPath = path.join(dataDir, "ouj-chat.db");
 
 export function createKnexInstance() {
   const dbClient = (
@@ -41,7 +41,7 @@ export function createKnexInstance() {
       port: Number(process.env.POSTGRES_PORT || 5432),
       user: process.env.POSTGRES_USER || "postgres",
       password: process.env.POSTGRES_PASSWORD || "postgres",
-      database: process.env.POSTGRES_DB || "songbird",
+      database: process.env.POSTGRES_DB || "ouj-chat",
       ssl:
         process.env.POSTGRES_SSL === "true"
           ? { rejectUnauthorized: false }

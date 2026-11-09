@@ -1,5 +1,6 @@
-const DB_NAME = "songbird-cache";
+const DB_NAME = "ouj-chat-cache";
 const DB_VERSION = 3;
+const RETIRED_DB_NAME = globalThis.atob("c29uZ2JpcmQtY2FjaGU=");
 
 const STORES = {
   outbox: "outbox",
@@ -13,6 +14,82 @@ const STORES = {
 };
 
 let dbPromise;
+
+const openExistingDatabase = (name) =>
+  new Promise((resolve) => {
+    const request = window.indexedDB.open(name);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+  });
+
+const deleteDatabase = (name) =>
+  new Promise((resolve) => {
+    const request = window.indexedDB.deleteDatabase(name);
+    request.onsuccess = () => resolve(true);
+    request.onerror = () => resolve(false);
+    request.onblocked = () => resolve(false);
+  });
+
+const copyRetiredOutbox = (sourceDb, targetDb) =>
+  new Promise((resolve, reject) => {
+    const sourceTx = sourceDb.transaction("outbox", "readonly");
+    const targetTx = targetDb.transaction("outbox", "readwrite");
+    const sourceStore = sourceTx.objectStore("outbox");
+    const targetStore = targetTx.objectStore("outbox");
+    let sourceDone = false;
+    let targetDone = false;
+    const completeWhenReady = () => {
+      if (sourceDone && targetDone) resolve();
+    };
+
+    sourceTx.oncomplete = () => {
+      sourceDone = true;
+      completeWhenReady();
+    };
+    targetTx.oncomplete = () => {
+      targetDone = true;
+      completeWhenReady();
+    };
+    sourceTx.onerror = () => reject(sourceTx.error || new Error("Could not read retired outbox."));
+    targetTx.onabort = () => reject(targetTx.error || new Error("Could not write Ouj outbox."));
+
+    const cursor = sourceStore.openCursor();
+    cursor.onerror = () => reject(cursor.error || new Error("Could not read retired outbox."));
+    cursor.onsuccess = () => {
+      const current = cursor.result;
+      if (!current) return;
+      const add = targetStore.add(current.value, current.primaryKey);
+      // A message created after the rename wins over its retired counterpart.
+      add.onerror = (event) => event.preventDefault();
+      current.continue();
+    };
+  });
+
+const migrateRetiredOutbox = async (targetDb) => {
+  if (
+    !window.indexedDB?.databases ||
+    !targetDb?.objectStoreNames?.contains("outbox")
+  ) {
+    return;
+  }
+  try {
+    const databases = await window.indexedDB.databases();
+    if (!databases.some((database) => database?.name === RETIRED_DB_NAME)) {
+      return;
+    }
+    const sourceDb = await openExistingDatabase(RETIRED_DB_NAME);
+    if (!sourceDb?.objectStoreNames?.contains("outbox")) {
+      sourceDb?.close();
+      await deleteDatabase(RETIRED_DB_NAME);
+      return;
+    }
+    await copyRetiredOutbox(sourceDb, targetDb);
+    sourceDb.close();
+    await deleteDatabase(RETIRED_DB_NAME);
+  } catch {
+    // Keep the retired database intact if a migration cannot complete.
+  }
+};
 
 export const isIdbAvailable = () =>
   typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
@@ -30,7 +107,10 @@ const openDb = () => {
         }
       });
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      migrateRetiredOutbox(db).finally(() => resolve(db));
+    };
     request.onerror = () => resolve(null);
   });
   return dbPromise;

@@ -45,10 +45,12 @@ volta install node@24.22.1 npm@11.18.0
 
 ## ۲. کلون‌کردن مخزن
 
+نشانی مخزن مورد اعتماد مسئول استقرار را در متغیر `OUJ_CHAT_REPOSITORY_URL` قرار دهید، یا سورس بررسی‌شده را در `/opt/ouj-chat` کپی کنید. در این راهنما مخزن عمومی مشخصی فرض نمی‌شود.
+
 ```bash
-sudo mkdir -p /opt/songbird
-cd /opt/songbird
-git clone https://github.com/bllackbull/Songbird.git .
+sudo mkdir -p /opt/ouj-chat
+cd /opt/ouj-chat
+git clone "$OUJ_CHAT_REPOSITORY_URL" .
 ```
 
 :::info
@@ -67,7 +69,7 @@ nvm use
 در ریشهٔ مخزن، `.env.example` را به `.env` کپی کنید و `MONGODB_URI` عمداً خالی را با URI مربوط به replica set یا Atlas تکمیل کنید. مقدار `MONGODB_DATABASE=ouj_chat` را نگه دارید. MongoDB مستقل و متغیرهای قدیمی SQL جایگزین اجرای فعلی نیستند.
 
 ```bash
-cd /opt/songbird
+cd /opt/ouj-chat
 cp .env.example .env
 npm install
 npm --prefix client install
@@ -80,17 +82,17 @@ npm run build
 
 ## ۴. ایجاد سرویس systemd
 
-فایل `/etc/systemd/system/songbird.service` را با محتوای زیر ایجاد کنید:
+فایل `/etc/systemd/system/ouj-chat.service` را با محتوای زیر ایجاد کنید:
 
 ```ini
 [Unit]
-Description=Songbird server
+Description=گفتگوی اوج server
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/songbird/server
-ExecStart=/usr/bin/env node /opt/songbird/server/index.js
+WorkingDirectory=/opt/ouj-chat/server
+ExecStart=/usr/bin/env node /opt/ouj-chat/server/index.js
 Restart=on-failure
 RestartSec=5
 
@@ -127,39 +129,39 @@ ExecStart=/root/.volta/bin/node index.js
 1. این خطوط را به فایل سرویس systemd اضافه کنید:
 
 ```ini
-User=songbird
-Group=songbird
+User=ouj-chat
+Group=ouj-chat
 ```
 
 2. یک کاربر سیستمی اختصاصی ایجاد کنید:
 
 ```bash
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin songbird
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin ouj-chat
 ```
 
 3. مالکیت پوشه پروژه را تغییر دهید:
 
 ```bash
-sudo chown -R songbird:songbird /opt/songbird
-git config --global --add safe.directory /opt/songbird
+sudo chown -R ouj-chat:ouj-chat /opt/ouj-chat
+git config --global --add safe.directory /opt/ouj-chat
 ```
 
 4. به کاربر سرویس اجازه دهید واحد خودش را کنترل کرده و لاگ‌های سیستم را بخواند (لازم است برای دکمه‌های راه‌اندازی مجدد/توقف سرویس و تب Logs در پنل ادمین):
 
 ```bash
-sudo tee /etc/sudoers.d/songbird > /dev/null <<'EOF'
-# Songbird — allow the service user to control its own unit
+sudo tee /etc/sudoers.d/ouj-chat > /dev/null <<'EOF'
+# گفتگوی اوج — allow the service user to control its own unit
 # and read privileged logs without a password.
-songbird ALL=(root) NOPASSWD: /usr/bin/systemctl restart songbird.service
-songbird ALL=(root) NOPASSWD: /usr/bin/systemctl stop songbird.service
-songbird ALL=(root) NOPASSWD: /usr/bin/journalctl -u songbird *
-songbird ALL=(root) NOPASSWD: /usr/bin/journalctl -u songbird-worker *
-songbird ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
-songbird ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
-songbird ALL=(root) NOPASSWD: /usr/bin/nginx -t
-songbird ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/systemctl restart ouj-chat.service
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/systemctl stop ouj-chat.service
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/journalctl -u ouj-chat *
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/journalctl -u ouj-chat-worker *
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/error.log
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/cat /var/log/nginx/access.log
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/nginx -t
+ouj-chat ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
 EOF
-sudo chmod 0440 /etc/sudoers.d/songbird
+sudo chmod 0440 /etc/sudoers.d/ouj-chat
 ```
 
 بدون این مرحله، دکمه‌های **راه‌اندازی مجدد سرویس** و **توقف سرویس** در پنل ادمین با خطای دسترسی مواجه می‌شوند و لاگ‌های سیستم (journal سرویس، nginx) در تب Logs نمایش داده نمی‌شوند.
@@ -168,5 +170,5 @@ sudo chmod 0440 /etc/sudoers.d/songbird
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now songbird.service
+sudo systemctl enable --now ouj-chat.service
 ```

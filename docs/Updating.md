@@ -59,4 +59,4 @@ A SQL-era release cannot run against MongoDB merely by checking out its code. Ro
 
 ## Deployment script versions
 
-Older `songbird-deploy` menus included SQL engine selection, SQL backups and SQL migrations. Treat those flows as legacy unless the exact script version has been updated for MongoDB. Use the native commands in [Database Commands](./Database-Commands) and verify the selected deployment artifact instead of assuming an automatic import or downgrade.
+Older `ouj-chat-deploy` menus included SQL engine selection, SQL backups and SQL migrations. Treat those flows as legacy unless the exact script version has been updated for MongoDB. Use the native commands in [Database Commands](./Database-Commands) and verify the selected deployment artifact instead of assuming an automatic import or downgrade.

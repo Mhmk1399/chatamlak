@@ -15,7 +15,7 @@ dotenv.config({ path: path.join(projectRootDir, ".env") });
 
 const HELP = `Apply a browser-upload CORS policy to the S3-compatible storage bucket.
 
-Songbird uploads files straight from the browser to the bucket via presigned
+Ouj Chat uploads files straight from the browser to the bucket via presigned
 PUT URLs, so the bucket must allow cross-origin requests from your app domain.
 Railway buckets ship with no CORS policy and no dashboard toggle for it; run
 this script once from any machine with network access (your laptop is fine).
@@ -42,10 +42,10 @@ Options (flags override environment variables):
   -h, --help              Show this help.
 
 Examples:
-  npm run storage:cors -- --origin https://songbird.up.railway.app
+  npm run storage:cors -- --origin https://ouj-chat.up.railway.app
   STORAGE_BUCKET=my-bucket-abc123 STORAGE_ENDPOINT=https://storage.railway.app \\
     STORAGE_ACCESS_KEY_ID=xxx STORAGE_SECRET_ACCESS_KEY=yyy \\
-    npm run storage:cors -- --origin https://songbird.up.railway.app --show
+    npm run storage:cors -- --origin https://ouj-chat.up.railway.app --show
 `;
 
 function clean(value) {

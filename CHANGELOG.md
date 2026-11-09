@@ -220,7 +220,7 @@
 - 🔁 App version check and service restart/stop from Actions tab
 - 🖥️ Admin presence pings with idle auto-exit
 - 💡 Prompt to create an owner user after a fresh install
-- 📖 Songbird Wiki website at `docs.songbird.website`
+- 📖 [Ouj Chat documentation](docs/index.md)
 - 🎨 Settings page design improvements to be more touch-friendly for mobile screens
 - 🕑 Show "last seen" timestamp status for non-invisible users
 - 🔧 Bug fixes
@@ -229,7 +229,7 @@
 
 ### New Features
 
-- 📡 Songbird as a second Remote Channel source provider
+- 📡 Ouj Chat as a second Remote Channel source provider
 - 💬 Message preview toggle in notification settings
 
 ### Improvements

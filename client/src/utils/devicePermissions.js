@@ -1,7 +1,7 @@
 export const PERMISSION_SETUP_EVENT = "ouj:permission-setup";
 export const INSTALL_GUIDE_EVENT = "ouj:install-guide";
 const SIGNUP_PENDING_KEY = "ouj-permissions-signup-pending";
-const INSTALL_PENDING_KEY = "songbird-pwa-permissions-prompt";
+const INSTALL_PENDING_KEY = "ouj-chat-pwa-permissions-prompt";
 const completedKey = (user) => `ouj-permissions-setup-v1:${user?.id || user?.username}`;
 
 export function markSignupPermissionsPending(username) {

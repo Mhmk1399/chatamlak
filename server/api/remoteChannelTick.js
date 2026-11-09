@@ -4,10 +4,10 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
  * remoteChannelTick.js — sleep-friendly on-demand polling.
  *
  * POST /api/internal/remote-channel/tick runs one poll+queue cycle
- * (Telegram + Songbird sources, then a queue drain) and disconnects the
+ * (Telegram + Ouj Chat sources, then a queue drain) and disconnects the
  * MTProto client so a serverless host (e.g. Render free) can sleep again.
  *
- * Auth: shared secret via `x-songbird-cron-secret` header, matching
+ * Auth: shared secret via `x-ouj-chat-cron-secret` header, matching
  * REMOTE_CHANNEL_CRON_SECRET. That secret is auto-generated on first boot
  * (see ensureSystemSecrets in lib/secrets.js) and persisted to app_settings,
  * so deploys never require the user to invent one: env var wins when set
@@ -51,7 +51,7 @@ function registerRemoteChannelTickRoutes(app, deps) {
         });
       }
       const provided = String(
-        req.headers["x-songbird-cron-secret"] ||
+        req.headers["x-ouj-chat-cron-secret"] ||
           req.headers["x-cron-secret"] ||
           "",
       );
@@ -80,7 +80,7 @@ function registerRemoteChannelTickRoutes(app, deps) {
             pollRounds: summary?.pollRounds ?? null,
             queueBatches: summary?.queueBatches ?? null,
             telegram: summary?.telegram ?? null,
-            songbird: summary?.songbird ?? null,
+            oujChat: summary?.oujChat ?? null,
           }),
         );
         return res.json({ ok: true, ...summary });
@@ -111,7 +111,7 @@ function registerRemoteChannelTickRoutes(app, deps) {
         });
       }
       const provided = String(
-        req.headers["x-songbird-cron-secret"] ||
+        req.headers["x-ouj-chat-cron-secret"] ||
           req.headers["x-cron-secret"] ||
           "",
       );

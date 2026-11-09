@@ -286,7 +286,7 @@ export class RemoteStorageProvider extends StorageProvider {
    * @returns {Promise<boolean>}
    */
   async checkHealth() {
-    await this.exists("songbird-storage-health-probe");
+    await this.exists("ouj-chat-storage-health-probe");
     return true;
   }
 

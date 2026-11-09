@@ -11,7 +11,7 @@ import { normalizeSqlForPostgres } from '../lib/sqlNormalizer.js'
 dotenv.config({ path: path.join(serverDir, '..', '.env'), quiet: true })
 dotenv.config({ path: path.join(serverDir, '.env'), override: true, quiet: true })
 
-export const dbPath = path.join(dataDir, 'songbird.db')
+export const dbPath = path.join(dataDir, 'ouj-chat.db')
 export const uploadsDir = path.join(dataDir, 'uploads', 'messages')
 export const avatarUploadsDir = path.join(dataDir, 'uploads', 'avatars')
 const backupDir = path.join(dataDir, 'backups')
@@ -274,7 +274,7 @@ export async function openDatabase(options = {}) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     const backupPath = path.join(
       backupDir,
-      `songbird-pre-migration-v${fromVersion}-to-v${toVersion}-${stamp}.db`,
+      `ouj-chat-pre-migration-v${fromVersion}-to-v${toVersion}-${stamp}.db`,
     )
     fs.copyFileSync(targetDbPath, backupPath)
   }
@@ -491,7 +491,7 @@ export async function runAdminActionViaServer(action, payload = {}) {
 
   const headers = { 'Content-Type': 'application/json' }
   if (process.env.ADMIN_API_TOKEN) {
-    headers['x-songbird-admin-token'] = process.env.ADMIN_API_TOKEN
+    headers['x-ouj-chat-admin-token'] = process.env.ADMIN_API_TOKEN
   }
 
   const res = await fetch(`http://127.0.0.1:${port}/api/admin/db-tools`, {
