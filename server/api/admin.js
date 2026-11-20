@@ -75,6 +75,7 @@ function registerAdminRoutes(app, deps) {
     path,
     emitChatEvent,
     emitSseEvent,
+    disconnectUserSessions,
   } = deps;
 
   function toSql(builder, p = []) {
@@ -244,6 +245,7 @@ function registerAdminRoutes(app, deps) {
         const deleteAll = Boolean(payload.all);
 
         let userIds = [];
+        const usernamesByUserId = new Map();
 
         for (const selector of selectors) {
           const raw = String(selector || "").trim();
@@ -270,6 +272,9 @@ function registerAdminRoutes(app, deps) {
 
           if (userRow?.id) {
             userIds.push(String(userRow.id));
+            if (userRow.username) {
+              usernamesByUserId.set(String(userRow.id), String(userRow.username));
+            }
           } else if (isIdSelector) {
             userIds.push(raw);
           }
@@ -287,9 +292,15 @@ function registerAdminRoutes(app, deps) {
               error: "Provide selectors or set all=true to delete every user.",
             });
           }
-          const rawAllUserIds = adminGetAll("SELECT id FROM users ORDER BY id ASC");
-          userIds = (Array.isArray(rawAllUserIds) ? rawAllUserIds : (await rawAllUserIds) || [])
-            .map((row) => String(row.id))
+          const rawAllUsers = adminGetAll("SELECT id, username FROM users ORDER BY id ASC");
+          const allUsers = Array.isArray(rawAllUsers) ? rawAllUsers : (await rawAllUsers) || [];
+          userIds = allUsers
+            .map((row) => {
+              if (row?.username) {
+                usernamesByUserId.set(String(row.id), String(row.username));
+              }
+              return String(row.id);
+            })
             .filter(Boolean);
         }
 
@@ -452,6 +463,12 @@ function registerAdminRoutes(app, deps) {
 
         removeStoredFileNames(storedNames);
         adminSave();
+        for (const userId of userIds) {
+          const username = usernamesByUserId.get(String(userId));
+          if (username) {
+            await disconnectUserSessions?.(username, "account_deleted");
+          }
+        }
 
         return res.json({
           ok: true,
@@ -1205,6 +1222,7 @@ function registerAdminRoutes(app, deps) {
             type: "session_revoked",
             reason: "banned",
           });
+          await disconnectUserSessions?.(user.username, "banned");
         }
 
         return res.json({

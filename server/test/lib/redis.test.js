@@ -1,5 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { createRedisClient, createRedisSessionStore } from "../../lib/redis.js";
+import { sessionTokenStorageValue } from "../../lib/sessionTokens.js";
 
 describe("Redis In-Process Fallback Client", () => {
   test("set and get values with TTL", async () => {
@@ -52,6 +53,22 @@ describe("Redis In-Process Fallback Client", () => {
     await sessionStore.deleteSession("test-token");
     const deletedSession = await sessionStore.getSession("invalid-token");
     expect(deletedSession).toBeNull();
+  });
+
+  test("does not accept a stored session digest as a presented credential", async () => {
+    const redis = createRedisClient({ forceInProcess: true });
+    const dbGetSession = vi.fn(async () => ({ id: "user-1" }));
+    const sessionStore = createRedisSessionStore({ redisClient: redis, dbGetSession });
+    const stored = sessionTokenStorageValue("browser-token");
+
+    await sessionStore.createSession("user-1", "browser-token");
+
+    expect(await sessionStore.getSession(stored)).toBeNull();
+    expect(dbGetSession).not.toHaveBeenCalled();
+    await sessionStore.deleteSession(stored);
+    expect(await redis.get(`session:${stored}`)).not.toBeNull();
+    await sessionStore.deleteSession(stored, { acceptStored: true });
+    expect(await redis.get(`session:${stored}`)).toBeNull();
   });
 });
 

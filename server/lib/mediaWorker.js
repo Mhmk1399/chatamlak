@@ -1,4 +1,20 @@
 import { readEnvBool } from "../settings/env.js";
+import { safeErrorCode } from "./requestLogging.js";
+
+function logDispatchFailure(event, fileId, error, fields = {}) {
+  console.warn(JSON.stringify({
+    service: "ouj-chat",
+    event,
+    fileId: String(fileId || "").slice(0, 200),
+    errorCode: safeErrorCode(error, "media_worker_dispatch_failed"),
+    ...(Number.isFinite(Number(fields.attempt))
+      ? { attempt: Math.max(0, Math.round(Number(fields.attempt))) }
+      : {}),
+    ...(Number.isFinite(Number(fields.timeoutMs))
+      ? { timeoutMs: Math.max(0, Math.round(Number(fields.timeoutMs))) }
+      : {}),
+  }));
+}
 
 async function sendTranscodeRequest(workerUrl, payload, webhookSecret, fetchImpl) {
   if (!workerUrl) return false;
@@ -150,12 +166,7 @@ export async function dispatchMediaWorkerJob({
         fetchImpl,
       );
     } catch (err) {
-      console.warn(
-        "[mediaWorker] Failed to dispatch to local worker (%s) for file %s:",
-        localWorkerUrl,
-        fileId,
-        err?.message || err,
-      );
+      logDispatchFailure("media_worker.local_dispatch_failed", fileId, err);
       return false;
     }
   }
@@ -173,12 +184,7 @@ export async function dispatchMediaWorkerJob({
         fetchImpl,
       );
     } catch (err) {
-      console.warn(
-        "[mediaWorker] Failed to dispatch to remote worker (%s) for file %s:",
-        configuredRemoteUrl,
-        fileId,
-        err?.message || err,
-      );
+      logDispatchFailure("media_worker.remote_dispatch_failed", fileId, err);
       return false;
     }
   }
@@ -213,13 +219,9 @@ export async function dispatchMediaWorkerJob({
           return true;
         }
       } catch (err) {
-        console.warn(
-          "[mediaWorker] Attempt %d to remote worker (%s) failed for file %s:",
+        logDispatchFailure("media_worker.remote_dispatch_retry", fileId, err, {
           attempt,
-          configuredRemoteUrl,
-          fileId,
-          err?.message || err,
-        );
+        });
       }
 
       const elapsed = Date.now() - startTime;
@@ -235,8 +237,11 @@ export async function dispatchMediaWorkerJob({
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
-    console.warn(
-      `[mediaWorker] Remote worker (${configuredRemoteUrl}) timed out after ${timeoutMs}ms (${attempt} attempt${attempt === 1 ? "" : "s"}) for file ${fileId}. Falling back to local worker (${localWorkerUrl}).`,
+    logDispatchFailure(
+      "media_worker.remote_dispatch_timeout",
+      fileId,
+      { code: "remote_worker_timeout" },
+      { attempt, timeoutMs },
     );
   }
 
@@ -249,12 +254,7 @@ export async function dispatchMediaWorkerJob({
       fetchImpl,
     );
   } catch (err) {
-    console.warn(
-      "[mediaWorker] Failed to dispatch to local worker (%s) for file %s:",
-      localWorkerUrl,
-      fileId,
-      err?.message || err,
-    );
+    logDispatchFailure("media_worker.local_fallback_failed", fileId, err);
     return false;
   }
 }

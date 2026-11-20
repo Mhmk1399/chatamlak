@@ -6,6 +6,8 @@ Requested output name: **chat.md**
 Revision inspected: branch **main**, commit **1f1d5cb2da6e4dfbbd65d74469990a8055ad42d6**, application version **0.13.2**  
 Method: static, read-only source and configuration inspection
 
+> **Sprint 1 update (2026-11-20):** Sections 1–23 below are the historical, pre-remediation audit baseline. They must not be read as the current state of the modified source tree. Section 24 records the subsequent CHAT-001–CHAT-010 implementation work, and [`docs/platform/CHAT_SPRINT_1_HANDOFF.md`](docs/platform/CHAT_SPRINT_1_HANDOFF.md) is the rollout handoff. The sprint changed source and tests only: it did not deploy, migrate production data, inspect customer messages, commit, push, or change any running container.
+
 ## Audit conventions and scope
 
 The status labels in this report have the following strict meanings:
@@ -1554,3 +1556,180 @@ Static declaration coverage is high enough to call the **source inventory comple
 - generated graph query/update results because the **graphify** CLI was unavailable.
 
 No directory was intentionally excluded except dependency/build output, actual environment/secret files, live data, and generated/binary assets not needed to establish architecture. Recommendations were not implemented.
+
+## 24. Sprint 1 implementation addendum
+
+### 24.1 Evidence boundary
+
+This addendum records the source work performed after the read-only audit. It is a development log, not evidence that `web-chat-1` or any other production process runs this revision. Only the Owj Chat repository was modified; Owj Web and Owj Analytics were not modified. No production database, message, attachment, secret, migration, object bucket, container, commit, or push was changed.
+
+Dependency installation was limited to local development packages needed to execute tests. No new runtime dependency was added to a `package.json`. The server lockfile was refreshed by the local install and is listed explicitly below. A first server install attempted an `mongodb-memory-server` binary download and was stopped; later installs used `--ignore-scripts`. The real-Mongo `test:mongo` suite was deliberately not run.
+
+### 24.2 Task outcome
+
+| Task | Source outcome | Important boundary |
+|---|---|---|
+| CHAT-001 | Implemented and regression-tested | Private file, stored-name, thumbnail, range and object-store paths authorize file → message → chat → current membership. Only an explicitly public channel permits anonymous message media. |
+| CHAT-002 | Implemented and regression-tested | Actor/chat/purpose/message or `clientRequestId`/storage key are bound; completion is persisted, queue-aware and retry-safe. Client and server must roll together. |
+| CHAT-003 | Implemented and regression-tested | Hardened paths emit structured allowlisted fields and stable error codes, without raw bodies, credentials, messages, provider URLs/bodies, object keys or raw exceptions. |
+| CHAT-004 | Implemented in source; rollout required | Final image uses `node`; Chat drops all capabilities, uses `no-new-privileges`, has no Docker socket, and disables host service/Nginx control in-process. Existing volume ownership must be prepared for uid/gid 1000. |
+| CHAT-005 | Partial | Worker/callback auth fails closed and work/URLs/queues are bounded, but the shared secret is static rather than an expiring replay-resistant service credential; DNS rebinding remains a deployment review item. |
+| CHAT-006 | Partial | Sensitive operations require owner plus a separate operator token and host controls are disabled. The static operator token is an interim step-up mechanism, not a final operator identity/rotation design. |
+| CHAT-007 | Implemented in source; cutover required | New session tokens are stored as SHA-256 digests; plaintext legacy rows dual-read/backfill. Stored digests are not accepted as bearer tokens. Logout/device revocation and account-wide admin invalidation close matching WebSocket and SSE streams. |
+| CHAT-008 | Partial | Cookie-only upgrade auth, origin/payload/IP/rate/auth-timeout/heartbeat controls, membership invalidation and explicit WS/SSE revocation are implemented. Already-open streams are not periodically revalidated solely because idle/absolute expiry elapses. |
+| CHAT-009 | Implemented and regression-tested | Topic close, async auto-add, upload persistence/save, webhook save, queue admission and pending-claim removal now honor their awaited contracts. |
+| CHAT-010 | Partial by design | Server and worker queues have bounded depth/concurrency and overload backpressure. The in-memory fallback remains non-durable across restart; no new broker was introduced. |
+
+The dormant M1 preparation is intentionally not live: `platformIdentitySchema.js`, `platformIdentityAdapter.js`, `supportAccessService.js`, and `crmTaskCommand.js` expose no production route, UI, startup wiring, external call or executed migration. Web still must approve issuer/audience/scope, verified link, guest-capability and CRM service contracts.
+
+### 24.3 Exact repository file inventory
+
+Repository/deployment files changed:
+
+- `.env.example`
+- `Dockerfile`
+- `docker-compose.yaml`
+- `playbook.yaml`
+- `scripts/docker-entrypoint.sh`
+- `scripts/test/docker-entrypoint.test.bats`
+- `server/package-lock.json` — local lock refresh only; no runtime dependency declaration was added
+
+Client files changed:
+
+- `client/src/api/chatApi.js`
+- `client/src/pages/ChatPage.jsx`
+- `client/test/utils/chatApiAvatar.test.js`
+
+Server API/runtime files changed:
+
+- `server/index.js`
+- `server/api/admin.js`
+- `server/api/adminPanel.js`
+- `server/api/adminRemoteChannel.js`
+- `server/api/auth.js`
+- `server/api/chats.js`
+- `server/api/health.js`
+- `server/api/index.js`
+- `server/api/messages.js`
+- `server/api/messaging.js`
+- `server/api/profile.js`
+- `server/api/remoteChannelTick.js`
+- `server/api/remoteMirror.js`
+- `server/api/uploadsRemote.js`
+
+Database files changed or added:
+
+- `server/db.js`
+- `server/db/mongoMessaging.js`
+- `server/db/mongoRepository.js`
+- `server/db/mongoSchema.js`
+- `server/db/platformIdentitySchema.js` — dormant additive helper; not executed
+
+Server library files changed or added:
+
+- `server/lib/crmTaskCommand.js`
+- `server/lib/localWorkerManager.js`
+- `server/lib/mediaQueue.js`
+- `server/lib/mediaWorker.js`
+- `server/lib/messageMediaAccess.js`
+- `server/lib/platformIdentityAdapter.js`
+- `server/lib/postgresMaintenance.js`
+- `server/lib/push.js`
+- `server/lib/redis.js`
+- `server/lib/requestLogging.js`
+- `server/lib/secrets.js`
+- `server/lib/services/mongoAdminService.js`
+- `server/lib/sessionTokens.js`
+- `server/lib/sessions.js`
+- `server/lib/sse.js`
+- `server/lib/storageEncryption.js`
+- `server/lib/storageLayoutMigration.js`
+- `server/lib/supportAccessService.js`
+- `server/lib/thumbUrl.js`
+- `server/lib/uploads.js`
+- `server/lib/vapid.js`
+- `server/lib/websocketGateway.js`
+- `server/lib/workers/autoAddWorker.js`
+
+Worker files changed:
+
+- `worker/index.js`
+- `worker/storage.js`
+- `worker/test/mirror.test.js`
+- `worker/test/server.test.js`
+- `worker/test/storage.test.js`
+
+Server test/support files changed or added:
+
+- `server/test/api/adminAuditLogs.test.js`
+- `server/test/api/adminDbTools.test.js`
+- `server/test/api/adminLogsWorker.test.js`
+- `server/test/api/adminPanel.test.js`
+- `server/test/api/adminSecrets.test.js`
+- `server/test/api/auth.test.js`
+- `server/test/api/avatar_dual_upload.test.js`
+- `server/test/api/mediaAuthorization.test.js`
+- `server/test/api/messages.test.js`
+- `server/test/api/messagesUploadStorageKeys.test.js`
+- `server/test/api/messaging.test.js`
+- `server/test/api/postgresChatMute.test.js`
+- `server/test/api/remoteChannelTick.test.js`
+- `server/test/api/remoteMirror.test.js`
+- `server/test/api/thumbs.test.js`
+- `server/test/api/uploadsRemotePresignRateLimit.test.js`
+- `server/test/api/uploadsRemoteCompletionSecurity.test.js`
+- `server/test/api_uploads_remote.test.js`
+- `server/test/db/mongoRepository.autoAdd.test.js`
+- `server/test/db/platformIdentitySchema.test.js`
+- `server/test/deploymentSecurity.test.js`
+- `server/test/e2e_remote_storage_flow.test.js`
+- `server/test/helpers/makeApp.js`
+- `server/test/lib/appSettingsNullable.test.js`
+- `server/test/lib/crmTaskCommand.test.js`
+- `server/test/lib/platformIdentityAdapter.test.js`
+- `server/test/lib/postgresMaintenance.test.js`
+- `server/test/lib/push.test.js`
+- `server/test/lib/redis.test.js`
+- `server/test/lib/requestLogging.test.js`
+- `server/test/lib/services/mongoAdminService.test.js`
+- `server/test/lib/sessionTokens.test.js`
+- `server/test/lib/sessions.test.js`
+- `server/test/lib/sse.membership.test.js`
+- `server/test/lib/sse.sessionRevocation.test.js`
+- `server/test/lib/supportAccessService.test.js`
+- `server/test/lib/websocketGateway.call.test.js`
+- `server/test/lib/websocketGateway.test.js`
+- `server/test/media_queue.test.js`
+- `server/test/mongo/adminApi.test.js`
+- `server/test/mongo/repository.test.js`
+- `server/test/prune_orphan_r2_objects.test.js`
+- `server/test/storage_layout_migration.test.js`
+
+Documentation files changed or added:
+
+- `chat.md`
+- `docs/.vitepress/config.mjs`
+- `docs/Admin-Panel.md`
+- `docs/Installation-Docker.md`
+- `docs/Media-Worker.md`
+- `docs/fa/Admin-Panel.md`
+- `docs/fa/Installation-Docker.md`
+- `docs/fa/Media-Worker.md`
+- `docs/platform/CHAT_REALTIME_PROTOCOL_V1.md`
+- `docs/platform/CHAT_SPRINT_1_HANDOFF.md`
+- `docs/platform/CHAT_SUPPORT_API_CONTRACT_V1.md`
+- `docs/platform/CHAT_WEB_IDENTITY_MIGRATION.md`
+- `docs/fa/platform/CHAT_REALTIME_PROTOCOL_V1.md`
+- `docs/fa/platform/CHAT_SPRINT_1_HANDOFF.md`
+- `docs/fa/platform/CHAT_SUPPORT_API_CONTRACT_V1.md`
+- `docs/fa/platform/CHAT_WEB_IDENTITY_MIGRATION.md`
+
+Generated dependency, VitePress, build, coverage and Vitest screenshot/cache output is not source work and is excluded from this inventory.
+
+### 24.4 Verification log and gaps
+
+The focused private-media/upload matrix passed 75/75 tests. The final server aggregate passed **1,092/1,092 tests in 125 files**. An earlier aggregate passed 1,061/1,083; its 22 failures were not hidden: 15 were stale security fixtures, six were test pollution from developer retention environment values, and one used an invalid username fixture. All were corrected without weakening production authorization before the final aggregate.
+
+The media worker suite passed 43/43. Client unit tests passed 457/457, and client browser component tests passed 334/334 in Chromium. Client lint passed and the production client build completed. The VitePress documentation build passed. Changed JavaScript syntax checks, Docker Compose configuration validation, and entrypoint shell syntax validation passed without loading the repository's actual `.env`; the manual missing-secret entrypoint check started only the application command. Restricted-sandbox HTTP runs initially reported `listen EPERM` and passed when rerun with local loopback access. Bats was unavailable, so the Bats entrypoint file was not executed.
+
+Real Mongo replica-set integration, live object storage, container image build, production load/resource benchmarking, deployment and migrations remain deliberately unexecuted. The `graphify` CLI was unavailable, so the required graph update could not be run.

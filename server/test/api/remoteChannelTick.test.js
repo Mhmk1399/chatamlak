@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import request from "supertest";
 
 import { makeApp } from "../helpers/makeApp.js";
@@ -56,6 +56,26 @@ describe("POST /api/internal/remote-channel/tick", () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.telegram).toBe("polled");
+  });
+
+  test("does not log or return raw upstream failure text", async () => {
+    const privateError = "error: https://upstream.example/path?token=secret";
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const { app } = makeTickApp({
+        tickOnce: async () => ({ telegram: privateError, oujChat: privateError }),
+      });
+      const res = await request(app)
+        .post("/api/internal/remote-channel/tick")
+        .set("x-ouj-chat-cron-secret", SECRET);
+
+      expect(res.status).toBe(200);
+      expect(res.body.telegram).toBe("error");
+      expect(res.body.oujChat).toBe("error");
+      expect(JSON.stringify(log.mock.calls)).not.toContain(privateError);
+    } finally {
+      log.mockRestore();
+    }
   });
 
   test("returns 409 when a tick is already running", async () => {

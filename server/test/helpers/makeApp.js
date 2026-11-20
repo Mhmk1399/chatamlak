@@ -183,7 +183,10 @@ export function makeApp(overrides = {}) {
     // ── Upload stubs (multer instances — .single/.array called at route
     //    registration time, so they must return valid middleware) ───────────
     uploadAvatar: { single: () => (_req, _res, next) => next() },
-    uploadFiles: { array: () => (_req, _res, next) => next() },
+    uploadFiles: {
+      array: () => (_req, _res, next) => next(),
+      single: () => (_req, _res, next) => next(),
+    },
     uploadRootDir: "/tmp/test-uploads",
     avatarUploadRootDir: "/tmp/test-avatars",
     removeUploadedFiles: () => {},
@@ -232,11 +235,25 @@ export function makeApp(overrides = {}) {
     removeAllMessageUploads: () => {},
     isVideoFileProcessing: () => false,
     hydrateMissingVideoMetadata: async (files) => files,
-    recordPendingPresignedUpload: ({ storageKey, userId, expiresAt }) => {
-      const rec = { storage_key: storageKey, user_id: userId, created_at: new Date().toISOString(), expires_at: expiresAt };
+    recordPendingPresignedUpload: ({ storageKey, userId, chatId = null, messageId = null, clientRequestId = null, purpose = null, expiresAt }) => {
+      if (pendingUploadsStore.some((row) => row.storage_key === storageKey)) {
+        throw new Error("Pending upload already exists.");
+      }
+      const rec = {
+        storage_key: storageKey,
+        user_id: userId,
+        chat_id: chatId,
+        message_id: messageId,
+        client_request_id: clientRequestId,
+        purpose,
+        created_at: new Date().toISOString(),
+        expires_at: expiresAt,
+      };
       pendingUploadsStore.push(rec);
       return rec;
     },
+    findPendingPresignedUpload: (storageKey) =>
+      pendingUploadsStore.find((row) => row.storage_key === storageKey) || null,
     removePendingPresignedUploads: (keys = []) => {
       const keySet = new Set((Array.isArray(keys) ? keys : [keys]).map((k) => (typeof k === "string" ? k : k?.storageKey || k?.storage_key)));
       for (let i = pendingUploadsStore.length - 1; i >= 0; i--) {

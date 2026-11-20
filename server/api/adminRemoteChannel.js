@@ -7,6 +7,7 @@ import {
   resolveTelegramSecrets,
   saveTelegramSecrets,
 } from "../lib/remoteChannelSecrets.js";
+import { safeErrorCode } from "../lib/requestLogging.js";
 // Guided Telegram setup for Remote Channel (Services tab). Replaces the
 // `remote:configure` CLI script: send a login code, verify it (+ 2FA), and
 // persist the credentials outside the settings registry with a hot-reload
@@ -248,8 +249,9 @@ function registerAdminRemoteChannelRoutes(app, deps) {
       } catch (error) {
         await client.destroy?.().catch(() => {});
         log(session, "remoteChannel.setup_code_failed", {
-          details: String(
-            error?.errorMessage || error?.message || "send-code failed",
+          details: safeErrorCode(
+            { code: error?.code || error?.errorMessage },
+            "remote_channel_send_code_failed",
           ),
           status: "failure",
         });
@@ -333,7 +335,10 @@ function registerAdminRemoteChannelRoutes(app, deps) {
           error?.errorMessage || error?.message || "Sign-in failed.",
         );
         log(session, "remoteChannel.setup_sign_in_failed", {
-          details: message,
+          details: safeErrorCode(
+            { code: error?.code || error?.errorMessage },
+            "remote_channel_sign_in_failed",
+          ),
           status: "failure",
         });
         return res.status(400).json({ error: message });

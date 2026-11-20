@@ -6,8 +6,16 @@ STORAGE_PROCESSING_MODE="${STORAGE_PROCESSING_MODE:-auto}"
 START_LOCAL_WORKER="${START_LOCAL_WORKER:-auto}"
 FILE_UPLOAD_TRANSCODE_VIDEOS="${FILE_UPLOAD_TRANSCODE_VIDEOS:-true}"
 WORKER_URL="${WORKER_URL:-${MEDIA_WORKER_URL:-}}"
+WEBHOOK_SECRET="${WEBHOOK_SECRET:-}"
 
 should_start_local_worker() {
+  # When the secret is not supplied by the container environment, let the
+  # server generate/load it first and spawn the worker through
+  # localWorkerManager. Starting here would leave the worker permanently
+  # unauthenticated because child-process environments do not update later.
+  if [ -z "$WEBHOOK_SECRET" ]; then
+    return 1
+  fi
   if [ "$START_LOCAL_WORKER" = "false" ]; then
     return 1
   fi

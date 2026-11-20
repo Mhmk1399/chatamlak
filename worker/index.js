@@ -3,6 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import net from "node:net";
+import { Transform } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
 import { createStorage } from "./storage.js";
@@ -27,12 +29,57 @@ if (typeof process.loadEnvFile === "function") {
 
 const PORT = Number(process.env.PORT || process.env.WORKER_PORT || 8080);
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
-const WORKER_CONCURRENCY = Math.max(
+const boundedInteger = (value, fallback, min, max) => {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+const safeLogValue = (value, maxLength = 200) =>
+  String(value ?? "")
+    .replace(/[^A-Za-z0-9_.:-]/g, "_")
+    .slice(0, maxLength);
+export const workerErrorCode = (error, fallback = "worker_error") =>
+  safeLogValue(error?.code || error?.name || fallback, 128) || fallback;
+const writeWorkerLog = (level, event, fields = {}) => {
+  const entry = {
+    service: "ouj-chat-media-worker",
+    event: safeLogValue(event, 128),
+  };
+  for (const key of ["errorCode", "fileId", "jobId"]) {
+    if (fields[key] !== undefined && fields[key] !== null) {
+      entry[key] = safeLogValue(fields[key]);
+    }
+  }
+  for (const key of ["attempt", "attempts", "delayMs", "status", "sizeBytes"]) {
+    const value = Number(fields[key]);
+    if (Number.isFinite(value)) entry[key] = Math.max(0, Math.round(value));
+  }
+  const method = ["error", "warn", "info"].includes(level) ? level : "info";
+  console[method](JSON.stringify(entry));
+};
+const WORKER_CONCURRENCY = boundedInteger(
+  process.env.WORKER_CONCURRENCY || process.env.CONCURRENCY,
+  2,
   1,
-  parseInt(
-    process.env.WORKER_CONCURRENCY || process.env.CONCURRENCY || "2",
-    10,
-  ),
+  4,
+);
+const WORKER_MAX_INPUT_BYTES = boundedInteger(
+  process.env.WORKER_MAX_INPUT_BYTES,
+  75 * 1024 * 1024,
+  1024,
+  512 * 1024 * 1024,
+);
+const WORKER_FETCH_TIMEOUT_MS = boundedInteger(
+  process.env.WORKER_FETCH_TIMEOUT_MS,
+  5 * 60 * 1000,
+  5_000,
+  10 * 60 * 1000,
+);
+const WORKER_MAX_QUEUE_DEPTH = boundedInteger(
+  process.env.WORKER_MAX_QUEUE_DEPTH,
+  32,
+  1,
+  256,
 );
 
 const storage = createStorage({
@@ -46,16 +93,19 @@ const storage = createStorage({
   forcePathStyle: process.env.STORAGE_FORCE_PATH_STYLE,
 });
 
-class AsyncQueue {
-  constructor(concurrency = 2) {
+export class AsyncQueue {
+  constructor(concurrency = 2, maxDepth = 32) {
     this.concurrency = concurrency;
+    this.maxDepth = maxDepth;
     this.running = 0;
     this.queue = [];
   }
 
   push(fn) {
+    if (this.queue.length >= this.maxDepth) return false;
     this.queue.push(fn);
     this._next();
+    return true;
   }
 
   _next() {
@@ -64,7 +114,9 @@ class AsyncQueue {
       this.running += 1;
       task()
         .catch((err) => {
-          console.error("[worker] Background job execution error:", err);
+          writeWorkerLog("error", "worker.job.failed", {
+            errorCode: workerErrorCode(err),
+          });
         })
         .finally(() => {
           this.running -= 1;
@@ -82,7 +134,7 @@ class AsyncQueue {
   }
 }
 
-const jobQueue = new AsyncQueue(WORKER_CONCURRENCY);
+const jobQueue = new AsyncQueue(WORKER_CONCURRENCY, WORKER_MAX_QUEUE_DEPTH);
 
 const tmpDir = path.join(os.tmpdir(), "ouj-chat-media-worker");
 fs.mkdirSync(tmpDir, { recursive: true });
@@ -97,12 +149,269 @@ export const isLoopbackUrl = (url) => {
   if (!url) return false;
   try {
     const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
     return (
-      parsed.hostname === "127.0.0.1" ||
-      parsed.hostname === "localhost" ||
-      parsed.hostname === "::1" ||
-      parsed.hostname === "0.0.0.0"
+      hostname === "127.0.0.1" ||
+      hostname === "localhost" ||
+      hostname === "::1"
     );
+  } catch {
+    return false;
+  }
+};
+
+const parseAllowedOrigins = (value) => {
+  const rawValues = Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+  const origins = new Set();
+  for (const rawValue of rawValues) {
+    try {
+      const parsed = new URL(rawValue);
+      if (["http:", "https:"].includes(parsed.protocol)) origins.add(parsed.origin);
+    } catch {
+      // Invalid configured origins are ignored and therefore fail closed.
+    }
+  }
+  return origins;
+};
+
+const isPrivateIpv4 = (hostname) => {
+  const parts = hostname.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part))) return true;
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    a >= 224
+  );
+};
+
+const isPrivateIpv6 = (hostname) => {
+  const normalized = hostname.toLowerCase();
+  return (
+    normalized === "::" ||
+    normalized === "::1" ||
+    normalized.startsWith("fc") ||
+    normalized.startsWith("fd") ||
+    normalized.startsWith("fe8") ||
+    normalized.startsWith("fe9") ||
+    normalized.startsWith("fea") ||
+    normalized.startsWith("feb") ||
+    normalized.startsWith("::ffff:127.") ||
+    normalized.startsWith("::ffff:10.") ||
+    normalized.startsWith("::ffff:192.168.")
+  );
+};
+
+const validateOutboundUrl = (
+  rawValue,
+  { field, allowedOrigins, allowLoopbackUrls },
+) => {
+  const value = String(rawValue || "");
+  if (!value) return null;
+  if (value.length > 4096) return `${field} is too long.`;
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return `${field} must be a valid HTTP(S) URL.`;
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) {
+    return `${field} must use HTTP(S).`;
+  }
+  if (parsed.username || parsed.password) {
+    return `${field} must not contain URL credentials.`;
+  }
+  if (parsed.hash) return `${field} must not contain a fragment.`;
+
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (
+    hostname === "169.254.169.254" ||
+    hostname === "metadata.google.internal" ||
+    hostname === "metadata.azure.internal"
+  ) {
+    return `${field} targets a forbidden metadata endpoint.`;
+  }
+  const explicitlyAllowed = allowedOrigins.has(parsed.origin);
+  if (isLoopbackUrl(parsed.href)) {
+    return allowLoopbackUrls || explicitlyAllowed
+      ? null
+      : `${field} targets a loopback address that is not allowed.`;
+  }
+  const ipVersion = net.isIP(hostname);
+  if (
+    !explicitlyAllowed &&
+    ((ipVersion === 4 && isPrivateIpv4(hostname)) ||
+      (ipVersion === 6 && isPrivateIpv6(hostname)))
+  ) {
+    return `${field} targets a private or reserved address.`;
+  }
+  if (
+    !explicitlyAllowed &&
+    (hostname.endsWith(".local") ||
+      hostname.endsWith(".internal") ||
+      hostname.endsWith(".lan") ||
+      hostname.endsWith(".home"))
+  ) {
+    return `${field} targets an internal hostname that is not allowed.`;
+  }
+  if (!explicitlyAllowed && parsed.protocol !== "https:") {
+    return `${field} must use HTTPS unless its origin is explicitly allowed.`;
+  }
+  return null;
+};
+
+const validateStorageKey = (value, field) => {
+  const key = String(value || "");
+  if (!key) return null;
+  if (key.length > 1024) return `${field} is too long.`;
+  if (
+    key.includes("\0") ||
+    key.includes("\\") ||
+    key.startsWith("/") ||
+    key.split("/").includes("..")
+  ) {
+    return `${field} must be a relative storage key without traversal.`;
+  }
+  return null;
+};
+
+const createByteLimitTransform = (maxBytes) => {
+  let received = 0;
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      received += Buffer.byteLength(chunk);
+      if (received > maxBytes) {
+        const error = new Error(`Downloaded bytes exceed the ${maxBytes}-byte processing limit.`);
+        error.code = "WORKER_INPUT_TOO_LARGE";
+        callback(error);
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+};
+
+const fetchWithTimeout = (url, options = {}) =>
+  fetch(url, {
+    ...options,
+    signal: options.signal || AbortSignal.timeout(WORKER_FETCH_TIMEOUT_MS),
+  });
+
+export function validateWorkerJobPayload(
+  payload,
+  {
+    kind,
+    allowedOrigins = new Set(),
+    allowLoopbackUrls = true,
+    maxInputBytes = WORKER_MAX_INPUT_BYTES,
+  } = {},
+) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { status: 400, error: "Request body must be a JSON object." };
+  }
+  const idField = kind === "mirror" ? "jobId" : "fileId";
+  const idValue = String(payload[idField] || "");
+  if (idValue.length > 200) {
+    return { status: 400, error: `${idField} is too long.` };
+  }
+  for (const [field, value] of [
+    ["storageKey", payload.storageKey],
+    ["storedName", payload.storageKey ? null : payload.storedName],
+  ]) {
+    const error = validateStorageKey(value, field);
+    if (error) return { status: 400, error };
+  }
+  if (String(payload.storedName || "").length > 1024) {
+    return { status: 400, error: "storedName is too long." };
+  }
+  if (String(payload.downloadSecret || "").length > 512) {
+    return { status: 400, error: "downloadSecret is too long." };
+  }
+  for (const field of [
+    "downloadUrl",
+    "callbackUrl",
+    "uploadUrl",
+    "thumbUploadUrl",
+  ]) {
+    const error = validateOutboundUrl(payload[field], {
+      field,
+      allowedOrigins,
+      allowLoopbackUrls,
+    });
+    if (error) return { status: 400, error };
+  }
+
+  if (payload.storageConfig !== undefined && payload.storageConfig !== null) {
+    const config = payload.storageConfig;
+    if (typeof config !== "object" || Array.isArray(config)) {
+      return { status: 400, error: "storageConfig must be an object." };
+    }
+    if (config.dataDir !== undefined) {
+      return {
+        status: 400,
+        error: "storageConfig.dataDir cannot be selected by a job request.",
+      };
+    }
+    const driver = String(config.driver || "").toLowerCase();
+    if (driver && !["remote", "s3", "r2", "cloudflare"].includes(driver)) {
+      return {
+        status: 400,
+        error: "storageConfig.driver must select an approved remote storage driver.",
+      };
+    }
+    const endpointError = validateOutboundUrl(config.endpoint, {
+      field: "storageConfig.endpoint",
+      allowedOrigins,
+      allowLoopbackUrls,
+    });
+    if (endpointError) return { status: 400, error: endpointError };
+    if (
+      config.bucket !== undefined &&
+      !/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$/.test(String(config.bucket))
+    ) {
+      return { status: 400, error: "storageConfig.bucket is invalid." };
+    }
+    for (const field of ["accessKeyId", "secretAccessKey", "region"]) {
+      if (String(config[field] || "").length > 512) {
+        return { status: 400, error: `storageConfig.${field} is too long.` };
+      }
+    }
+  }
+
+  if (payload.maxBytes !== undefined && payload.maxBytes !== null) {
+    const requestedMax = Number(payload.maxBytes);
+    if (!Number.isSafeInteger(requestedMax) || requestedMax <= 0) {
+      return { status: 400, error: "maxBytes must be a positive integer." };
+    }
+    if (requestedMax > maxInputBytes) {
+      return {
+        status: 413,
+        error: `Requested maxBytes exceeds the ${maxInputBytes}-byte processing limit.`,
+      };
+    }
+  }
+  return { status: 200, error: "" };
+}
+
+const secretsMatch = (providedValue, expectedValue) => {
+  const provided = Buffer.from(String(providedValue || ""));
+  const expected = Buffer.from(String(expectedValue || ""));
+  if (!provided.length || !expected.length || provided.length !== expected.length) {
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(provided, expected);
   } catch {
     return false;
   }
@@ -189,13 +498,12 @@ export async function downloadWithRetry(
       lastErr = err;
       if (!isMissingKeyError(err) || attempt === attempts) throw err;
       const delayMs = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1));
-      console.warn(
-        "[worker] Object not yet available (attempt %d/%d), retrying in %dms:",
+      writeWorkerLog("warn", "worker.download.retry", {
         attempt,
         attempts,
         delayMs,
-        err?.message || err,
-      );
+        errorCode: workerErrorCode(err, "download_missing"),
+      });
       await sleep(delayMs);
     }
   }
@@ -204,15 +512,27 @@ export async function downloadWithRetry(
 
 async function notifyCallback(url, payload, secret, maxRetries = 5) {
   if (!url) {
-    console.warn(
-      `[worker] Callback notification skipped for file ${payload?.fileId}: no callbackUrl provided or configured.`,
-    );
+    writeWorkerLog("warn", "worker.callback.skipped", {
+      fileId: payload?.fileId,
+      jobId: payload?.jobId,
+      errorCode: "callback_url_missing",
+    });
     return;
   }
   const effectiveSecret = secret || WEBHOOK_SECRET || "";
+  if (!effectiveSecret) {
+    console.error(
+      JSON.stringify({
+        service: "ouj-chat-media-worker",
+        event: "worker.callback.skipped",
+        errorCode: "callback_secret_missing",
+      }),
+    );
+    return false;
+  }
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -224,22 +544,35 @@ async function notifyCallback(url, payload, secret, maxRetries = 5) {
       });
       if (res.ok) {
         console.log(
-          `[worker] Callback webhook delivered successfully to ${url} for file ${payload.fileId}`,
+          JSON.stringify({
+            service: "ouj-chat-media-worker",
+            event: "worker.callback.delivered",
+            status: res.status,
+            fileId: payload?.fileId || null,
+            jobId: payload?.jobId || null,
+          }),
         );
-        return;
+        return true;
       }
-      const errText = await res.text();
       console.warn(
-        `[worker] Callback webhook to ${url} returned HTTP ${res.status} (attempt ${attempt}/${maxRetries}): ${errText}`,
+        JSON.stringify({
+          service: "ouj-chat-media-worker",
+          event: "worker.callback.rejected",
+          status: res.status,
+          attempt,
+          errorCode: "callback_http_error",
+        }),
       );
     } catch (err) {
       console.error(
-        "[worker] Failed to notify callback %s for file %s (attempt %d/%d):",
-        url,
-        payload.fileId,
-        attempt,
-        maxRetries,
-        err?.message || err,
+        JSON.stringify({
+          service: "ouj-chat-media-worker",
+          event: "worker.callback.failed",
+          attempt,
+          errorCode: String(err?.code || err?.name || "callback_fetch_failed")
+            .replace(/[^A-Za-z0-9_.:-]/g, "_")
+            .slice(0, 128),
+        }),
       );
     }
     if (attempt < maxRetries) {
@@ -247,6 +580,7 @@ async function notifyCallback(url, payload, secret, maxRetries = 5) {
       await new Promise((r) => setTimeout(r, delayMs));
     }
   }
+  return false;
 }
 
 async function processTranscodeJob({
@@ -260,6 +594,7 @@ async function processTranscodeJob({
   downloadUrl,
   uploadUrl,
   thumbUploadUrl,
+  maxBytes,
 }) {
   const defaultLocalCallback = `http://127.0.0.1:${process.env.PORT || process.env.SERVER_PORT || "5174"}/api/uploads/webhook/processed`;
   const targetCallback = callbackUrl || defaultLocalCallback;
@@ -276,15 +611,21 @@ async function processTranscodeJob({
   const effectiveStorage = storageConfig
     ? createStorage(storageConfig)
     : storage;
-
-  console.log(
-    `[worker] Starting transcode job for file ${fileId} (${storageKey})`,
+  const requestedMaxBytes = Number(maxBytes || WORKER_MAX_INPUT_BYTES);
+  const sizeCap = Math.max(
+    1,
+    Math.min(
+      WORKER_MAX_INPUT_BYTES,
+      Number.isFinite(requestedMaxBytes) ? requestedMaxBytes : WORKER_MAX_INPUT_BYTES,
+    ),
   );
+
+  writeWorkerLog("info", "worker.transcode.started", { fileId });
 
   try {
     await downloadWithRetry(async () => {
       if (downloadUrl) {
-        const res = await fetch(downloadUrl);
+        const res = await fetchWithTimeout(downloadUrl);
         if (!res.ok) {
           const downloadErr = new Error(
             `Failed to download from downloadUrl: HTTP ${res.status}`,
@@ -292,11 +633,34 @@ async function processTranscodeJob({
           if (res.status === 404) downloadErr.code = "NotFound";
           throw downloadErr;
         }
-        await pipeline(res.body, fs.createWriteStream(inputPath));
+        const contentLength = Number(res.headers.get("content-length") || 0);
+        if (contentLength > sizeCap) {
+          const sizeError = new Error(
+            `Downloaded bytes exceed the ${sizeCap}-byte processing limit.`,
+          );
+          sizeError.code = "WORKER_INPUT_TOO_LARGE";
+          throw sizeError;
+        }
+        await pipeline(
+          res.body,
+          createByteLimitTransform(sizeCap),
+          fs.createWriteStream(inputPath),
+        );
       } else {
         await effectiveStorage.downloadToPath(storageKey, inputPath);
       }
     });
+
+    const inputSize = Number(fs.statSync(inputPath)?.size || 0);
+    if (inputSize <= 0 || inputSize > sizeCap) {
+      const sizeError = new Error(
+        inputSize <= 0
+          ? "Downloaded media is empty."
+          : `Downloaded bytes exceed the ${sizeCap}-byte processing limit.`,
+      );
+      sizeError.code = inputSize <= 0 ? "WORKER_INPUT_EMPTY" : "WORKER_INPUT_TOO_LARGE";
+      throw sizeError;
+    }
 
     let workingInputPath = inputPath;
     let decryptCleanup = () => {};
@@ -317,27 +681,22 @@ async function processTranscodeJob({
       let usedTranscodedFile = false;
 
       if (details.needsTranscode) {
-        console.log(
-          `[worker] File ${fileId} requires transcoding (codec=${details.videoCodec}, pix_fmt=${details.pixFmt}, format=${details.formatName})`,
-        );
+        writeWorkerLog("info", "worker.transcode.required", { fileId });
         await transcodeVideo({ inputPath: workingInputPath, outputPath });
         meta = await probeVideoMetadata(outputPath);
         finalOutputPath = outputPath;
         usedTranscodedFile = true;
       } else {
-        console.log(
-          `[worker] File ${fileId} is already web-compatible H.264/AAC. Skipping re-encoding.`,
-        );
+        writeWorkerLog("info", "worker.transcode.copy_only", { fileId });
         try {
           await faststartVideo({ inputPath: workingInputPath, outputPath });
           finalOutputPath = outputPath;
           usedTranscodedFile = true;
         } catch (faststartErr) {
-          console.warn(
-            "[worker] Faststart copy skipped for file %s:",
+          writeWorkerLog("warn", "worker.faststart.skipped", {
             fileId,
-            faststartErr?.message,
-          );
+            errorCode: workerErrorCode(faststartErr, "faststart_failed"),
+          });
           finalOutputPath = workingInputPath;
           usedTranscodedFile = false;
         }
@@ -351,11 +710,11 @@ async function processTranscodeJob({
         });
         const thumbEncrypted = encryptThumbnail(thumbPath, isEncrypted);
         if (thumbEncrypted) {
-          console.log(`[worker] Thumbnail encrypted for file ${fileId}`);
+          writeWorkerLog("info", "worker.thumbnail.encrypted", { fileId });
         }
         thumbStorageKey = `${storageKey.replace(/\.[^.]*$/, "")}-thumb.jpg`;
         if (thumbUploadUrl) {
-          const res = await fetch(thumbUploadUrl, {
+          const res = await fetchWithTimeout(thumbUploadUrl, {
             method: "PUT",
             headers: { "Content-Type": "image/jpeg" },
             body: fs.createReadStream(thumbPath),
@@ -372,11 +731,10 @@ async function processTranscodeJob({
           );
         }
       } catch (thumbErr) {
-        console.warn(
-          "[worker] Thumbnail generation skipped for file %s:",
+        writeWorkerLog("warn", "worker.thumbnail.skipped", {
           fileId,
-          thumbErr?.message,
-        );
+          errorCode: workerErrorCode(thumbErr, "thumbnail_failed"),
+        });
         thumbStorageKey = null;
       }
 
@@ -392,7 +750,7 @@ async function processTranscodeJob({
           .toString("hex")}.mp4`;
 
         if (uploadUrl) {
-          const res = await fetch(uploadUrl, {
+          const res = await fetchWithTimeout(uploadUrl, {
             method: "PUT",
             headers: { "Content-Type": "video/mp4" },
             body: fs.createReadStream(finalOutputPath),
@@ -414,18 +772,13 @@ async function processTranscodeJob({
         // Delete the original raw file from remote storage to avoid storing duplicate orphaned video files
         if (transcodedStorageKey !== storageKey && !uploadUrl) {
           await effectiveStorage.deleteFile(storageKey);
-          console.log(
-            `[worker] Deleted original raw video ${storageKey} from storage`,
-          );
+          writeWorkerLog("info", "worker.transcode.original_deleted", {
+            fileId,
+          });
         }
       }
 
-      console.log("[worker] Process completed for file %s:", fileId, {
-        transcodedStorageKey,
-        thumbStorageKey,
-        meta,
-        transcoded: details.needsTranscode,
-      });
+      writeWorkerLog("info", "worker.transcode.completed", { fileId });
 
       await notifyCallback(targetCallback, {
         fileId,
@@ -440,7 +793,10 @@ async function processTranscodeJob({
       decryptCleanup();
     }
     } catch (err) {
-      console.error("[worker] Transcode failed for file %s:", fileId, err);
+      writeWorkerLog("error", "worker.transcode.failed", {
+        fileId,
+        errorCode: workerErrorCode(err, "transcode_failed"),
+      });
       await notifyCallback(targetCallback, {
       fileId,
       status: "failed",
@@ -484,27 +840,35 @@ export async function processMirrorJob({
   const defaultLocalCallback = `http://127.0.0.1:${process.env.PORT || process.env.SERVER_PORT || "5174"}/api/remote-channel/webhook/mirror-done`;
   const targetCallback = callbackUrl || defaultLocalCallback;
   const fail = async (error) => {
-    console.error("[worker] Mirror failed for job %s:", jobId, error?.message || error);
+    const errorCode = workerErrorCode(error, "mirror_failed");
+    writeWorkerLog("error", "worker.mirror.failed", { jobId, errorCode });
     await notifyCallback(targetCallback, {
       jobId,
       status: "failed",
-      error: String(error?.message || error || "mirror failed"),
+      errorCode,
     }, webhookSecret);
   };
 
   const ext = path.extname(storedName || storageKey || ".bin") || ".bin";
   const inputPath = tempPath(ext);
   const effectiveStorage = storageConfig ? createStorage(storageConfig) : storage;
-  const sizeCap = Math.max(1, Number(maxBytes || 25 * 1024 * 1024));
+  const requestedMaxBytes = Number(maxBytes || 25 * 1024 * 1024);
+  const sizeCap = Math.max(
+    1,
+    Math.min(
+      WORKER_MAX_INPUT_BYTES,
+      Number.isFinite(requestedMaxBytes) ? requestedMaxBytes : 25 * 1024 * 1024,
+    ),
+  );
 
-  console.log(`[worker] Starting mirror job ${jobId} (${storageKey})`);
+  writeWorkerLog("info", "worker.mirror.started", { jobId });
 
   try {
     await downloadWithRetry(async () => {
       const headers = downloadSecret
         ? { "x-ouj-chat-mirror-secret": downloadSecret }
         : {};
-      const res = await fetch(downloadUrl, { headers });
+      const res = await fetchWithTimeout(downloadUrl, { headers });
       if (!res.ok) {
         const downloadErr = new Error(
           `Failed to download mirror bytes: HTTP ${res.status}`,
@@ -512,7 +876,19 @@ export async function processMirrorJob({
         if (res.status === 404) downloadErr.code = "NotFound";
         throw downloadErr;
       }
-      await pipeline(res.body, fs.createWriteStream(inputPath));
+      const contentLength = Number(res.headers.get("content-length") || 0);
+      if (contentLength > sizeCap) {
+        const sizeError = new Error(
+          `Downloaded bytes exceed the ${sizeCap}-byte processing limit.`,
+        );
+        sizeError.code = "WORKER_INPUT_TOO_LARGE";
+        throw sizeError;
+      }
+      await pipeline(
+        res.body,
+        createByteLimitTransform(sizeCap),
+        fs.createWriteStream(inputPath),
+      );
     });
 
     const stat = fs.statSync(inputPath);
@@ -535,17 +911,16 @@ export async function processMirrorJob({
         outHeight = outHeight || Number(details?.heightPx || details?.height || 0) || null;
         outDuration = outDuration || Number(details?.durationSeconds || details?.duration || 0) || null;
       } catch (probeErr) {
-        console.warn(
-          "[worker] Mirror probe skipped for job %s:",
+        writeWorkerLog("warn", "worker.mirror_probe.skipped", {
           jobId,
-          probeErr?.message,
-        );
+          errorCode: workerErrorCode(probeErr, "mirror_probe_failed"),
+        });
       }
     }
 
     const contentType = uploadContentType || mimeType || "application/octet-stream";
     if (uploadUrl) {
-      const res = await fetch(uploadUrl, {
+      const res = await fetchWithTimeout(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": contentType },
         body: fs.createReadStream(inputPath),
@@ -558,10 +933,7 @@ export async function processMirrorJob({
       await effectiveStorage.uploadFile(storageKey, inputPath, contentType);
     }
 
-    console.log("[worker] Mirror completed for job %s:", jobId, {
-      storageKey,
-      sizeBytes,
-    });
+    writeWorkerLog("info", "worker.mirror.completed", { jobId, sizeBytes });
 
     await notifyCallback(targetCallback, {
       jobId,
@@ -587,14 +959,22 @@ export async function processMirrorJob({
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
+    let receivedBytes = 0;
+    let rejected = false;
     req.on("data", (chunk) => {
-      body += String(chunk || "");
-      if (body.length > 1024 * 1024) {
-        req.destroy();
-        reject(new Error("Request body too large"));
+      if (rejected) return;
+      receivedBytes += Buffer.byteLength(chunk);
+      if (receivedBytes > 1024 * 1024) {
+        rejected = true;
+        const error = new Error("Request body too large");
+        error.code = "REQUEST_BODY_TOO_LARGE";
+        reject(error);
+        return;
       }
+      body += String(chunk || "");
     });
     req.on("end", () => {
+      if (rejected) return;
       try {
         resolve(body ? JSON.parse(body) : {});
       } catch (err) {
@@ -606,15 +986,33 @@ function parseJsonBody(req) {
 }
 
 export function createWorkerServer(options = {}) {
-  const effectiveWebhookSecret =
-    options.webhookSecret !== undefined ? options.webhookSecret : WEBHOOK_SECRET;
+  const effectiveWebhookSecret = String(
+    options.webhookSecret !== undefined ? options.webhookSecret || "" : WEBHOOK_SECRET,
+  );
   const effectiveQueue = options.jobQueue || jobQueue;
   const processJobFn = options.processTranscodeJob || processTranscodeJob;
   const processMirrorFn = options.processMirrorJob || processMirrorJob;
+  const allowedOrigins = parseAllowedOrigins(
+    options.allowedUrlOrigins !== undefined
+      ? options.allowedUrlOrigins
+      : process.env.WORKER_ALLOWED_URL_ORIGINS,
+  );
+  const allowLoopbackUrls = options.allowLoopbackUrls !== false;
+  const configuredMaxInputBytes = boundedInteger(
+    options.maxInputBytes,
+    WORKER_MAX_INPUT_BYTES,
+    1024,
+    WORKER_MAX_INPUT_BYTES,
+  );
 
   const checkSecret = (req, res) => {
+    if (!effectiveWebhookSecret) {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Worker webhook secret is not configured" }));
+      return false;
+    }
     const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
-    if (effectiveWebhookSecret && incomingSecret !== effectiveWebhookSecret) {
+    if (!secretsMatch(incomingSecret, effectiveWebhookSecret)) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return false;
@@ -639,6 +1037,7 @@ export function createWorkerServer(options = {}) {
             pending: effectiveQueue.pending,
             queued: effectiveQueue.size,
             concurrency: effectiveQueue.concurrency,
+            maxDepth: effectiveQueue.maxDepth ?? null,
           },
         }),
       );
@@ -647,14 +1046,18 @@ export function createWorkerServer(options = {}) {
     // Transcode dispatch endpoint
     if (req.method === "POST" && url.pathname === "/transcode") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
 
       let payload;
       try {
         payload = await parseJsonBody(req);
       } catch (err) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Invalid JSON body" }));
+        const status = err?.code === "REQUEST_BODY_TOO_LARGE" ? 413 : 400;
+        res.writeHead(status, { "Content-Type": "application/json" });
+        return res.end(
+          JSON.stringify({
+            error: status === 413 ? "Request body too large" : "Invalid JSON body",
+          }),
+        );
       }
 
       const {
@@ -663,11 +1066,11 @@ export function createWorkerServer(options = {}) {
         storedName,
         encryptionType,
         callbackUrl,
-        webhookSecret,
         storageConfig,
         downloadUrl,
         uploadUrl,
         thumbUploadUrl,
+        maxBytes,
       } = payload;
       const effectiveStorageKey = storageKey || storedName;
       const effectiveStoredName = storedName || storageKey;
@@ -680,31 +1083,49 @@ export function createWorkerServer(options = {}) {
           }),
         );
       }
+      const validation = validateWorkerJobPayload(payload, {
+        kind: "transcode",
+        allowedOrigins,
+        allowLoopbackUrls,
+        maxInputBytes: configuredMaxInputBytes,
+      });
+      if (validation.error) {
+        res.writeHead(validation.status, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: validation.error }));
+      }
 
-      // Acknowledge receipt immediately (202 Accepted)
-      res.writeHead(202, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: true,
-          message: "Transcode job accepted",
-          fileId,
-          queuePosition: effectiveQueue.size,
-        }),
-      );
-
-      // Process via async queue with concurrency limit
-      effectiveQueue.push(() =>
+      const queuePosition = Number(effectiveQueue.size || 0);
+      const accepted = effectiveQueue.push(() =>
         processJobFn({
           fileId,
           storageKey: effectiveStorageKey,
           storedName: effectiveStoredName,
           encryptionType,
           callbackUrl,
-          webhookSecret: webhookSecret || incomingSecret || null,
+          webhookSecret: effectiveWebhookSecret,
           storageConfig,
           downloadUrl,
           uploadUrl,
           thumbUploadUrl,
+          maxBytes: Number(maxBytes || configuredMaxInputBytes),
+        }),
+      );
+      if (accepted === false) {
+        res.writeHead(503, {
+          "Content-Type": "application/json",
+          "Retry-After": "5",
+        });
+        return res.end(JSON.stringify({ error: "Worker queue is full" }));
+      }
+
+      // Acknowledge only after the bounded queue accepts the job.
+      res.writeHead(202, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          message: "Transcode job accepted",
+          fileId,
+          queuePosition,
         }),
       );
       return;
@@ -713,14 +1134,18 @@ export function createWorkerServer(options = {}) {
     // Mirror dispatch endpoint (Remote Channel media handoff)
     if (req.method === "POST" && url.pathname === "/mirror-media") {
       if (!checkSecret(req, res)) return;
-      const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
 
       let payload;
       try {
         payload = await parseJsonBody(req);
       } catch (err) {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        return res.end(JSON.stringify({ error: "Invalid JSON body" }));
+        const status = err?.code === "REQUEST_BODY_TOO_LARGE" ? 413 : 400;
+        res.writeHead(status, { "Content-Type": "application/json" });
+        return res.end(
+          JSON.stringify({
+            error: status === 413 ? "Request body too large" : "Invalid JSON body",
+          }),
+        );
       }
 
       const {
@@ -736,7 +1161,6 @@ export function createWorkerServer(options = {}) {
         maxBytes,
         probeVideo,
         callbackUrl,
-        webhookSecret,
         storageConfig,
         uploadUrl,
         uploadContentType,
@@ -749,20 +1173,19 @@ export function createWorkerServer(options = {}) {
           }),
         );
       }
+      const validation = validateWorkerJobPayload(payload, {
+        kind: "mirror",
+        allowedOrigins,
+        allowLoopbackUrls,
+        maxInputBytes: configuredMaxInputBytes,
+      });
+      if (validation.error) {
+        res.writeHead(validation.status, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: validation.error }));
+      }
 
-      // Acknowledge receipt immediately (202 Accepted)
-      res.writeHead(202, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: true,
-          message: "Mirror job accepted",
-          jobId,
-          queuePosition: effectiveQueue.size,
-        }),
-      );
-
-      // Process via async queue with concurrency limit
-      effectiveQueue.push(() =>
+      const queuePosition = Number(effectiveQueue.size || 0);
+      const accepted = effectiveQueue.push(() =>
         processMirrorFn({
           jobId,
           downloadUrl,
@@ -776,10 +1199,28 @@ export function createWorkerServer(options = {}) {
           maxBytes,
           probeVideo,
           callbackUrl,
-          webhookSecret: webhookSecret || incomingSecret || null,
+          webhookSecret: effectiveWebhookSecret,
           storageConfig,
           uploadUrl,
           uploadContentType,
+        }),
+      );
+      if (accepted === false) {
+        res.writeHead(503, {
+          "Content-Type": "application/json",
+          "Retry-After": "5",
+        });
+        return res.end(JSON.stringify({ error: "Worker queue is full" }));
+      }
+
+      // Acknowledge only after the bounded queue accepts the job.
+      res.writeHead(202, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          message: "Mirror job accepted",
+          jobId,
+          queuePosition,
         }),
       );
       return;
@@ -799,14 +1240,12 @@ if (
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
 ) {
   server.listen(PORT, () => {
-    console.log(
-      `[ouj-chat-worker] listening on port ${PORT} (storage: ${storage.type})`,
-    );
+    writeWorkerLog("info", "worker.listening", {});
   });
 
   for (const sig of ["SIGINT", "SIGTERM"]) {
     process.on(sig, () => {
-      console.log(`[worker] ${sig} received, shutting down gracefully...`);
+      writeWorkerLog("info", "worker.shutdown", {});
       server.close(() => process.exit(0));
     });
   }

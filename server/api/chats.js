@@ -29,6 +29,7 @@ function registerChatRoutes(app, deps) {
     findChatByGroupUsername,
     findChatByInviteToken,
     findMessageById,
+    findPendingPresignedUpload,
     findDmChat,
     findUserByUsername,
     findUserById,
@@ -412,28 +413,14 @@ function registerChatRoutes(app, deps) {
       const messageId = file.message_id;
       if (!filesByMessageId[messageId]) filesByMessageId[messageId] = [];
 
-      const driver = file.storage_driver;
-      const storageKey = file.storage_key;
       const thumbKey = file.thumb_storage_key || file.thumbStorageKey;
-      let fileUrl = `/api/uploads/messages/${file.stored_name}`;
+      const fileUrl = `/api/uploads/file/${encodeURIComponent(file.id)}`;
       let thumbUrl = await resolveThumbUrl({
         storageProvider: deps.storageProvider,
         file,
         thumbKey,
         fileId: file.id,
       });
-      if (
-        (driver === "remote" || driver === "s3") &&
-        deps.storageProvider &&
-        typeof deps.storageProvider.getDownloadUrl === "function"
-      ) {
-        if (storageKey) {
-          try {
-            fileUrl = await deps.storageProvider.getDownloadUrl(storageKey);
-          } catch (_) {}
-        }
-      }
-
       filesByMessageId[messageId].push({
         id: file.id,
         kind: file.kind,
@@ -1510,6 +1497,28 @@ function registerChatRoutes(app, deps) {
         avatarUrl = directAvatarUrl.startsWith("/uploads/")
           ? `/api${directAvatarUrl}`
           : directAvatarUrl;
+        if (typeof findPendingPresignedUpload !== "function") {
+          return res.status(503).json({
+            error: "Upload ownership verification is unavailable.",
+          });
+        }
+        const rawPending = findPendingPresignedUpload(
+          `uploads/avatars/${fileName}`,
+        );
+        const pending =
+          rawPending && typeof rawPending.then === "function"
+            ? await rawPending
+            : rawPending;
+        if (
+          !pending ||
+          String(pending.user_id ?? pending.userId ?? "") !== String(user.id) ||
+          String(pending.chat_id ?? pending.chatId ?? "") !== String(chatId) ||
+          String(pending.purpose || "").toLowerCase() !== "chat-avatar"
+        ) {
+          return res.status(403).json({
+            error: "Upload ownership could not be verified.",
+          });
+        }
       } else {
         const avatarMime = String(file.mimetype || "").toLowerCase();
         if (!ALLOWED_AVATAR_MIME_TYPES.has(avatarMime)) {
@@ -1551,11 +1560,14 @@ function registerChatRoutes(app, deps) {
       );
       const fileName = path.basename(avatarUrl);
       if (fileName && typeof removePendingPresignedUploads === "function") {
-        removePendingPresignedUploads([
+        const rawRemoved = removePendingPresignedUploads([
           `uploads/avatars/${fileName}`,
           // Legacy key from before uploads/avatars unification.
           `avatars/${fileName}`,
         ]);
+        if (rawRemoved && typeof rawRemoved.then === "function") {
+          await rawRemoved;
+        }
       }
       emitChatListChangedToChatParticipants(chatId);
 

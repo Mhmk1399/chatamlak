@@ -44,7 +44,9 @@ describe("native MongoDB repositories on a real replica set", () => {
   });
   test("keeps public session/member/settings contracts while storing native documents", async () => {
     const chat = await group(); await R.createSession(alice, "browser-token");
-    expect(await R.getSession("browser-token")).toMatchObject({ id: alice, username: "alice", token: "browser-token" });
+    expect(await R.getSession("browser-token")).toMatchObject({ id: alice, username: "alice" });
+    expect(await R.getSession("browser-token")).not.toHaveProperty("token");
+    expect((await db.collection("sessions").findOne({ user_id: alice })).token).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect((await R.listChatMembersForChats([chat])).get(chat)).toHaveLength(2);
     await R.dbSetSetting("REPORT_TEST", "yes"); expect(await R.dbGetSetting("REPORT_TEST")).toBe("yes");
     await R.setUserBanned(alice, true); expect(await R.getSession("browser-token")).toBeNull();

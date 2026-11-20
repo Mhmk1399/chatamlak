@@ -25,6 +25,7 @@ function setupSecretsApp({ isOwner = true } = {}) {
     deps: {
       isUserAdmin: () => true,
       isUserOwner: () => isOwner,
+      operatorApiToken: "secrets-operator-token",
     },
   });
   return { app };
@@ -49,11 +50,12 @@ describe("GET /api/admin/secrets", () => {
     else process.env.ADMIN_API_TOKEN = oldAdmin;
   });
 
-  test("owner receives all three secrets", async () => {
+  test("owner with operator step-up receives all three secrets", async () => {
     const { app } = setupSecretsApp({ isOwner: true });
     const res = await request(app)
       .get("/api/admin/secrets")
-      .set("Cookie", "sid=sid-1");
+      .set("Cookie", "sid=sid-1")
+      .set("x-ouj-chat-operator-token", "secrets-operator-token");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       cronSecret: "cron-secret",
@@ -66,8 +68,26 @@ describe("GET /api/admin/secrets", () => {
     const { app } = setupSecretsApp({ isOwner: false });
     const res = await request(app)
       .get("/api/admin/secrets")
-      .set("Cookie", "sid=sid-1");
+      .set("Cookie", "sid=sid-1")
+      .set("x-ouj-chat-operator-token", "secrets-operator-token");
     expect(res.status).toBe(403);
+  });
+
+  test("owner without operator step-up is denied", async () => {
+    const { app } = setupSecretsApp({ isOwner: true });
+    const res = await request(app)
+      .get("/api/admin/secrets")
+      .set("Cookie", "sid=sid-1");
+    expect(res.status).toBe(401);
+  });
+
+  test("owner with an invalid operator credential is denied", async () => {
+    const { app } = setupSecretsApp({ isOwner: true });
+    const res = await request(app)
+      .get("/api/admin/secrets")
+      .set("Cookie", "sid=sid-1")
+      .set("x-ouj-chat-operator-token", "invalid-operator-token");
+    expect(res.status).toBe(401);
   });
 
   test("unauthenticated requests are denied", async () => {

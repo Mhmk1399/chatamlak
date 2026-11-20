@@ -10,6 +10,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
   let sessionToken = "test-session-token-storage-keys";
   let userId;
   let chatId = "c0c0c0c0-d1d1-4e2e-af3f-060606060606";
+  const clientRequestId = "upload-storage-keys-request";
 
   beforeEach(() => {
     emittedEvents = [];
@@ -26,12 +27,30 @@ describe("POST /api/messages/upload with storageKeys", () => {
       },
     );
 
+    let persistedFiles = [];
     appObj = makeApp({
       deps: {
         isMember: () => true,
         findChatById: () => ({ id: chatId, name: "test-chat", type: "group" }),
         emitChatEvent: (_chatId, payload) => emittedEvents.push(payload),
+        emitSseEvent: (_username, payload) => emittedEvents.push(payload),
         storageProvider: mockRemoteProvider,
+        createMessageFiles: (messageId, files) => {
+          persistedFiles = files.map((file, index) => ({
+            ...file,
+            id: `file-uuid-${index + 1}`,
+            message_id: messageId,
+            original_name: file.originalName,
+            stored_name: file.storedName,
+            mime_type: file.mimeType,
+            size_bytes: file.sizeBytes,
+            storage_driver: file.storageDriver,
+            storage_key: file.storageKey,
+            processing_status: file.processingStatus,
+          }));
+          return persistedFiles.map((file) => file.id);
+        },
+        listMessageFilesByMessageIds: () => persistedFiles,
         MESSAGE_FILE_LIMITS: {
           maxFiles: 3,
           maxFileSizeBytes: 50 * 1024 * 1024,
@@ -50,13 +69,24 @@ describe("POST /api/messages/upload with storageKeys", () => {
     appObj.sessionStore.createSession(userId, sessionToken);
   });
 
+  const bindPendingUpload = (targetApp, targetUserId, storageKey) =>
+    targetApp.deps.recordPendingPresignedUpload({
+      storageKey,
+      userId: targetUserId,
+      chatId,
+      clientRequestId,
+      purpose: "message",
+    });
+
   test("accepts storageKeys array and attaches files to created message", async () => {
+    bindPendingUpload(appObj, userId, "uploads/doc123.pdf");
     const res = await request(appObj.app)
       .post("/api/messages/upload")
       .set("Cookie", [`sid=${sessionToken}`])
       .send({
         chatId,
         username: "remoteuser",
+        clientRequestId,
         body: "Here is the uploaded document",
         storageKeys: ["uploads/doc123.pdf"],
         fileMeta: JSON.stringify([
@@ -68,15 +98,16 @@ describe("POST /api/messages/upload with storageKeys", () => {
     expect(res.body.id).toBeDefined();
     expect(res.body.files).toHaveLength(1);
     expect(res.body.files[0].name).toBe("doc123.pdf");
-    expect(res.body.files[0].url).toContain("https://test-bucket.s3.amazonaws.com/uploads/doc123.pdf");
+    expect(res.body.files[0].url).toBe("/api/uploads/file/file-uuid-1");
     expect(emittedEvents.length).toBeGreaterThan(0);
-    expect(emittedEvents[0].files[0].url).toContain("uploads/doc123.pdf");
+    expect(emittedEvents[0].files[0].url).toBe("/api/uploads/file/file-uuid-1");
   });
 
   test("preserves the circular video kind through remote upload and SSE", async () => {
+    bindPendingUpload(appObj, userId, "uploads/video-note.webm");
     const res = await request(appObj.app).post("/api/messages/upload")
       .set("Cookie", [`sid=${sessionToken}`])
-      .send({ chatId, username: "remoteuser", uploadType: "video_note", storageKeys: [{
+      .send({ chatId, username: "remoteuser", clientRequestId, uploadType: "video_note", storageKeys: [{
         storageKey: "uploads/video-note.webm", originalName: "video-message.webm", mimeType: "video/webm",
         sizeBytes: 20480, width: 480, height: 480, durationSeconds: 3,
       }] });
@@ -86,9 +117,10 @@ describe("POST /api/messages/upload with storageKeys", () => {
   });
 
   test("rejects nonvideo attachments masquerading as a circular video", async () => {
+    bindPendingUpload(appObj, userId, "uploads/image.png");
     const res = await request(appObj.app).post("/api/messages/upload")
       .set("Cookie", [`sid=${sessionToken}`])
-      .send({ chatId, username: "remoteuser", uploadType: "video_note", storageKeys: [{
+      .send({ chatId, username: "remoteuser", clientRequestId, uploadType: "video_note", storageKeys: [{
         storageKey: "uploads/image.png", mimeType: "image/png", sizeBytes: 100,
       }] });
     expect(res.status).toBe(400);
@@ -96,12 +128,14 @@ describe("POST /api/messages/upload with storageKeys", () => {
   });
 
   test("accepts storageKeys as JSON stringified array or object array", async () => {
+    bindPendingUpload(appObj, userId, "uploads/image.png");
     const res = await request(appObj.app)
       .post("/api/messages/upload")
       .set("Cookie", [`sid=${sessionToken}`])
       .send({
         chatId,
         username: "remoteuser",
+        clientRequestId,
         body: "Check out this image",
         storageKeys: JSON.stringify([
           {
@@ -121,7 +155,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
     expect(res.body.files[0].name).toBe("image.png");
     expect(res.body.files[0].width).toBe(800);
     expect(res.body.files[0].height).toBe(600);
-    expect(res.body.files[0].url).toContain("https://test-bucket.s3.amazonaws.com/uploads/image.png");
+    expect(res.body.files[0].url).toBe("/api/uploads/file/file-uuid-1");
   });
 
   test("rejects when no files or storageKeys are provided", async () => {
@@ -158,12 +192,14 @@ describe("POST /api/messages/upload with storageKeys", () => {
   });
 
   test("rejects when total presigned size exceeds maxTotalBytes limit", async () => {
+    bindPendingUpload(appObj, userId, "uploads/huge.zip");
     const res = await request(appObj.app)
       .post("/api/messages/upload")
       .set("Cookie", [`sid=${sessionToken}`])
       .send({
         chatId,
         username: "remoteuser",
+        clientRequestId,
         storageKeys: [
           {
             storageKey: "uploads/huge.zip",
@@ -187,6 +223,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
     });
     const uId = customApp.userStore.createUser("testuser", "pass", "Test", null, "#fff");
     customApp.sessionStore.createSession(uId, sessionToken);
+    bindPendingUpload(customApp, uId, "uploads/malware.exe");
 
     const res = await request(customApp.app)
       .post("/api/messages/upload")
@@ -194,6 +231,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
       .send({
         chatId,
         username: "testuser",
+        clientRequestId,
         storageKeys: ["uploads/malware.exe"],
       });
 
@@ -218,6 +256,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
     });
     const uId = customApp.userStore.createUser("testuser2", "pass", "Test", null, "#fff");
     customApp.sessionStore.createSession(uId, sessionToken);
+    bindPendingUpload(customApp, uId, "uploads/clip.mp4");
 
     const res = await request(customApp.app)
       .post("/api/messages/upload")
@@ -225,6 +264,7 @@ describe("POST /api/messages/upload with storageKeys", () => {
       .send({
         chatId,
         username: "testuser2",
+        clientRequestId,
         body: "Here is a video clip",
         storageKeys: [
           {

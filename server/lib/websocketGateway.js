@@ -1,4 +1,42 @@
 import { WebSocketServer, WebSocket } from "ws";
+import { isIP } from "node:net";
+import { isValidUuid } from "./uuidUtils.js";
+import { sessionTokenStorageValue } from "./sessionTokens.js";
+
+const MEMBERSHIP_EVENT_TYPES = new Set(["chat_updated", "chat_deleted", "chat_list_changed"]);
+const CALL_SIGNAL_TYPES = new Set([
+  "start",
+  "accept",
+  "reject",
+  "end",
+  "offer",
+  "answer",
+  "ice-candidate",
+  "camera-state",
+]);
+
+function boundedInteger(value, fallback, minimum, maximum) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed)
+    ? Math.max(minimum, Math.min(maximum, parsed))
+    : fallback;
+}
+
+export function resolveWebSocketClientIp(
+  request,
+  { trustProxy = false } = {},
+) {
+  const direct = String(
+    request?.socket?.remoteAddress ||
+      request?.connection?.remoteAddress ||
+      "unknown",
+  );
+  if (!trustProxy) return direct;
+  const forwarded = String(request?.headers?.["x-forwarded-for"] || "")
+    .split(",")[0]
+    .trim();
+  return isIP(forwarded) ? forwarded : direct;
+}
 
 export function createWebSocketGateway({
   server,
@@ -10,11 +48,79 @@ export function createWebSocketGateway({
   onUserDisconnected,
   heartbeatIntervalMs = 30000,
   heartbeatTimeoutMs = 10000,
+  allowedOrigins,
+  maxPayloadBytes = Number(process.env.WS_MAX_PAYLOAD_BYTES) || 64 * 1024,
+  maxConnectionsPerIp = Number(process.env.WS_MAX_CONNECTIONS_PER_IP) || 50,
+  maxMessagesPerWindow = Number(process.env.WS_MESSAGE_RATE_LIMIT) || 120,
+  messageRateWindowMs = Number(process.env.WS_MESSAGE_RATE_WINDOW_MS) || 60_000,
+  authTimeoutMs = Number(process.env.WS_AUTH_TIMEOUT_MS) || 5_000,
+  trustProxy = ["1", "true", "yes"].includes(
+    String(process.env.WS_TRUST_PROXY || "").trim().toLowerCase(),
+  ),
 }) {
-  const wss = new WebSocketServer({ noServer: true });
+  const effectiveMaxPayloadBytes = boundedInteger(maxPayloadBytes, 64 * 1024, 1024, 1024 * 1024);
+  const effectiveMaxConnectionsPerIp = boundedInteger(maxConnectionsPerIp, 50, 1, 1000);
+  const effectiveMaxMessagesPerWindow = boundedInteger(maxMessagesPerWindow, 120, 1, 10_000);
+  const effectiveMessageRateWindowMs = boundedInteger(messageRateWindowMs, 60_000, 1_000, 60 * 60 * 1000);
+  const effectiveAuthTimeoutMs = boundedInteger(authTimeoutMs, 5_000, 100, 30_000);
+  const configuredOrigins = new Set(
+    (Array.isArray(allowedOrigins)
+      ? allowedOrigins
+      : String(process.env.WS_ALLOWED_ORIGINS || process.env.APP_PUBLIC_URL || "").split(","))
+      .map((origin) => String(origin || "").trim())
+      .filter(Boolean)
+      .map((origin) => {
+        try { return new URL(origin).origin; } catch { return ""; }
+      })
+      .filter(Boolean),
+  );
+  const wss = new WebSocketServer({ noServer: true, maxPayload: effectiveMaxPayloadBytes });
   const clientsByUsername = new Map();
+  const connectionsByIp = new Map();
+  const pendingUpgradesByIp = new Map();
 
   const instanceId = Math.random().toString(36).substring(2);
+
+  function getClientIp(request) {
+    return resolveWebSocketClientIp(request, { trustProxy });
+  }
+
+  function changeCount(map, key, delta) {
+    const next = Math.max(0, Number(map.get(key) || 0) + delta);
+    if (next) map.set(key, next);
+    else map.delete(key);
+    return next;
+  }
+
+  function rejectUpgrade(socket, status, statusText, message) {
+    const body = `${message}\n`;
+    try {
+      socket.write(
+        `HTTP/1.1 ${status} ${statusText}\r\nConnection: close\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`,
+      );
+    } catch (_) {}
+    try { socket.destroy(); } catch (_) {}
+  }
+
+  function isOriginAllowed(request) {
+    const rawOrigin = String(request?.headers?.origin || "").trim();
+    if (!rawOrigin) return true;
+    let origin;
+    try { origin = new URL(rawOrigin).origin; } catch { return false; }
+    if (configuredOrigins.has(origin)) return true;
+    const host = String(request?.headers?.host || "").trim().toLowerCase();
+    if (!host) return false;
+    return origin === `https://${host}` || origin === `http://${host}`;
+  }
+
+  function withAuthTimeout(value) {
+    let timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeout = setTimeout(() => reject(new Error("WebSocket authentication timed out.")), effectiveAuthTimeoutMs);
+      if (typeof timeout.unref === "function") timeout.unref();
+    });
+    return Promise.race([Promise.resolve(value), timeoutPromise]).finally(() => clearTimeout(timeout));
+  }
 
   function clearHeartbeatTimeoutTimer(ws) {
     if (ws && ws._heartbeatTimeoutTimer) {
@@ -64,6 +170,9 @@ export function createWebSocketGateway({
           if (broadcast) {
             broadcastLocal(payload);
           } else if (chatId && sseHub) {
+            if (MEMBERSHIP_EVENT_TYPES.has(String(payload?.type || ""))) {
+              sseHub.invalidateChatMembers?.(chatId);
+            }
             const rawMembers = sseHub.getCachedMembers(chatId);
             const processMembers = (members) => {
               (members || []).forEach((m) => {
@@ -120,8 +229,11 @@ export function createWebSocketGateway({
     }
   }
 
-  function sendChatEvent(chatId, payload) {
+  function routeChatEvent(chatId, payload, cacheAlreadyInvalidated = false) {
     if (sseHub) {
+      if (!cacheAlreadyInvalidated && MEMBERSHIP_EVENT_TYPES.has(String(payload?.type || ""))) {
+        sseHub.invalidateChatMembers?.(chatId);
+      }
       const rawMembers = sseHub.getCachedMembers(chatId);
       const processMembers = (members) => {
         (members || []).forEach((member) => {
@@ -142,10 +254,14 @@ export function createWebSocketGateway({
     }
   }
 
+  function sendChatEvent(chatId, payload) {
+    routeChatEvent(chatId, payload, false);
+  }
+
   let unsubscribeHub = null;
   if (sseHub && typeof sseHub.onChatEvent === "function") {
     unsubscribeHub = sseHub.onChatEvent((chatId, payload) => {
-      sendChatEvent(chatId, payload);
+      routeChatEvent(chatId, payload, true);
     });
   }
 
@@ -161,7 +277,14 @@ export function createWebSocketGateway({
 
   wss.on("connection", (ws, req, rawSession) => {
     const sessionCookie = String(req?.headers?.cookie || "").match(/(?:^|;\s*)sid=([^;]+)/);
-    ws._sessionToken = sessionCookie ? decodeURIComponent(sessionCookie[1]) : null;
+    let cookieToken = "";
+    try { cookieToken = sessionCookie ? decodeURIComponent(sessionCookie[1]) : ""; } catch (_) {}
+    ws._sessionTokenId = req?._wsSessionTokenId || sessionTokenStorageValue(cookieToken) || null;
+    ws._connectionIp = req?._wsClientIp || getClientIp(req);
+    ws._messageRateWindowStartedAt = Date.now();
+    ws._messageRateCount = 0;
+    ws._connectionCounted = true;
+    changeCount(connectionsByIp, ws._connectionIp, 1);
     ws.isAlive = true;
     if (wss.clients && typeof wss.clients.add === "function") {
       wss.clients.add(ws);
@@ -185,11 +308,24 @@ export function createWebSocketGateway({
         clients.add(ws);
         clientsByUsername.set(username, clients);
       }
+      if (!username) {
+        if (ws._connectionCounted) {
+          ws._connectionCounted = false;
+          changeCount(connectionsByIp, ws._connectionIp, -1);
+        }
+        if (wss.clients && typeof wss.clients.delete === "function") wss.clients.delete(ws);
+        if (typeof ws.close === "function") ws.close(1008, "Authentication required");
+        return;
+      }
       if (onUserConnected) onUserConnected(username, ws);
 
       if (typeof ws.on === "function") {
         ws.on("close", () => {
           clearHeartbeatTimeoutTimer(ws);
+          if (ws._connectionCounted) {
+            ws._connectionCounted = false;
+            changeCount(connectionsByIp, ws._connectionIp, -1);
+          }
           if (wss.clients && typeof wss.clients.delete === "function") {
             wss.clients.delete(ws);
           }
@@ -216,8 +352,28 @@ export function createWebSocketGateway({
 
     if (typeof ws.on === "function") {
       ws.on("message", (raw) => {
+        const rawLength = Buffer.isBuffer(raw)
+          ? raw.length
+          : Buffer.byteLength(String(raw || ""));
+        if (rawLength > effectiveMaxPayloadBytes) {
+          if (typeof ws.close === "function") ws.close(1009, "Payload too large");
+          return;
+        }
+
+        const currentTime = Date.now();
+        if (currentTime - ws._messageRateWindowStartedAt >= effectiveMessageRateWindowMs) {
+          ws._messageRateWindowStartedAt = currentTime;
+          ws._messageRateCount = 0;
+        }
+        ws._messageRateCount += 1;
+        if (ws._messageRateCount > effectiveMaxMessagesPerWindow) {
+          if (typeof ws.close === "function") ws.close(1008, "Message rate limit exceeded");
+          return;
+        }
+
         try {
           const msg = JSON.parse(raw.toString());
+          if (!msg || typeof msg !== "object" || Array.isArray(msg)) throw new Error("Invalid payload");
           if (msg.type === "pong" || msg.type === "ping") {
             ws.isAlive = true;
             clearHeartbeatTimeoutTimer(ws);
@@ -226,89 +382,138 @@ export function createWebSocketGateway({
             ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
           }
 
-          if (msg.action === "call_signal" && callManager && currentSession?.username) {
+          if (msg.action === "call_signal") {
             const { signalType, chatId, data } = msg;
+            const sendCallError = (error) => {
+              if (typeof ws.send === "function") {
+                ws.send(JSON.stringify({ type: "call:error", chatId, error }));
+              }
+            };
+            const validData = data === undefined || data === null
+              || (typeof data === "object" && !Array.isArray(data));
+            if (!callManager || !currentSession?.username) {
+              sendCallError("Authentication required.");
+              return;
+            }
+            if (!CALL_SIGNAL_TYPES.has(String(signalType || ""))
+              || !isValidUuid(String(chatId || ""))
+              || !validData
+              || (signalType === "start" && !["audio", "video"].includes(data?.type))) {
+              sendCallError("Invalid call signal.");
+              return;
+            }
             // Serialize per socket: a camera-level signal posted right after
             // start must not relay before startCall has seeded the call.
             ws._callSignalQueue = (ws._callSignalQueue || Promise.resolve()).then(
               async () => {
                 try {
+                  let response;
                   if (signalType === "start") {
-                    const res = await callManager.startCall({
+                    response = await callManager.startCall({
                       user: currentSession,
                       chatId,
                       type: data?.type,
                     });
-                    if (res?.error && typeof ws.send === "function") {
-                      ws.send(JSON.stringify({ type: "call:error", chatId, error: res.error }));
-                    }
                   } else if (signalType === "accept") {
-                    const res = await callManager.acceptCall({
+                    response = await callManager.acceptCall({
                       user: currentSession,
                       chatId,
                     });
-                    if (res?.error && typeof ws.send === "function") {
-                      ws.send(JSON.stringify({ type: "call:error", chatId, error: res.error }));
-                    }
                   } else if (signalType === "reject") {
-                    await callManager.rejectCall({
+                    response = await callManager.rejectCall({
                       user: currentSession,
                       chatId,
-                      reason: data?.reason,
+                      reason: String(data?.reason || "").slice(0, 200),
                     });
                   } else if (signalType === "end") {
-                    await callManager.endCall({
+                    response = await callManager.endCall({
                       user: currentSession,
                       chatId,
                     });
                   } else if (["offer", "answer", "ice-candidate", "camera-state"].includes(signalType)) {
-                    await callManager.relaySignal({
+                    response = await callManager.relaySignal({
                       user: currentSession,
                       chatId,
                       signalType,
                       payload: data || {},
                     });
                   }
-                } catch (_) {}
+                  if (response?.error) sendCallError(String(response.error).slice(0, 300));
+                } catch (_) {
+                  sendCallError("Unable to process call signal.");
+                }
               },
             );
           }
-        } catch (_) {}
+        } catch (_) {
+          if (typeof ws.send === "function") {
+            try { ws.send(JSON.stringify({ type: "error", error: "Invalid WebSocket payload." })); } catch (_) {}
+          }
+        }
       });
     }
   });
 
   if (server) {
     server.on("upgrade", (request, socket, head) => {
-      const urlObj = new URL(
-        request.url,
-        `http://${request.headers.host || "localhost"}`,
-      );
+      let urlObj;
+      try {
+        urlObj = new URL(
+          request.url,
+          `http://${request.headers.host || "localhost"}`,
+        );
+      } catch (_) {
+        rejectUpgrade(socket, 400, "Bad Request", "Invalid WebSocket request.");
+        return;
+      }
       const pathname = urlObj.pathname;
       if (pathname === "/ws" || pathname === "/api/ws") {
-        let token = urlObj.searchParams.get("token") || urlObj.searchParams.get("sid");
-        if (!token) {
-          const cookieHeader = request.headers.cookie || "";
-          const matches = cookieHeader.match(/sid=([^;]+)/);
-          if (matches) token = decodeURIComponent(matches[1]);
+        if (!isOriginAllowed(request)) {
+          rejectUpgrade(socket, 403, "Forbidden", "WebSocket origin is not allowed.");
+          return;
+        }
+        if (urlObj.searchParams.has("token") || urlObj.searchParams.has("sid")) {
+          rejectUpgrade(socket, 400, "Bad Request", "WebSocket credentials must use the session cookie.");
+          return;
         }
 
-        const rawSession =
-          token && getSessionFromToken ? getSessionFromToken(token) : null;
-
-        const processSession = (session) => {
-          wss.handleUpgrade(request, socket, head, (ws) => {
-            wss.emit("connection", ws, request, session);
-          });
-        };
-
-        if (rawSession && typeof rawSession.then === "function") {
-          rawSession.then(processSession).catch(() => {
-            processSession(null);
-          });
-        } else {
-          processSession(rawSession);
+        const cookieHeader = String(request.headers.cookie || "");
+        const matches = cookieHeader.match(/(?:^|;\s*)sid=([^;]+)/);
+        let token = "";
+        try { token = matches ? decodeURIComponent(matches[1]) : ""; } catch (_) {}
+        if (!token || typeof getSessionFromToken !== "function") {
+          rejectUpgrade(socket, 401, "Unauthorized", "Authentication required.");
+          return;
         }
+
+        const clientIp = getClientIp(request);
+        const admitted = Number(connectionsByIp.get(clientIp) || 0)
+          + Number(pendingUpgradesByIp.get(clientIp) || 0);
+        if (admitted >= effectiveMaxConnectionsPerIp) {
+          rejectUpgrade(socket, 429, "Too Many Requests", "WebSocket connection limit exceeded.");
+          return;
+        }
+        changeCount(pendingUpgradesByIp, clientIp, 1);
+
+        let rawSession;
+        try { rawSession = getSessionFromToken(token); }
+        catch (_) { rawSession = null; }
+        withAuthTimeout(rawSession)
+          .then((session) => {
+            if (!session?.username) {
+              rejectUpgrade(socket, 401, "Unauthorized", "Authentication required.");
+              return;
+            }
+            request._wsClientIp = clientIp;
+            request._wsSessionTokenId = sessionTokenStorageValue(token);
+            wss.handleUpgrade(request, socket, head, (ws) => {
+              wss.emit("connection", ws, request, session);
+            });
+          })
+          .catch(() => {
+            rejectUpgrade(socket, 401, "Unauthorized", "Authentication required.");
+          })
+          .finally(() => changeCount(pendingUpgradesByIp, clientIp, -1));
       }
     });
   }
@@ -320,12 +525,31 @@ export function createWebSocketGateway({
     sendChatEvent,
     broadcastAll,
     disconnectSession(token) {
+      const tokenId = sessionTokenStorageValue(token);
       wss.clients.forEach((ws) => {
-        if (ws._sessionToken === token) {
-          ws.send(JSON.stringify({ type: "session_revoked" }));
-          ws.close(1008, "Session revoked");
+        if (tokenId && ws._sessionTokenId === tokenId) {
+          try { ws.send(JSON.stringify({ type: "session_revoked" })); } catch (_) {}
+          try { ws.close(1008, "Session revoked"); } catch (_) {}
         }
       });
+    },
+    disconnectUsername(username, reason = "revoked") {
+      const key = String(username || "").trim().toLowerCase();
+      const safeReason = ["banned", "password_changed", "account_deleted", "revoked"]
+        .includes(String(reason || ""))
+        ? String(reason)
+        : "revoked";
+      const clients = clientsByUsername.get(key);
+      if (!clients?.size) return 0;
+      let disconnected = 0;
+      for (const ws of [...clients]) {
+        try {
+          ws.send(JSON.stringify({ type: "session_revoked", reason: safeReason }));
+        } catch (_) {}
+        try { ws.close(1008, "Session revoked"); } catch (_) {}
+        disconnected += 1;
+      }
+      return disconnected;
     },
     close() {
       clearInterval(heartbeatTimer);

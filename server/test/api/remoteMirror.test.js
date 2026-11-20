@@ -12,6 +12,7 @@ import { createMirrorJobRegistry } from "../../lib/remoteMirrorJobs.js";
 
 let tmpDir;
 let registry;
+const TEST_WEBHOOK_SECRET = "test-webhook-secret";
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rc-mirror-"));
@@ -22,7 +23,7 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function setupMirrorApp({ webhookSecret = null, attachImpl = null, hasMirroredFile = null } = {}) {
+function setupMirrorApp({ webhookSecret = TEST_WEBHOOK_SECRET, attachImpl = null, hasMirroredFile = null } = {}) {
   const sessionStore = makeSessionStore();
   const userStore = makeUserStore();
   const attachMirroredMedia = attachImpl || vi.fn(async () => 1);
@@ -86,6 +87,7 @@ describe("remote mirror blob + webhook", () => {
     const { app, attachMirroredMedia } = setupMirrorApp();
     const res = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
+      .set("x-ouj-chat-webhook-secret", TEST_WEBHOOK_SECRET)
       .send({
         jobId: entry.jobId,
         status: "ready",
@@ -107,6 +109,7 @@ describe("remote mirror blob + webhook", () => {
     expect(fs.existsSync(filePath)).toBe(false);
     const again = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
+      .set("x-ouj-chat-webhook-secret", TEST_WEBHOOK_SECRET)
       .send({
         jobId: entry.jobId,
         status: "ready",
@@ -135,6 +138,7 @@ describe("remote mirror blob + webhook", () => {
     const { app, attachMirroredMedia } = setupMirrorApp({ hasMirroredFile });
     const res = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
+      .set("x-ouj-chat-webhook-secret", TEST_WEBHOOK_SECRET)
       .send({
         jobId: entry.jobId,
         status: "ready",
@@ -167,6 +171,7 @@ describe("remote mirror blob + webhook", () => {
     });
     const res = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
+      .set("x-ouj-chat-webhook-secret", TEST_WEBHOOK_SECRET)
       .send({
         jobId: entry.jobId,
         status: "ready",
@@ -187,6 +192,21 @@ describe("remote mirror blob + webhook", () => {
     expect(res.status).toBe(401);
   });
 
+  test("webhook fails closed when no shared secret is configured", async () => {
+    const attachMirroredMedia = vi.fn(async () => 1);
+    const { app } = setupMirrorApp({
+      webhookSecret: "",
+      attachImpl: attachMirroredMedia,
+    });
+    const res = await request(app)
+      .post("/api/remote-channel/webhook/mirror-done")
+      .send({ jobId: "x", status: "ready", storageKey: "uploads/x" });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/not configured/i);
+    expect(attachMirroredMedia).not.toHaveBeenCalled();
+  });
+
   test("failed worker status skips attach but still settles", async () => {
     const filePath = path.join(tmpDir, "a.bin");
     fs.writeFileSync(filePath, "mirror-bytes");
@@ -194,6 +214,7 @@ describe("remote mirror blob + webhook", () => {
     const { app, attachMirroredMedia } = setupMirrorApp();
     const res = await request(app)
       .post("/api/remote-channel/webhook/mirror-done")
+      .set("x-ouj-chat-webhook-secret", TEST_WEBHOOK_SECRET)
       .send({
         jobId: entry.jobId,
         status: "failed",

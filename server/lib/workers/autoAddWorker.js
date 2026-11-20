@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import { safeErrorCode } from "../requestLogging.js";
 
 export const userEvents = new EventEmitter();
 
@@ -39,7 +40,11 @@ export function initAutoAddWorker({ db, emitChatEvent }) {
         }
       }
     } catch (err) {
-      console.error("AutoAddWorker error auto-adding user:", err);
+      console.error(JSON.stringify({
+        service: "ouj-chat",
+        event: "auto_add.failed",
+        errorCode: safeErrorCode(err, "auto_add_failed"),
+      }));
     }
   };
 

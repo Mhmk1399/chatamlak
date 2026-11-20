@@ -1,7 +1,11 @@
 export function createSessionHelpers({
   getSession,
   touchSession,
+  deleteSession = () => {},
   isProduction,
+  sessionIdleTimeoutMs = Number(process.env.SESSION_IDLE_TIMEOUT_MS) || 14 * 24 * 60 * 60 * 1000,
+  sessionAbsoluteTimeoutMs = Number(process.env.SESSION_ABSOLUTE_TIMEOUT_MS) || 30 * 24 * 60 * 60 * 1000,
+  now = Date.now,
 }) {
   const parseCookies = (req) => {
     const cookieHeader = req.headers.cookie;
@@ -61,26 +65,58 @@ export function createSessionHelpers({
     res.setHeader("Set-Cookie", parts.join("; "));
   };
 
+  const timestamp = (value) => {
+    if (value === undefined || value === null || value === "") return null;
+    const parsed = Date.parse(String(value));
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const isSessionExpired = (session) => {
+    if (!session) return false;
+    const currentTime = Number(now());
+    const createdAt = timestamp(session.session_created_at ?? session.created_at);
+    const lastSeen = timestamp(session.session_last_seen ?? session.last_seen);
+    const idleExpired = sessionIdleTimeoutMs > 0 && lastSeen !== null
+      && currentTime - lastSeen >= sessionIdleTimeoutMs;
+    const absoluteExpired = sessionAbsoluteTimeoutMs > 0 && createdAt !== null
+      && currentTime - createdAt >= sessionAbsoluteTimeoutMs;
+    return idleExpired || absoluteExpired;
+  };
+
+  const resolveSession = (session, token) => {
+    if (!session) return null;
+    if (isSessionExpired(session)) {
+      try {
+        const deleted = deleteSession(token);
+        if (deleted && typeof deleted.then === "function") {
+          return deleted.catch(() => {}).then(() => null);
+        }
+      } catch (_) {
+        // Expired credentials stay denied even if best-effort cleanup fails.
+      }
+      return null;
+    }
+
+    const touched = touchSession(token);
+    if (touched && typeof touched.then === "function") {
+      return touched.then(() => session);
+    }
+    return session;
+  };
+
+  const getSessionFromToken = (token) => {
+    if (typeof token !== "string" || !token) return null;
+    const rawSession = getSession(token);
+    if (rawSession && typeof rawSession.then === "function") {
+      return rawSession.then((session) => resolveSession(session, token));
+    }
+    return resolveSession(rawSession, token);
+  };
+
   const getSessionFromRequest = (req) => {
     const cookies = parseCookies(req);
     if (!cookies.sid) return null;
-
-    const rawSession = getSession(cookies.sid);
-    if (rawSession && typeof rawSession.then === "function") {
-      return rawSession.then(async (session) => {
-        if (session) {
-          await touchSession(cookies.sid);
-        }
-        return session;
-      });
-    }
-
-    if (rawSession) {
-      const touched = touchSession(cookies.sid);
-      if (touched && typeof touched.then === "function") return touched.then(() => rawSession);
-    }
-
-    return rawSession;
+    return getSessionFromToken(cookies.sid);
   };
 
   const requireSession = (req, res) => {
@@ -124,6 +160,8 @@ export function createSessionHelpers({
     shouldUseSecureCookie,
     setSessionCookie,
     clearSessionCookie,
+    isSessionExpired,
+    getSessionFromToken,
     getSessionFromRequest,
     requireSession,
     requireSessionUsernameMatch,

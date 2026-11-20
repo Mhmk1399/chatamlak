@@ -12,6 +12,7 @@ function registerAuthRoutes(app, deps) {
     createUser,
     crypto,
     deleteSession,
+    disconnectSession,
     ensureAvatarExists,
     findChatByGroupUsername,
     findUserByUsername,
@@ -181,6 +182,7 @@ function registerAuthRoutes(app, deps) {
 
     if (cookies.sid) {
       await deleteSession(cookies.sid);
+      disconnectSession?.(cookies.sid);
     }
 
     clearSessionCookie(req, res);

@@ -4213,7 +4213,9 @@ export default function ChatPage({
         if (!CHAT_PAGE_CONFIG.fileUploadEnabled) {
           throw new Error("File uploads are disabled on this server.");
         }
-        const uploaded = await uploadAvatarFile(pendingAvatarFile.file);
+        const uploaded = await uploadAvatarFile(pendingAvatarFile.file, {
+          uploadPurpose: "profile-avatar",
+        });
         let response;
         if (uploaded.directS3 && uploaded.avatarUrl) {
           response = await uploadAvatar({
@@ -4805,7 +4807,10 @@ export default function ChatPage({
       if (!nextChatId) throw new Error("Server did not return a group id.");
 
       if (pendingGroupAvatarFile?.file) {
-        const uploaded = await uploadAvatarFile(pendingGroupAvatarFile.file);
+        const uploaded = await uploadAvatarFile(pendingGroupAvatarFile.file, {
+          uploadPurpose: "chat-avatar",
+          chatId: nextChatId,
+        });
         let avatarResponse;
         if (uploaded.directS3 && uploaded.avatarUrl) {
           avatarResponse = await uploadGroupAvatar(nextChatId, {
@@ -5523,6 +5528,9 @@ export default function ChatPage({
         let prepared = { presignedFiles: [], localFiles: [], fileMeta: [] };
         try {
           prepared = await prepareFilesForMessage(fileItems, {
+            chatId: targetChatId,
+            clientRequestId: pendingMessage._clientId,
+            uploadPurpose: "message",
             onProgress: (_index, percent) => {
               setPendingUploadProgress(
                 pendingMessage._clientId,

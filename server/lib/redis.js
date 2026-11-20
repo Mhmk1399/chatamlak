@@ -1,5 +1,10 @@
 import { EventEmitter } from "node:events";
 import Redis from "ioredis";
+import {
+  isStoredSessionToken,
+  sessionTokenStorageValue,
+} from "./sessionTokens.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 class InProcessRedisClient extends EventEmitter {
   constructor(sharedState) {
@@ -117,7 +122,11 @@ export function createRedisClient(config = {}) {
     client.isFallback = false;
     return client;
   } catch (error) {
-    console.warn("[redis] Failed to instantiate ioredis client, falling back to in-process:", error?.message || error);
+    console.warn(JSON.stringify({
+      service: "ouj-chat",
+      event: "redis.fallback",
+      errorCode: safeErrorCode(error, "redis_client_failed"),
+    }));
     const sharedState = config.sharedState || {
       store: new Map(),
       subscribers: new Map(),
@@ -134,20 +143,20 @@ export function createRedisSessionStore({ redisClient, dbGetSession }) {
 
   return {
     async createSession(userId, token) {
-      const key = `${SESSION_PREFIX}${token}`;
+      const key = `${SESSION_PREFIX}${sessionTokenStorageValue(token)}`;
       const payload = JSON.stringify({ userId, createdAt: Date.now() });
       await redisClient.set(key, payload, "EX", DEFAULT_TTL_SECONDS);
     },
 
     async getSession(token) {
-      if (!token) return null;
-      const key = `${SESSION_PREFIX}${token}`;
+      if (!token || isStoredSessionToken(token)) return null;
+      const key = `${SESSION_PREFIX}${sessionTokenStorageValue(token)}`;
       const cached = await redisClient.get(key);
 
       if (cached) {
         // Hydrate from DB or return cached payload
         if (typeof dbGetSession === "function") {
-          const dbSession = dbGetSession(token);
+          const dbSession = await dbGetSession(token);
           if (dbSession) return dbSession;
         }
         try {
@@ -159,7 +168,7 @@ export function createRedisSessionStore({ redisClient, dbGetSession }) {
 
       // Fallback to DB session lookup
       if (typeof dbGetSession === "function") {
-        const dbSession = dbGetSession(token);
+        const dbSession = await dbGetSession(token);
         if (dbSession) {
           await redisClient.set(
             key,
@@ -178,17 +187,17 @@ export function createRedisSessionStore({ redisClient, dbGetSession }) {
     },
 
     async touchSession(token) {
-      if (!token) return;
-      const key = `${SESSION_PREFIX}${token}`;
+      if (!token || isStoredSessionToken(token)) return;
+      const key = `${SESSION_PREFIX}${sessionTokenStorageValue(token)}`;
       const cached = await redisClient.get(key);
       if (cached) {
         await redisClient.set(key, cached, "EX", DEFAULT_TTL_SECONDS);
       }
     },
 
-    async deleteSession(token) {
-      if (!token) return;
-      const key = `${SESSION_PREFIX}${token}`;
+    async deleteSession(token, { acceptStored = false } = {}) {
+      if (!token || (isStoredSessionToken(token) && !acceptStored)) return;
+      const key = `${SESSION_PREFIX}${sessionTokenStorageValue(token)}`;
       await redisClient.del(key);
     },
   };

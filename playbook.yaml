@@ -150,4 +150,4 @@
           - "Ouj Chat {{ ouj_chat_version }} deployment {{ 'succeeded' if ouj_chat_success else ('may be incomplete — check logs in ' + ouj_chat_src) }}."
           - "Access URL: {{ ouj_chat_access_url }} (self-signed cert until you replace certs/cert.pem + certs/key.pem)."
           - "First steps: create the owner account, then set SIGN_UP=false in {{ ouj_chat_src }}/.env if the instance is public."
-          - "Notes: MongoDB data is external to this stack; the container mounts /var/run/docker.sock for the admin panel's service controls."
+          - "Notes: MongoDB data is external to this stack; the application does not mount the Docker socket, and host service controls are infrastructure-managed."

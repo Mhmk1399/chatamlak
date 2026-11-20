@@ -17,8 +17,21 @@ function registerRemoteMirrorRoutes(app, deps) {
 
   const expectedWebhookSecret =
     webhookSecret !== undefined
-      ? webhookSecret
-      : process.env.WEBHOOK_SECRET || "";
+      ? String(webhookSecret || "")
+      : String(process.env.WEBHOOK_SECRET || "");
+
+  const secretsMatch = (providedValue, expectedValue) => {
+    const provided = Buffer.from(String(providedValue || ""));
+    const expected = Buffer.from(String(expectedValue || ""));
+    if (!provided.length || !expected.length || provided.length !== expected.length) {
+      return false;
+    }
+    try {
+      return crypto.timingSafeEqual(provided, expected);
+    } catch {
+      return false;
+    }
+  };
 
   const blobLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -62,11 +75,14 @@ function registerRemoteMirrorRoutes(app, deps) {
 
   // ─── Worker result callback ───────────────────────────────────────────────
   app.post("/api/remote-channel/webhook/mirror-done", async (req, res) => {
-    if (expectedWebhookSecret) {
-      const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
-      if (headerSecret !== expectedWebhookSecret) {
-        return res.status(401).json({ error: "Unauthorized webhook request." });
-      }
+    if (!expectedWebhookSecret) {
+      return res.status(503).json({
+        error: "Remote mirror webhook is not configured.",
+      });
+    }
+    const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
+    if (!secretsMatch(headerSecret, expectedWebhookSecret)) {
+      return res.status(401).json({ error: "Unauthorized webhook request." });
     }
     const {
       jobId,
@@ -78,7 +94,6 @@ function registerRemoteMirrorRoutes(app, deps) {
       heightPx,
       durationSeconds,
       mimeType,
-      error,
     } = req.body || {};
     // Settle exactly once — the local-fallback timer loses if we win.
     const entry = mirrorJobRegistry?.settle?.(jobId, "webhook");
@@ -90,11 +105,12 @@ function registerRemoteMirrorRoutes(app, deps) {
       // Best effort.
     }
     if (status !== "ready" || !storageKey) {
-      console.warn(
-        "[remote-mirror] Job %s failed: %s",
-        String(jobId),
-        String(error || "no storage key"),
-      );
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "remote_mirror.failed",
+        jobId: String(jobId || "").slice(0, 200),
+        errorCode: status !== "ready" ? "worker_status_failed" : "storage_key_missing",
+      }));
       return res.json({ ok: true, attached: false });
     }
     // A retried queue item may dispatch the same file twice while a previous
@@ -134,12 +150,13 @@ function registerRemoteMirrorRoutes(app, deps) {
         },
       });
       return res.json({ ok: true, attached: true });
-    } catch (attachError) {
-      console.warn(
-        "[remote-mirror] Attach failed for job %s: %s",
-        String(jobId),
-        String(attachError?.message || attachError),
-      );
+    } catch {
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "remote_mirror.attach_failed",
+        jobId: String(jobId || "").slice(0, 200),
+        errorCode: "attach_failed",
+      }));
       return res.json({ ok: true, attached: false });
     }
   });

@@ -1,4 +1,5 @@
 import { updateEnvValue } from "./secrets.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 export function ensureValidVapidKeys({ projectRootDir, fs, path, webpush }) {
   const envPath = path.join(projectRootDir, ".env");
@@ -65,10 +66,11 @@ export function ensureValidVapidKeys({ projectRootDir, fs, path, webpush }) {
       updateEnvValue(envPath, "VAPID_SUBJECT", subject, { fsImpl: fs });
     }
   } catch (error) {
-    console.warn(
-      "[push] Unable to update .env with regenerated VAPID keys:",
-      String(error?.message || error),
-    );
+    console.warn(JSON.stringify({
+      service: "ouj-chat",
+      event: "vapid.env_update_failed",
+      errorCode: safeErrorCode(error, "vapid_env_update_failed"),
+    }));
   }
 
   process.env.VAPID_PUBLIC_KEY = publicKey;

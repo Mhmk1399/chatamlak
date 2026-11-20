@@ -27,7 +27,7 @@ export function createMongoAdminActions(deps) {
         required(p.password, "Password is required.");
         const role = ["user", "admin", "owner"].includes(p.role) ? p.role : "user";
         const id = await R.createUser(name, await deps.bcrypt.hash(String(p.password), 10), p.nickname || name, p.avatarUrl || null, p.color || null, { role, verified: p.verified });
-        userEvents.emit("user:created", { id }); result = { id, username: name, nickname: p.nickname || name, role };
+        userEvents.emit("user:created", { userId: id }); result = { id, username: name, nickname: p.nickname || name, role };
       } else if (action === "create_chat") {
         const owner = required(await selectUser(p.owner || p.ownerUsername || p.ownerId), "Owner user not found.");
         const type = p.type === "channel" ? "channel" : "group", groupUsername = username(p.username || p.groupUsername);
@@ -56,7 +56,12 @@ export function createMongoAdminActions(deps) {
         for (const field of ["username", "nickname", "color", "status", "role"]) if (p[field] !== undefined) patch[field] = field === "username" ? username(p[field]) : p[field];
         if (p.avatarUrl !== undefined) patch.avatar_url = p.avatarUrl;
         if (p.password) patch.password_hash = await deps.bcrypt.hash(String(p.password), 10);
-        await R.updateUserProfile(user.id, patch); result = { id: user.id, username: patch.username || user.username };
+        await R.updateUserProfile(user.id, patch);
+        if (p.password) {
+          await R.deleteSessionsByUserId(user.id);
+          await deps.disconnectUserSessions?.(user.username, "password_changed");
+        }
+        result = { id: user.id, username: patch.username || user.username };
       } else if (action === "edit_chat") {
         const chat = required(await selectChat(p.chat || p.chatId || p.selector), "Chat not found.");
         const patch = {};
@@ -69,7 +74,11 @@ export function createMongoAdminActions(deps) {
       } else if (["toggle_user_verified", "toggle_user_ban"].includes(action)) {
         const user = required(await selectUser(p.user || p.userId || p.selector || p.username), "User not found.");
         const field = action === "toggle_user_ban" ? "banned" : "verified", next = p[field] === undefined ? Number(!user[field]) : Number(Boolean(p[field]));
-        await s.update("users", { id: user.id }, { [field]: next }); if (field === "banned" && next) await R.deleteSessionsByUserId(user.id);
+        await s.update("users", { id: user.id }, { [field]: next });
+        if (field === "banned" && next) {
+          await R.deleteSessionsByUserId(user.id);
+          await deps.disconnectUserSessions?.(user.username, "banned");
+        }
         result = { id: user.id, username: user.username, [field]: Boolean(next) };
       } else if (action === "toggle_chat_verified") {
         const chat = required(await selectChat(p.chat || p.chatId || p.selector), "Chat not found."); const verified = p.verified === undefined ? Number(!chat.verified) : Number(Boolean(p.verified)); await R.updateChat(chat.id, { verified }); emit(chat.id, "chat_updated"); result = { id: chat.id, verified: Boolean(verified) };
@@ -77,7 +86,7 @@ export function createMongoAdminActions(deps) {
         const selectors = p.all ? (await s.many("users")).map((row) => row.id) : p.userIds || p.users || [];
         required(Array.isArray(selectors) && selectors.length, "Provide users or all=true.");
         let deleted = 0;
-        for (const selector of selectors) { const user = await selectUser(selector); if (!user) continue; const removed = await R.deleteUserById(user.id); await cleanup(removed); deleted++; }
+        for (const selector of selectors) { const user = await selectUser(selector); if (!user) continue; const removed = await R.deleteUserById(user.id); await cleanup(removed); await deps.disconnectUserSessions?.(user.username, "account_deleted"); deleted++; }
         result = { deleted, deletedUsers: deleted };
       } else if (action === "delete_chats") {
         const selectors = p.all ? (await s.many("chats")).map((row) => row.id) : p.chatIds || [];

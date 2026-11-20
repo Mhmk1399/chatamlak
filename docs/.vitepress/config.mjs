@@ -9,6 +9,16 @@ const enSidebar = [
     ],
   },
   {
+    text: '🤝 Platform Integration',
+    collapsed: true,
+    items: [
+      {text: 'Sprint 1 Handoff', link: '/platform/CHAT_SPRINT_1_HANDOFF'},
+      {text: 'Web Identity Migration', link: '/platform/CHAT_WEB_IDENTITY_MIGRATION'},
+      {text: 'Support API Contract v1', link: '/platform/CHAT_SUPPORT_API_CONTRACT_V1'},
+      {text: 'Realtime Protocol v1', link: '/platform/CHAT_REALTIME_PROTOCOL_V1'},
+    ],
+  },
+  {
     text: '📦 Installation',
     collapsed: false,
     items: [
@@ -53,6 +63,16 @@ const faSidebar = [
     collapsed: false,
     items: [
       {text: '💬 قابلیت‌های گفتگو', link: '/fa/Chat-Features'},
+    ],
+  },
+  {
+    text: '🤝 یکپارچه‌سازی پلتفرم',
+    collapsed: true,
+    items: [
+      {text: 'تحویل اسپرینت ۱', link: '/fa/platform/CHAT_SPRINT_1_HANDOFF'},
+      {text: 'مهاجرت هویت Web', link: '/fa/platform/CHAT_WEB_IDENTITY_MIGRATION'},
+      {text: 'قرارداد API پشتیبانی', link: '/fa/platform/CHAT_SUPPORT_API_CONTRACT_V1'},
+      {text: 'پروتکل realtime نسخه ۱', link: '/fa/platform/CHAT_REALTIME_PROTOCOL_V1'},
     ],
   },
   {

@@ -1,10 +1,34 @@
 import { describe, test, expect, vi } from "vitest";
 import { EventEmitter } from "node:events";
-import { createWebSocketGateway } from "../../lib/websocketGateway.js";
+import {
+  createWebSocketGateway,
+  resolveWebSocketClientIp,
+} from "../../lib/websocketGateway.js";
 import { createSseHub } from "../../lib/sse.js";
 import { createRedisClient } from "../../lib/redis.js";
 
 describe("WebSocket Gateway", () => {
+  test("uses forwarded client IPs only when the deployment explicitly trusts its proxy", () => {
+    const request = {
+      headers: { "x-forwarded-for": "203.0.113.10, 172.18.0.2" },
+      socket: { remoteAddress: "172.18.0.2" },
+    };
+
+    expect(resolveWebSocketClientIp(request)).toBe("172.18.0.2");
+    expect(resolveWebSocketClientIp(request, { trustProxy: true })).toBe(
+      "203.0.113.10",
+    );
+    expect(
+      resolveWebSocketClientIp(
+        {
+          ...request,
+          headers: { "x-forwarded-for": "attacker-controlled-value" },
+        },
+        { trustProxy: true },
+      ),
+    ).toBe("172.18.0.2");
+  });
+
   test("registers and manages WebSocket gateway structure", () => {
     const sseHub = { getCachedMembers: vi.fn(() => [{ username: "alice" }]) };
     const gateway = createWebSocketGateway({ sseHub });
@@ -14,6 +38,14 @@ describe("WebSocket Gateway", () => {
     expect(typeof gateway.sendEvent).toBe("function");
     expect(typeof gateway.sendChatEvent).toBe("function");
     expect(typeof gateway.broadcastAll).toBe("function");
+
+    gateway.close();
+  });
+
+  test("configures a bounded websocket frame size", () => {
+    const gateway = createWebSocketGateway({ maxPayloadBytes: 8192 });
+
+    expect(gateway.wss.options.maxPayload).toBe(8192);
 
     gateway.close();
   });
@@ -95,6 +127,23 @@ describe("WebSocket Gateway", () => {
     gateway.close();
   });
 
+  test("disconnects every socket for a user when account sessions are revoked", () => {
+    const gateway = createWebSocketGateway({});
+    const ws = new EventEmitter();
+    ws.readyState = 1;
+    ws.send = vi.fn();
+    ws.close = vi.fn();
+    gateway.wss.emit("connection", ws, {}, { username: "Alice" });
+
+    gateway.disconnectUsername("alice", "banned");
+
+    expect(ws.send).toHaveBeenCalledWith(
+      JSON.stringify({ type: "session_revoked", reason: "banned" }),
+    );
+    expect(ws.close).toHaveBeenCalledWith(1008, "Session revoked");
+    gateway.close();
+  });
+
   test("handles Promise-returning getSessionFromToken during HTTP upgrade", async () => {
     const onUserConnected = vi.fn();
     const server = new EventEmitter();
@@ -126,6 +175,98 @@ describe("WebSocket Gateway", () => {
     expect(onUserConnected).toHaveBeenCalledWith("alice", expect.anything());
     expect(gateway.clientsByUsername.get("alice")).toBeDefined();
 
+    gateway.close();
+  });
+
+  test("rejects an upgrade before websocket allocation when the session is invalid", async () => {
+    const server = new EventEmitter();
+    const getSessionFromToken = vi.fn(async () => null);
+    const gateway = createWebSocketGateway({ server, getSessionFromToken });
+    const handleUpgrade = vi.spyOn(gateway.wss, "handleUpgrade");
+    const socket = { write: vi.fn(), destroy: vi.fn() };
+
+    server.emit(
+      "upgrade",
+      { url: "/ws", headers: { host: "localhost", cookie: "sid=invalid" } },
+      socket,
+      Buffer.alloc(0),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(handleUpgrade).not.toHaveBeenCalled();
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining("401 Unauthorized"));
+    expect(socket.destroy).toHaveBeenCalled();
+    gateway.close();
+  });
+
+  test("rejects query-string session tokens without looking them up", async () => {
+    const server = new EventEmitter();
+    const getSessionFromToken = vi.fn(async () => ({ username: "alice" }));
+    const gateway = createWebSocketGateway({ server, getSessionFromToken });
+    const handleUpgrade = vi.spyOn(gateway.wss, "handleUpgrade");
+    const socket = { write: vi.fn(), destroy: vi.fn() };
+
+    server.emit(
+      "upgrade",
+      { url: "/ws?token=leaky-secret", headers: { host: "localhost" } },
+      socket,
+      Buffer.alloc(0),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getSessionFromToken).not.toHaveBeenCalled();
+    expect(handleUpgrade).not.toHaveBeenCalled();
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining("400 Bad Request"));
+    gateway.close();
+  });
+
+  test("rejects browser upgrades from an untrusted origin", async () => {
+    const server = new EventEmitter();
+    const getSessionFromToken = vi.fn(async () => ({ username: "alice" }));
+    const gateway = createWebSocketGateway({
+      server,
+      getSessionFromToken,
+      allowedOrigins: ["https://chat.example.com"],
+    });
+    const handleUpgrade = vi.spyOn(gateway.wss, "handleUpgrade");
+    const socket = { write: vi.fn(), destroy: vi.fn() };
+
+    server.emit(
+      "upgrade",
+      {
+        url: "/ws",
+        headers: {
+          host: "chat.example.com",
+          origin: "https://evil.example.com",
+          cookie: "sid=valid-token",
+        },
+      },
+      socket,
+      Buffer.alloc(0),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(getSessionFromToken).not.toHaveBeenCalled();
+    expect(handleUpgrade).not.toHaveBeenCalled();
+    expect(socket.write).toHaveBeenCalledWith(expect.stringContaining("403 Forbidden"));
+    gateway.close();
+  });
+
+  test("enforces a per-socket message rate limit", () => {
+    const gateway = createWebSocketGateway({
+      maxMessagesPerWindow: 1,
+      messageRateWindowMs: 60_000,
+    });
+    const ws = new EventEmitter();
+    ws.readyState = 1;
+    ws.send = vi.fn();
+    ws.close = vi.fn();
+
+    gateway.wss.emit("connection", ws, {}, { username: "alice" });
+    ws.emit("message", Buffer.from(JSON.stringify({ type: "ping" })));
+    ws.emit("message", Buffer.from(JSON.stringify({ type: "ping" })));
+
+    expect(ws.close).toHaveBeenCalledWith(1008, "Message rate limit exceeded");
     gateway.close();
   });
 

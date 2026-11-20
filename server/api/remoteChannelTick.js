@@ -1,4 +1,5 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { safeErrorCode } from "../lib/requestLogging.js";
 
 /**
  * remoteChannelTick.js — sleep-friendly on-demand polling.
@@ -39,6 +40,31 @@ function registerRemoteChannelTickRoutes(app, deps) {
       res.status(429).json({ error: "Too many requests." }),
   });
 
+  const safeTickStatus = (value) => {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized.startsWith("error")) return "error";
+    return ["polled", "not-configured", "disabled", "skipped"].includes(
+      normalized,
+    )
+      ? normalized
+      : null;
+  };
+
+  const safeCount = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.round(number)) : null;
+  };
+
+  const publicTickSummary = (summary = {}) => ({
+    queued: safeCount(summary.queued),
+    processed: safeCount(summary.processed),
+    pollRounds: safeCount(summary.pollRounds),
+    queueBatches: safeCount(summary.queueBatches),
+    telegram: safeTickStatus(summary.telegram),
+    oujChat: safeTickStatus(summary.oujChat),
+    disconnected: Boolean(summary.disconnected),
+  });
+
   app.post(
     "/api/internal/remote-channel/tick",
     tickLimiter,
@@ -72,28 +98,32 @@ function registerRemoteChannelTickRoutes(app, deps) {
         if (body.maxQueueBatches !== undefined) options.maxQueueBatches = Number(body.maxQueueBatches);
         const summary = await remoteChannelManager.tickOnce(options);
 
-        console.log(
-          "[remote-channel] tick done",
-          JSON.stringify({
-            queued: summary?.queued ?? null,
-            processed: summary?.processed ?? null,
-            pollRounds: summary?.pollRounds ?? null,
-            queueBatches: summary?.queueBatches ?? null,
-            telegram: summary?.telegram ?? null,
-            oujChat: summary?.oujChat ?? null,
-          }),
-        );
-        return res.json({ ok: true, ...summary });
+        const publicSummary = publicTickSummary(summary);
+        console.log(JSON.stringify({
+          service: "ouj-chat",
+          event: "remote_channel.tick_completed",
+          ...publicSummary,
+        }));
+        return res.json({ ok: true, ...publicSummary });
       } catch (error) {
         if (error?.code === "TICK_BUSY") {
-          console.warn("[remote-channel] tick rejected: already in progress");
+          console.warn(JSON.stringify({
+            service: "ouj-chat",
+            event: "remote_channel.tick_rejected",
+            errorCode: "tick_busy",
+          }));
           return res
             .status(409)
-            .json({ error: String(error?.message || "Tick already in progress.") });
+            .json({ error: "Tick already in progress." });
         }
+        console.error(JSON.stringify({
+          service: "ouj-chat",
+          event: "remote_channel.tick_failed",
+          errorCode: safeErrorCode(error, "remote_channel_tick_failed"),
+        }));
         return res
           .status(500)
-          .json({ error: String(error?.message || "Tick failed.") });
+          .json({ error: "Tick failed." });
       }
     },
   );

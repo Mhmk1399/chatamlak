@@ -148,24 +148,11 @@ mkdir -p ./data
 sudo chown -R ouj-chat:ouj-chat ./data
 ```
 
-## کنترل سرویس در پنل مدیریت
+## کنترل سرویس توسط زیرساخت
 
-اقدامات **ریستارت سرویس** و **توقف سرویس** در پنل مدیریت برای استقرار Docker با فراخوانی Docker Engine API از طریق سوکت mount‌شده (`/var/run/docker.sock`) کار می‌کنند. فایل compose متغیر `OUJ_CHAT_CONTAINER_NAME=ouj-chat` را تنظیم می‌کند تا اپلیکیشن بداند کدام کانتینر را هدف قرار دهد.
+کانتینر برنامه عمداً `/var/run/docker.sock` را mount نمی‌کند. image نهایی با کاربر non-root به نام `node` اجرا، capabilityهای Linux حذف و `no-new-privileges` فعال می‌شود. پنل مدیریت restart، stop و reload انجین‌اکس را وظیفه زیرساخت اعلام می‌کند و قادر به کنترل Docker host نیست.
 
-اگر نام کانتینر را تغییر دادید یا از نام سفارشی استفاده می‌کنید، متغیر env را به‌روز کنید:
-
-```yaml
-# docker-compose.yaml
-environment:
-  OUJ_CHAT_CONTAINER_NAME: my-custom-name
-```
-
-اگر به کنترل سرویس از پنل مدیریت نیاز ندارید، می‌توانید mount سوکت را از `docker-compose.yaml` حذف کنید:
-
-```yaml
-# این خط را در بخش volumes مربوط به ouj-chat حذف یا کامنت کنید:
-# - /var/run/docker.sock:/var/run/docker.sock
-```
+این عملیات را از یک مسیر deployment/operations جدا و authenticated انجام دهید؛ برای نمونه روی host از `docker compose restart ouj-chat` استفاده کنید. Docker socket را به‌عنوان میان‌بر بازنگردانید. پیش از ارتقای named volume موجود، اطمینان یابید `/app/data` برای uid/gid 1000 قابل نوشتن است و backup آزموده‌شده داده/رسانه را نگه دارید.
 
 ## به‌روزرسانی
 

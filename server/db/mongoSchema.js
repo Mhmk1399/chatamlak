@@ -63,7 +63,7 @@ export function documentDefaults(collection, now = new Date().toISOString()) {
     users: { role: "user", status: "online", banned: 0, verified: 0, nickname: null, avatar_url: null, avatar_storage_driver: "local", avatar_storage_key: null, avatar_encryption_type: "none", last_seen: now },
     chats: { type: "dm", group_visibility: "public", group_username: null, invite_token: null, created_by_user_id: null, verified: 0, allow_member_invites: 1, auto_add_new_users: 0, group_color: null, group_avatar_url: null },
     chat_messages: { edited: 0, edited_body: null, read_at: null, read_by_user_id: null, hidden_everyone_at: null, expires_at: null, reply_to_message_id: null, client_request_id: null },
-    chat_message_files: { processing_status: "ready", encryption_type: "none", storage_driver: "local", expires_at: null, width_px: null, height_px: null, duration_seconds: null, storage_key: null, thumb_storage_key: null },
+    chat_message_files: { processing_status: "ready", upload_completed_at: null, encryption_type: "none", storage_driver: "local", expires_at: null, width_px: null, height_px: null, duration_seconds: null, storage_key: null, thumb_storage_key: null },
     chat_members: { role: "member" }, sessions: { last_seen: now },
     remote_channel_sources: { enabled: 0, paused: 0, source_version: 1, sync_metadata: 0, stream_media: 0, last_error: null, last_remote_message_id: null },
     remote_channel_queue: { status: "pending", attempts: 0, next_attempt_at: now, locked_at: null, lock_owner: null },

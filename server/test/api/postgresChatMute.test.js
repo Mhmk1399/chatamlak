@@ -229,6 +229,8 @@ describe("PostgreSQL Promise mode - Chat Mute, Unmute, and Hide endpoints", () =
   });
 
   test("POST /api/messages and /api/messages/upload allow reply and edit when findMessageById returns a Promise", async () => {
+    const uploadClientRequestId = "postgres-promise-upload-request";
+    const uploadStorageKey = "uploads/doc123.pdf";
     const originalMessage = {
       id: "44444444-4444-4444-8444-444444444444",
       chat_id: testChat.id,
@@ -246,6 +248,19 @@ describe("PostgreSQL Promise mode - Chat Mute, Unmute, and Hide endpoints", () =
           Promise.resolve(cid === testChat.id && uid === alice.id),
         findMessageById: (mid) =>
           Promise.resolve(mid === originalMessage.id ? originalMessage : null),
+        findPendingPresignedUpload: (storageKey) =>
+          Promise.resolve(
+            storageKey === uploadStorageKey
+              ? {
+                  storage_key: uploadStorageKey,
+                  user_id: alice.id,
+                  chat_id: testChat.id,
+                  message_id: null,
+                  client_request_id: uploadClientRequestId,
+                  purpose: "message",
+                }
+              : null,
+          ),
         createMessage: () =>
           Promise.resolve("55555555-5555-4555-8555-555555555555"),
         editMessage: () => Promise.resolve(originalMessage.id),
@@ -288,8 +303,9 @@ describe("PostgreSQL Promise mode - Chat Mute, Unmute, and Hide endpoints", () =
         chatId: testChat.id,
         username: "alice",
         body: "File with reply",
+        clientRequestId: uploadClientRequestId,
         replyToMessageId: originalMessage.id,
-        storageKeys: ["uploads/doc123.pdf"],
+        storageKeys: [uploadStorageKey],
         fileMeta: JSON.stringify([
           {
             originalName: "doc123.pdf",

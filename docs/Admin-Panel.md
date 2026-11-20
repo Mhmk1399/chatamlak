@@ -258,23 +258,11 @@ See [Database Commands](./Database-Commands.md) and [MongoDB](./MongoDB.md) for 
 - Compare with latest GitHub release
 - See if update is available
 
-**Restart Service**
-- Restart the Ouj Chat server
-- Applies pending changes
-- Reconnects all clients
+**Restart/Stop Service and Reload Nginx**
 
-**Stop Service**
-- Gracefully stop the Ouj Chat server
-- Requires manual start via systemd/Docker
+These host-level actions are disabled inside the Chat application and report `managedBy: "infrastructure"`. Use a separately authenticated deployment/operations channel. The default Compose file does not mount the Docker socket, and the application user must not receive `sudo`/Docker-daemon access.
 
-:::warning Permission Requirements
-
-Service control (restart/stop) requires the right setup depending on deployment:
-
-- **Docker**: The `ouj-chat` container must have the Docker socket mounted (`/var/run/docker.sock`). This is included in the default `docker-compose.yaml`. The `OUJ_CHAT_CONTAINER_NAME` environment variable tells the app which container to target (defaults to `ouj-chat`). See [Install via Docker](./Installation-Docker.md#admin-panel-service-control).
-- **Systemd**: The service user must have `sudo` privileges for `systemctl`. See [Troubleshooting](./Troubleshooting.md#admin-panel-issues).
-
-:::
+High-risk database maintenance that remains available requires the owner role plus a separate operator step-up token. MongoDB restore/delete stays offline. See [Sprint 1 handoff](./platform/CHAT_SPRINT_1_HANDOFF.md) before rollout.
 
 ### Danger Zone
 

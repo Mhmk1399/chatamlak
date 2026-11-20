@@ -96,6 +96,7 @@ export const hideMessageForEveryone = (...args) => mongoRepository.hideMessageFo
 export const setMessageForwardOrigin = (...args) => mongoRepository.setMessageForwardOrigin(...args);
 export const createMessageFiles = (...args) => mongoRepository.createMessageFiles(...args);
 export const recordPendingPresignedUpload = (...args) => mongoRepository.recordPendingPresignedUpload(...args);
+export const findPendingPresignedUpload = (...args) => mongoRepository.findPendingPresignedUpload(...args);
 export const removePendingPresignedUploads = (...args) => mongoRepository.removePendingPresignedUploads(...args);
 export const listPendingPresignedUploads = (...args) => mongoRepository.listPendingPresignedUploads(...args);
 export const rewriteStorageKeys = (...args) => mongoRepository.rewriteStorageKeys(...args);

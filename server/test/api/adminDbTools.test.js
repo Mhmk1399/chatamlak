@@ -28,6 +28,7 @@ function makeAdminDbToolsApp({
   adminRun = vi.fn(async () => 1),
   adminTransaction,
   adminResetDatabase,
+  disconnectUserSessions,
 } = {}) {
   process.env.ADMIN_API_TOKEN = "test-admin-token";
   const transaction =
@@ -52,6 +53,7 @@ function makeAdminDbToolsApp({
       adminTransaction: transaction,
       adminResetDatabase: adminResetDatabase || vi.fn(async () => ({ storedNames: [] })),
       adminSave: vi.fn(),
+      disconnectUserSessions,
     },
   }).app;
 }
@@ -249,6 +251,44 @@ describe("POST /api/admin/db-tools database edits", () => {
     );
   });
 
+  test("disconnects legacy WebSocket sessions after banning a user", async () => {
+    const disconnectUserSessions = vi.fn(async () => undefined);
+    const adminGetRow = vi.fn(async (sql) => {
+      const lower = String(sql || "").toLowerCase();
+      if (lower.includes("users")) return user;
+      if (lower.includes("sessions")) return { count: 1 };
+      return null;
+    });
+    const app = makeAdminDbToolsApp({ adminGetRow, disconnectUserSessions });
+
+    const res = await request(app)
+      .post("/api/admin/db-tools")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
+      .send({ action: "toggle_user_ban", payload: { userSelector: "alice" } });
+
+    expect(res.status).toBe(200);
+    expect(disconnectUserSessions).toHaveBeenCalledWith("alice", "banned");
+  });
+
+  test("disconnects legacy WebSocket sessions after deleting a user", async () => {
+    const disconnectUserSessions = vi.fn(async () => undefined);
+    const adminGetRow = vi.fn(async (sql) => {
+      const lower = String(sql || "").toLowerCase();
+      if (lower.includes("chats")) return null;
+      if (lower.includes("users")) return user;
+      return null;
+    });
+    const app = makeAdminDbToolsApp({ adminGetRow, disconnectUserSessions });
+
+    const res = await request(app)
+      .post("/api/admin/db-tools")
+      .set("x-ouj-chat-admin-token", "test-admin-token")
+      .send({ action: "delete_users", payload: { selectors: ["alice"] } });
+
+    expect(res.status).toBe(200);
+    expect(disconnectUserSessions).toHaveBeenCalledWith("alice", "account_deleted");
+  });
+
   test("handles verify and add-member actions with PostgreSQL promise-based chat lookups", async () => {
     const adminGetRow = vi.fn(async (sql) => {
       const lower = String(sql || "").toLowerCase();
@@ -309,7 +349,7 @@ describe("POST /api/admin/db-tools database edits", () => {
   test("edits a user with UUID string id without returning id=null or passing NaN", async () => {
     const uuidUser = {
       id: "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-      username: "ouj-chat.admin",
+      username: "ouj_chat.admin",
       nickname: "Admin",
       avatar_url: null,
       color: "#10b981",
@@ -320,7 +360,7 @@ describe("POST /api/admin/db-tools database edits", () => {
     const adminGetRow = vi.fn(async (sql, params = []) => {
       const lower = String(sql || "").toLowerCase();
       if (lower.includes("users")) {
-        if (params.includes("ouj-chat.admin") || params.includes("f47ac10b-58cc-4372-a567-0e02b2c3d479")) {
+        if (params.includes("ouj_chat.admin") || params.includes("f47ac10b-58cc-4372-a567-0e02b2c3d479")) {
           return uuidUser;
         }
       }
@@ -333,12 +373,12 @@ describe("POST /api/admin/db-tools database edits", () => {
       .set("x-ouj-chat-admin-token", "test-admin-token")
       .send({
         action: "edit_user",
-        payload: { userSelector: "ouj-chat.admin", nickname: "Updated Admin", role: "owner" },
+        payload: { userSelector: "ouj_chat.admin", nickname: "Updated Admin", role: "owner" },
       });
 
     expect(res.status).toBe(200);
     expect(res.body.result.id).toBe("f47ac10b-58cc-4372-a567-0e02b2c3d479");
-    expect(res.body.result.username).toBe("ouj-chat.admin");
+    expect(res.body.result.username).toBe("ouj_chat.admin");
     expect(adminRun).toHaveBeenCalledWith(
       expect.stringMatching(/UPDATE users/i),
       expect.arrayContaining(["f47ac10b-58cc-4372-a567-0e02b2c3d479"]),

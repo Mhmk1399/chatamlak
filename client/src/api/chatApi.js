@@ -429,6 +429,13 @@ export async function presignUploadFile(file, options = {}) {
     blurhash: options.blurhash ?? metadata.blurhash ?? null,
     waveform: options.waveform ?? metadata.waveform ?? null,
     ...(options.messageId ? { messageId: options.messageId } : {}),
+    ...(options.chatId ? { chatId: options.chatId } : {}),
+    ...(options.clientRequestId
+      ? { clientRequestId: options.clientRequestId }
+      : {}),
+    ...(options.uploadPurpose
+      ? { uploadPurpose: options.uploadPurpose }
+      : {}),
     ...(options.encryptionType ? { encryptionType: options.encryptionType } : {}),
   };
 
@@ -560,9 +567,11 @@ export async function presignAvatarUpload(file, options = {}) {
 
   const payload = {
     uploadType: "avatar",
+    uploadPurpose: options.uploadPurpose || "profile-avatar",
     filename,
     contentType,
     fileSize,
+    ...(options.chatId ? { chatId: options.chatId } : {}),
   };
 
   const res = await apiFetch(`${API_BASE}/api/uploads/presign`, {

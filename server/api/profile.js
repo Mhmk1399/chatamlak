@@ -16,6 +16,7 @@ function registerProfileRoutes(app, deps) {
     bcrypt,
     ensureAvatarExists,
     findChatByGroupUsername,
+    findPendingPresignedUpload,
     findUserById,
     findUserByUsername,
     isConnected,
@@ -249,6 +250,26 @@ function registerProfileRoutes(app, deps) {
       avatarUrl = directAvatarUrl.startsWith("/uploads/")
         ? `/api${directAvatarUrl}`
         : directAvatarUrl;
+      if (typeof findPendingPresignedUpload !== "function") {
+        return res.status(503).json({
+          error: "Upload ownership verification is unavailable.",
+        });
+      }
+      const pendingKey = `uploads/avatars/${fileName}`;
+      const rawPending = findPendingPresignedUpload(pendingKey);
+      const pending =
+        rawPending && typeof rawPending.then === "function"
+          ? await rawPending
+          : rawPending;
+      if (
+        !pending ||
+        String(pending.user_id ?? pending.userId ?? "") !== String(user.id) ||
+        String(pending.purpose || "").toLowerCase() !== "profile-avatar"
+      ) {
+        return res.status(403).json({
+          error: "Upload ownership could not be verified.",
+        });
+      }
     } else {
       if (!file) {
         return res.status(400).json({ error: "Avatar file is required." });
@@ -298,11 +319,14 @@ function registerProfileRoutes(app, deps) {
 
     const fileName = path.basename(avatarUrl);
     if (fileName && typeof removePendingPresignedUploads === "function") {
-      removePendingPresignedUploads([
+      const rawRemoved = removePendingPresignedUploads([
         `uploads/avatars/${fileName}`,
         // Legacy key from before uploads/avatars unification.
         `avatars/${fileName}`,
       ]);
+      if (rawRemoved && typeof rawRemoved.then === "function") {
+        await rawRemoved;
+      }
     }
 
     const rawUpdated = findUserById(user.id);

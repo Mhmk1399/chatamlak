@@ -83,6 +83,7 @@ import {
   getFirstUnreadMessage,
   recordMessageReads,
   recordPendingPresignedUpload,
+  findPendingPresignedUpload,
   removePendingPresignedUploads,
   listPendingPresignedUploads,
   rewriteStorageKeys,
@@ -173,6 +174,12 @@ import { resolveTelegramSecrets } from "./lib/remoteChannelSecrets.js";
 import { createMirrorJobRegistry } from "./lib/remoteMirrorJobs.js";
 import { dispatchMirrorJob } from "./lib/remoteMirrorDispatch.js";
 import {
+  buildHttpRequestLog,
+  normalizeRequestId,
+  safeErrorCode,
+  sanitizeStructuredFields,
+} from "./lib/requestLogging.js";
+import {
   loadSettings,
   getSetting,
   getAllSettings,
@@ -237,9 +244,23 @@ const isProduction = appEnv === "production";
 // For VPS with firewall, can use localhost (nginx proxies from same machine)
 const bindAddress = process.env.BIND_ADDRESS || "localhost";
 
-function debugLog(...args) {
+function writeStructuredLog(entry, severity = "debug") {
+  console.log(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    severity,
+    ...entry,
+  }));
+}
+
+function debugLog(event, fields = {}) {
   if (!getSetting("APP_DEBUG")) return;
-  console.log("[app-debug]", ...args);
+  writeStructuredLog({
+    service: "ouj-chat",
+    event: String(event || "app.debug")
+      .replace(/[^A-Za-z0-9_.:-]/g, "_")
+      .slice(0, 128),
+    ...sanitizeStructuredFields(fields),
+  });
 }
 
 const debugRouteCounts = new Map();
@@ -286,34 +307,37 @@ app.use((req, res, next) => {
   if (!getSetting("APP_DEBUG")) return next();
 
   const startedAt = Date.now();
-  let responseBody = null;
-  const originalJson = res.json.bind(res);
-
-  res.json = (body) => {
-    responseBody = body;
-    return originalJson(body);
-  };
+  const requestId =
+    normalizeRequestId(req.headers["x-request-id"]) || crypto.randomUUID();
+  req.requestId = requestId;
+  res.setHeader("X-Request-Id", requestId);
 
   res.on("finish", () => {
-    const routeKey = `${String(req.method || "GET").toUpperCase()} ${
-      String(req.path || req.originalUrl || req.url || "").split("?")[0]
-    }`;
+    const method = String(req.method || "GET").toUpperCase();
+    const endpoint = String(
+      req.route?.path || req.path || req.originalUrl || req.url || "/",
+    ).split("?")[0];
+    const routeKey = `${method} ${endpoint}`;
+    const status = Number(res.statusCode || 0);
 
     debugRouteCounts.set(
       routeKey,
       Number(debugRouteCounts.get(routeKey) || 0) + 1,
     );
 
-    debugLog("api:request", {
-      method: req.method,
-      path: req.originalUrl || req.url || "",
-      query: req.query || {},
-      params: req.params || {},
-      body: req.body || {},
-      status: Number(res.statusCode || 0),
+    const entry = buildHttpRequestLog({
+      requestId,
+      method,
+      endpoint,
+      status,
       durationMs: Date.now() - startedAt,
-      response: responseBody,
+      errorCode:
+        res.locals?.errorCode || (status >= 400 ? `http_${status}` : ""),
     });
+    writeStructuredLog(
+      entry,
+      status >= 500 ? "error" : status >= 400 ? "warn" : "info",
+    );
   });
   next();
 });
@@ -444,31 +468,40 @@ if (
 ) {
   const corsOrigins = resolveAppOrigins(process.env);
   if (corsOrigins.length === 0) {
-    console.log(
-      "[server] Bucket CORS auto-configuration skipped (no public app origin known. Set APP_PUBLIC_URL to enable it).",
-    );
+    writeStructuredLog({
+      service: "ouj-chat",
+      event: "storage_cors.skipped",
+      errorCode: "public_origin_missing",
+    }, "info");
   } else {
     ensureBucketCors(storageProvider, corsOrigins)
       .then((result) => {
         if (result.status === "applied") {
-          console.log(
-            `[server] Bucket CORS policy applied for ${corsOrigins.join(", ")}`,
-          );
+          writeStructuredLog({
+            service: "ouj-chat",
+            event: "storage_cors.applied",
+            count: corsOrigins.length,
+          }, "info");
         } else if (result.status === "ok") {
-          console.log(
-            `[server] Bucket CORS already configured for ${corsOrigins.join(", ")}`,
-          );
+          writeStructuredLog({
+            service: "ouj-chat",
+            event: "storage_cors.already_configured",
+            count: corsOrigins.length,
+          }, "info");
         } else if (result.status === "error") {
-          console.warn(
-            `[server] Could not configure bucket CORS automatically (${result.error}). ` +
-              `Uploads from browsers will fail until CORS is set — run: npm --prefix server run storage:cors -- --origin <your-app-url>`,
-          );
+          writeStructuredLog({
+            service: "ouj-chat",
+            event: "storage_cors.failed",
+            errorCode: "bucket_cors_failed",
+          }, "warn");
         }
       })
       .catch((err) => {
-        console.warn(
-          `[server] Bucket CORS auto-configuration failed: ${err?.message || err}`,
-        );
+        writeStructuredLog({
+          service: "ouj-chat",
+          event: "storage_cors.failed",
+          errorCode: safeErrorCode(err, "bucket_cors_failed"),
+        }, "warn");
       });
   }
 }
@@ -506,9 +539,11 @@ if (
       );
     })
     .catch((err) => {
-      console.warn(
-        `[server] Object-storage layout migration failed (legacy keys keep working via fallback): ${err?.message || err}`,
-      );
+      writeStructuredLog({
+        service: "ouj-chat",
+        event: "storage_migration.failed",
+        errorCode: safeErrorCode(err, "storage_migration_failed"),
+      }, "warn");
     });
 }
 
@@ -552,7 +587,16 @@ const {
 } = uploadTools;
 
 const sseHub = createSseHub({ listChatMembers, recordEvent: messagingDb.recordEvent });
-const { addSseClient, removeSseClient, emitSseEvent, emitChatEvent, broadcastAll, getCachedMembers } = sseHub;
+const {
+  addSseClient,
+  removeSseClient,
+  disconnectSession: disconnectSseSession,
+  disconnectUsername: disconnectSseUsername,
+  emitSseEvent,
+  emitChatEvent,
+  broadcastAll,
+  getCachedMembers,
+} = sseHub;
 
 let wsPresenceBroadcaster = null;
 let wsGlobalBroadcaster = null;
@@ -692,20 +736,22 @@ async function touchSessionCombined(token) {
   await redisSessionStore.touchSession(token);
 }
 
-async function deleteSessionCombined(token) {
-  await deleteSession(token);
-  await redisSessionStore.deleteSession(token);
+async function deleteSessionCombined(token, options) {
+  await deleteSession(token, options);
+  await redisSessionStore.deleteSession(token, options);
 }
 
 const sessionHelpers = createSessionHelpers({
   getSession: getSessionCombined,
   touchSession: touchSessionCombined,
+  deleteSession: deleteSessionCombined,
   isProduction,
 });
 const {
   parseCookies,
   setSessionCookie,
   clearSessionCookie,
+  getSessionFromToken: getValidatedSessionFromToken,
   getSessionFromRequest,
   requireSession,
   requireSessionUsernameMatch,
@@ -812,19 +858,36 @@ async function backfillStorageEncryption() {
       );
     }
   } catch (error) {
-    console.error(
-      `[storage-encryption] backfill failed: ${String(error?.message || error)}`,
-    );
+    writeStructuredLog({
+      service: "ouj-chat",
+      event: "storage_encryption.backfill_failed",
+      errorCode: safeErrorCode(error, "backfill_failed"),
+    }, "error");
   }
 }
 
-registerUploadRoutes(app, { adminGetRow, storageProvider });
+registerUploadRoutes(app, {
+  adminGetRow,
+  storageProvider,
+  requireSession,
+  getSessionFromRequest,
+  findMessageById,
+  findChatById,
+  isMember,
+});
 
 const apiDeps = {
   cleanupDeletedFiles: messageFileJobs.cleanupDeletedFiles,
   mongoRepository,
   messagingDb,
-  disconnectSession: (token) => wsGateway.disconnectSession(token),
+  disconnectSession: (token) => {
+    wsGateway.disconnectSession(token);
+    disconnectSseSession(token);
+  },
+  disconnectUserSessions: (username, reason) => {
+    wsGateway.disconnectUsername(username, reason);
+    disconnectSseUsername(username);
+  },
   dbConfig: readDbConfig(),
   postgresMaintenance: null,
   storageProvider,
@@ -996,6 +1059,7 @@ const apiDeps = {
   listMutedUserIdsForChat,
   setSessionCookie,
   recordPendingPresignedUpload,
+  findPendingPresignedUpload,
   removePendingPresignedUploads,
   listPendingPresignedUploads,
   pruneOrphanRemoteObjects,
@@ -1327,7 +1391,11 @@ setImmediate(() => {
   try {
     backfillStorageEncryption();
   } catch (err) {
-    console.error("[storage-encryption] deferred backfill failed:", String(err?.message || err));
+    writeStructuredLog({
+      service: "ouj-chat",
+      event: "storage_encryption.backfill_failed",
+      errorCode: safeErrorCode(err, "backfill_failed"),
+    }, "error");
   }
 });
 remoteChannelManager.start();
@@ -1357,14 +1425,20 @@ if (REMOTE_CHANNEL) {
 
 const server = app.listen(port, bindAddress, () => {
   console.log(`Ouj Chat server running on http://${bindAddress}:${port}`);
-  console.log(
-    `[server] Media worker webhook callback URL: ${apiDeps.webhookCallbackUrl}`,
-  );
+  writeStructuredLog({
+    service: "ouj-chat",
+    event: "media_worker.callback_config",
+    configured: Boolean(apiDeps.webhookCallbackUrl),
+  });
   ensureLocalWorkerRunning({
     transcodeVideos: TRANSCODE_VIDEOS_TO_H264,
     getSetting,
   }).catch((err) => {
-    console.warn("[server] ensureLocalWorkerRunning error:", err?.message || err);
+    writeStructuredLog({
+      service: "ouj-chat",
+      event: "media_worker.local_start_failed",
+      errorCode: safeErrorCode(err, "local_worker_start_failed"),
+    }, "warn");
   });
 });
 
@@ -1378,7 +1452,7 @@ const wsGateway = createWebSocketGateway({
   sseHub,
   redisClient,
   callManager,
-  getSessionFromToken: getSessionCombined,
+  getSessionFromToken: getValidatedSessionFromToken,
   onUserConnected: (username, ws) => presenceTracker.markConnected(username, ws),
   onUserDisconnected: (username, ws) => presenceTracker.markDisconnected(username, ws),
   heartbeatIntervalMs: wsHeartbeatIntervalMs,

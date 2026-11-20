@@ -7,7 +7,11 @@ const makeHelpers = (overrides = {}) =>
   createSessionHelpers({
     getSession: overrides.getSession ?? (() => null),
     touchSession: overrides.touchSession ?? (() => {}),
+    deleteSession: overrides.deleteSession ?? (() => {}),
     isProduction: overrides.isProduction ?? false,
+    sessionIdleTimeoutMs: overrides.sessionIdleTimeoutMs,
+    sessionAbsoluteTimeoutMs: overrides.sessionAbsoluteTimeoutMs,
+    now: overrides.now,
   });
 
 const makeReq = (overrides = {}) => ({
@@ -199,6 +203,28 @@ describe("clearSessionCookie", () => {
 // ─── getSessionFromRequest ────────────────────────────────────────────────────
 
 describe("getSessionFromRequest", () => {
+  test("applies the same expiration and revocation rules to token-only consumers", async () => {
+    const deleteSession = vi.fn(async () => {});
+    const touchSession = vi.fn(async () => {});
+    const { getSessionFromToken } = makeHelpers({
+      getSession: async () => ({
+        id: "11111111-1111-4111-a111-111111111111",
+        username: "alice",
+        session_created_at: "2026-01-01T00:00:00.000Z",
+        session_last_seen: "2026-01-01T00:00:10.000Z",
+      }),
+      deleteSession,
+      touchSession,
+      sessionIdleTimeoutMs: 5_000,
+      sessionAbsoluteTimeoutMs: 60_000,
+      now: () => Date.parse("2026-01-01T00:00:20.000Z"),
+    });
+
+    expect(await getSessionFromToken("expired-ws-token")).toBeNull();
+    expect(deleteSession).toHaveBeenCalledWith("expired-ws-token");
+    expect(touchSession).not.toHaveBeenCalled();
+  });
+
   test("returns null when no sid cookie", () => {
     const { getSessionFromRequest } = makeHelpers();
     expect(getSessionFromRequest(makeReq())).toBeNull();
@@ -239,6 +265,68 @@ describe("getSessionFromRequest", () => {
     const req = makeReq({ headers: { cookie: "sid=abc" } });
     getSessionFromRequest(req);
     expect(touchSession).not.toHaveBeenCalled();
+  });
+
+  test("rejects and revokes a session that exceeded its idle lifetime", async () => {
+    const touchSession = vi.fn();
+    const deleteSession = vi.fn();
+    const { getSessionFromRequest } = makeHelpers({
+      getSession: async () => ({
+        id: "11111111-1111-4111-a111-111111111111",
+        username: "alice",
+        session_created_at: "2026-01-01T00:00:00.000Z",
+        session_last_seen: "2026-01-01T00:00:10.000Z",
+      }),
+      touchSession,
+      deleteSession,
+      sessionIdleTimeoutMs: 5_000,
+      sessionAbsoluteTimeoutMs: 60_000,
+      now: () => Date.parse("2026-01-01T00:00:20.000Z"),
+    });
+
+    expect(await getSessionFromRequest(
+      makeReq({ headers: { cookie: "sid=expired" } }),
+    )).toBeNull();
+    expect(deleteSession).toHaveBeenCalledWith("expired");
+    expect(touchSession).not.toHaveBeenCalled();
+  });
+
+  test("rejects and revokes a session that exceeded its absolute lifetime", async () => {
+    const deleteSession = vi.fn();
+    const { getSessionFromRequest } = makeHelpers({
+      getSession: async () => ({
+        id: "11111111-1111-4111-a111-111111111111",
+        username: "alice",
+        session_created_at: "2026-01-01T00:00:00.000Z",
+        session_last_seen: "2026-01-01T00:00:19.000Z",
+      }),
+      deleteSession,
+      sessionIdleTimeoutMs: 60_000,
+      sessionAbsoluteTimeoutMs: 15_000,
+      now: () => Date.parse("2026-01-01T00:00:20.000Z"),
+    });
+
+    expect(await getSessionFromRequest(
+      makeReq({ headers: { cookie: "sid=absolute-expired" } }),
+    )).toBeNull();
+    expect(deleteSession).toHaveBeenCalledWith("absolute-expired");
+  });
+
+  test("keeps legacy sessions without timestamps compatible", async () => {
+    const touchSession = vi.fn();
+    const session = { id: "11111111-1111-4111-a111-111111111111", username: "alice" };
+    const { getSessionFromRequest } = makeHelpers({
+      getSession: async () => session,
+      touchSession,
+      sessionIdleTimeoutMs: 1,
+      sessionAbsoluteTimeoutMs: 1,
+      now: () => Date.parse("2026-01-01T00:00:20.000Z"),
+    });
+
+    expect(await getSessionFromRequest(
+      makeReq({ headers: { cookie: "sid=legacy" } }),
+    )).toEqual(session);
+    expect(touchSession).toHaveBeenCalledWith("legacy");
   });
 });
 

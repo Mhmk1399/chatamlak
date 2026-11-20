@@ -6,6 +6,7 @@ import { resolveWebhookCallbackUrl } from "../lib/webhookUrl.js";
 import { markEncryptedFileRecord } from "../lib/storageEncryption.js";
 import { resolveThumbUrl } from "../lib/thumbUrl.js";
 import { readEnvBool } from "../settings/env.js";
+import { safeErrorCode } from "../lib/requestLogging.js";
 
 function registerMessageRoutes(app, deps) {
   const {
@@ -28,6 +29,7 @@ function registerMessageRoutes(app, deps) {
     findChatById,
     findMessageIdByClientRequestId,
     findMessageById,
+    findPendingPresignedUpload,
     findUserById,
     findUserByUsername,
     getMessages,
@@ -372,10 +374,8 @@ function registerMessageRoutes(app, deps) {
       const messageId = file.message_id;
       if (!filesByMessageId[messageId]) filesByMessageId[messageId] = [];
 
-      let fileUrl = `/api/uploads/messages/${file.stored_name}`;
+      const fileUrl = `/api/uploads/file/${encodeURIComponent(file.id)}`;
       let thumbUrl = null;
-      const driver = file.storage_driver;
-      const storageKey = file.storage_key;
       const thumbKey = file.thumb_storage_key || file.thumbStorageKey;
       thumbUrl = await resolveThumbUrl({
         storageProvider: deps.storageProvider,
@@ -383,18 +383,6 @@ function registerMessageRoutes(app, deps) {
         thumbKey,
         fileId: file.id,
       });
-      if (
-        (driver === "remote" || driver === "s3") &&
-        deps.storageProvider &&
-        typeof deps.storageProvider.getDownloadUrl === "function"
-      ) {
-        if (storageKey) {
-          try {
-            fileUrl = await deps.storageProvider.getDownloadUrl(storageKey);
-          } catch (_) {}
-        }
-      }
-
       filesByMessageId[messageId].push({
         id: file.id,
         kind: file.kind,
@@ -879,6 +867,46 @@ function registerMessageRoutes(app, deps) {
             return res
               .status(403)
               .json({ error: "Only channel owner can send messages." });
+          }
+        }
+
+        if (presignedFiles.length > 0) {
+          if (typeof findPendingPresignedUpload !== "function") {
+            removeUploadedFiles(uploadedFiles);
+            return res.status(503).json({
+              error: "Upload ownership verification is unavailable.",
+            });
+          }
+          for (const item of presignedFiles) {
+            const key =
+              typeof item === "string"
+                ? item
+                : item?.storageKey || item?.storage_key || item?.key || "";
+            const rawPending = key ? findPendingPresignedUpload(key) : null;
+            const pending =
+              rawPending && typeof rawPending.then === "function"
+                ? await rawPending
+                : rawPending;
+            const pendingActorId = pending?.user_id ?? pending?.userId ?? null;
+            const pendingChatId = pending?.chat_id ?? pending?.chatId ?? null;
+            const pendingMessageId =
+              pending?.message_id ?? pending?.messageId ?? null;
+            const pendingClientRequestId =
+              pending?.client_request_id ?? pending?.clientRequestId ?? null;
+            if (
+              !pending ||
+              String(pendingActorId || "") !== String(user.id) ||
+              String(pendingChatId || "") !== String(chatId) ||
+              String(pending?.purpose || "").toLowerCase() !== "message" ||
+              pendingMessageId ||
+              !pendingClientRequestId ||
+              String(pendingClientRequestId) !== String(clientRequestId || "")
+            ) {
+              removeUploadedFiles(uploadedFiles);
+              return res.status(403).json({
+                error: "Upload ownership could not be verified.",
+              });
+            }
           }
         }
         if (replyToMessageId && editMessageId) {
@@ -1394,7 +1422,10 @@ function registerMessageRoutes(app, deps) {
           .filter(Boolean);
         if (usedStorageKeys.length > 0) {
           if (typeof removePendingPresignedUploads === "function") {
-            removePendingPresignedUploads(usedStorageKeys);
+            const rawRemoved = removePendingPresignedUploads(usedStorageKeys);
+            if (rawRemoved && typeof rawRemoved.then === "function") {
+              await rawRemoved;
+            }
           }
         }
 
@@ -1480,20 +1511,29 @@ function registerMessageRoutes(app, deps) {
               })
                 .then((ok) => {
                   if (ok) {
-                    console.log(
-                      `[messages] Dispatched transcode job for file ${fileId} (mode=${storageProcessingMode})`,
-                    );
+                    console.log(JSON.stringify({
+                      event: "media.transcode.dispatched",
+                      service: "ouj-chat",
+                      fileId,
+                      operation: String(storageProcessingMode || "unknown"),
+                    }));
                   } else {
-                    console.warn(
-                      `[messages] Failed to dispatch transcode job for file ${fileId} (mode=${storageProcessingMode})`,
-                    );
+                    console.warn(JSON.stringify({
+                      event: "media.transcode.dispatch_failed",
+                      service: "ouj-chat",
+                      fileId,
+                      operation: String(storageProcessingMode || "unknown"),
+                    }));
                   }
                 })
                 .catch((err) => {
-                  console.error(
-                    `[messages] Error dispatching transcode job for file ${fileId}:`,
-                    err,
-                  );
+                  console.error(JSON.stringify({
+                    event: "media.transcode.dispatch_error",
+                    service: "ouj-chat",
+                    fileId,
+                    operation: String(storageProcessingMode || "unknown"),
+                    errorCode: safeErrorCode(err, "dispatch_error"),
+                  }));
                 });
               transcodeJobsQueued += 1;
             }
@@ -1507,19 +1547,11 @@ function registerMessageRoutes(app, deps) {
           : insertedFiles;
         const sourceFilesForResponse = hydratedFiles.length ? hydratedFiles : normalizedFiles;
 
-        const resolveFileUrl = async (file) => {
+        const resolveFileUrl = (file) => {
+          const fileId = file.id;
           const storedName = file.stored_name || file.storedName || "";
-          const driver = file.storage_driver || file.storageDriver;
-          const storageKey = file.storage_key || file.storageKey;
-          if (
-            (driver === "remote" || driver === "s3") &&
-            storageKey &&
-            deps.storageProvider &&
-            typeof deps.storageProvider.getDownloadUrl === "function"
-          ) {
-            try {
-              return await deps.storageProvider.getDownloadUrl(storageKey);
-            } catch (_) {}
+          if (fileId !== null && fileId !== undefined && fileId !== "") {
+            return `/api/uploads/file/${encodeURIComponent(fileId)}`;
           }
           return storedName ? `/api/uploads/messages/${storedName}` : null;
         };
@@ -1535,7 +1567,7 @@ function registerMessageRoutes(app, deps) {
           sourceFilesForResponse.map(async (file, idx) => {
             const storedName = file.stored_name || file.storedName || "";
             const expiresAtVal = file.expires_at || file.expiresAt || expiresAtIso || null;
-            const resolvedUrl = await resolveFileUrl(file);
+            const resolvedUrl = resolveFileUrl(file);
             const resolvedThumbUrl = await resolveFileThumbUrl(file);
             const thumbKey = file.thumb_storage_key || file.thumbStorageKey || null;
             return {
@@ -1672,11 +1704,16 @@ function registerMessageRoutes(app, deps) {
 
         return;
       } catch (error) {
-        console.error("POST /api/messages ERROR:", error);
+        const errorCode = safeErrorCode(error, "message_upload_failed");
+        console.error(JSON.stringify({
+          service: "ouj-chat",
+          event: "message.upload.failed",
+          errorCode,
+        }));
         removeUploadedFiles(uploadedFiles);
 
         debugLog("api:messages/upload:error", {
-          error: String(error?.message || error),
+          errorCode,
         });
 
         return res

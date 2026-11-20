@@ -3,6 +3,7 @@ function registerHealthRoutes(app, deps) {
     addSseClient,
     findUserByUsername,
     removeSseClient,
+    parseCookies,
     requireSession,
     requireSessionUsernameMatch,
     connectPresence,
@@ -37,7 +38,8 @@ function registerHealthRoutes(app, deps) {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders?.();
 
-    addSseClient(username, res);
+    const sessionToken = parseCookies?.(req)?.sid || null;
+    addSseClient(username, res, sessionToken);
     connectPresence(username, res);
 
     res.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);

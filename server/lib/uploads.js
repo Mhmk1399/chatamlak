@@ -1,5 +1,10 @@
 import rateLimit from "express-rate-limit";
 import { dbKnex } from "../db/query.js";
+import {
+  authorizeMessageFileAccess,
+  setMessageMediaCacheHeaders,
+} from "./messageMediaAccess.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 export function createUploadTools({
   fs,
@@ -275,10 +280,11 @@ export function createUploadTools({
       ) {
         const newKey = `uploads/avatars/${fileName}`;
         storageProvider.deleteFile(newKey).catch((err) => {
-          console.warn(
-            `[uploads] Failed to delete avatar "${newKey}" from storage:`,
-            err?.message || err,
-          );
+          console.warn(JSON.stringify({
+            event: "avatar.storage_cleanup_failed",
+            service: "ouj-chat",
+            errorCode: safeErrorCode(err, "delete_failed"),
+          }));
         });
         // Best-effort cleanup of legacy keys stored before the
         // uploads/avatars + uploads/messages unification.
@@ -392,7 +398,17 @@ export function createUploadTools({
     );
   };
 
-  const registerUploadRoutes = (app, { adminGetRow }) => {
+  const registerUploadRoutes = (
+    app,
+    {
+      adminGetRow,
+      requireSession,
+      getSessionFromRequest,
+      findMessageById,
+      findChatById,
+      isMember,
+    },
+  ) => {
     app.get(
       "/api/uploads/messages/:storedName",
       uploadDownloadLimiter,
@@ -408,12 +424,52 @@ export function createUploadTools({
         try {
           const rawRow = adminGetRow(
             dbKnex("chat_message_files")
-              .select("original_name", "mime_type", "storage_key", "storage_driver")
+              .select(
+                "id",
+                "message_id",
+                "stored_name",
+                "original_name",
+                "mime_type",
+                "storage_key",
+                "storage_driver",
+              )
               .where("stored_name", storedName)
               .first(),
           );
           row = (rawRow && typeof rawRow.then === "function") ? await rawRow : rawRow;
         } catch (_) {}
+
+        if (!row) return res.status(404).end();
+        const authorization = await authorizeMessageFileAccess({
+          req,
+          res,
+          file: row,
+          requireSession,
+          getSessionFromRequest,
+          findMessageById,
+          findChatById,
+          isMember,
+          loadMessage: async (messageId) => {
+            if (typeof adminGetRow !== "function") return null;
+            const value = adminGetRow(
+              dbKnex("chat_messages").where("id", messageId).first(),
+            );
+            return value && typeof value.then === "function"
+              ? await value
+              : value;
+          },
+          loadChat: async (chatId) => {
+            if (typeof adminGetRow !== "function") return null;
+            const value = adminGetRow(
+              dbKnex("chats").where("id", chatId).first(),
+            );
+            return value && typeof value.then === "function"
+              ? await value
+              : value;
+          },
+        });
+        if (!authorization) return;
+        setMessageMediaCacheHeaders(res, authorization);
 
         const driver = row?.storage_driver || row?.storageDriver;
         if (
@@ -437,7 +493,6 @@ export function createUploadTools({
         const mimeType = String(row?.mime_type || "").trim();
         const ext = path.extname(storedName).toLowerCase();
 
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         res.setHeader("Vary", "Accept-Encoding");
         res.setHeader("X-Content-Type-Options", "nosniff");
         res.setHeader("Accept-Ranges", "bytes");

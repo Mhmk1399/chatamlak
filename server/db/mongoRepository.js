@@ -9,6 +9,12 @@ import { createMessagingRepository } from "./mongoMessaging.js";
 import { createDocumentExecutor } from "./query.js";
 import { createMongoMaintenance } from "./mongoMaintenance.js";
 import { createAppearanceRepository } from "./mongoAppearance.js";
+import {
+  isStoredSessionToken,
+  sessionDeviceId,
+  sessionTokenLookupValues,
+  sessionTokenStorageValue,
+} from "../lib/sessionTokens.js";
 
 const now = () => new Date().toISOString();
 const time = (value) => { if (!value) return null; const parsed = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(String(value)) ? value : `${String(value).replace(" ", "T")}Z`); return Number.isFinite(+parsed) ? parsed.toISOString() : null; };
@@ -20,10 +26,21 @@ const and = (...filters) => {
   return clauses.length ? { $and: clauses } : {};
 };
 const alive = (field = "expires_at") => ({ $or: [{ [field]: null }, { [field]: { $gt: now() } }] });
-const sessionTokenHash = (token) => crypto.createHash("sha256").update(token).digest("hex");
 const SESSION_DEVICE_BATCH_SIZE = 100;
 export const isRemoteMessageClientRequestId = (value) => /^remote:/i.test(String(value || "").trim());
 export const isRemoteMessageRow = (row) => isRemoteMessageClientRequestId(row?.client_request_id || row?.clientRequestId);
+
+export async function addEligibleChatMemberships(repository, userId, chatIds = []) {
+  const addedChatIds = [];
+  for (const chatId of unique(chatIds)) {
+    if (await repository.hasChatMemberLeft(chatId, userId)) continue;
+    if (await repository.isGroupMemberRemoved(chatId, userId)) continue;
+    if (await repository.isMember(chatId, userId)) continue;
+    await repository.addChatMember(chatId, userId);
+    addedChatIds.push(chatId);
+  }
+  return addedChatIds;
+}
 
 export function createMongoRepository({ db, client, encryption = storageEncryption }) {
   const s = createMongoStore({ db, client });
@@ -39,7 +56,7 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     try {
       for await (const session of cursor) {
         if (typeof session.token !== "string" || !session.token) continue;
-        hashes.push(sessionTokenHash(session.token));
+        hashes.push(sessionDeviceId(session.token));
         if (hashes.length === SESSION_DEVICE_BATCH_SIZE) await flush();
       }
       await flush();
@@ -151,7 +168,7 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
       return { addedUsers, skippedLeftCount: users.length - addedUsers.length };
     },
     async getAutoAddPublicChatIds() { return (await s.many("chats", { type: { $in: ["group", "channel"] }, group_visibility: "public", auto_add_new_users: 1 })).map((row) => row.id); },
-    async bulkAddMemberToChats(userId, chatIds) { for (const id of chatIds) if (!await R.hasChatMemberLeft(id, userId) && !await R.isGroupMemberRemoved(id, userId)) await R.addChatMember(id, userId); },
+    bulkAddMemberToChats: (userId, chatIds) => addEligibleChatMemberships(R, userId, chatIds),
     async searchPublicGroups(query, viewer, limit = 20) { return R.searchSocialChats("group", query, viewer, limit); },
     async searchPublicChannels(query, viewer, limit = 20) { return R.searchSocialChats("channel", query, viewer, limit); },
     async searchSocialChats(type, query, viewer, limit) {
@@ -251,7 +268,8 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     listMessageFilesByMessageIds: (ids = []) => s.many("chat_message_files", { message_id: { $in: unique(ids) } }, { sort: { id: 1 } }),
     listMessageFilesNeedingMetadata: (limit = 10000) => s.many("chat_message_files", { $or: [{ width_px: null }, { height_px: null }, { duration_seconds: null }] }, { limit }),
     updateMessageFileMetadata: (id, metadata = {}) => s.update("chat_message_files", { id: Number(id) }, Object.fromEntries(Object.entries({ width_px: metadata.widthPx ?? metadata.width, height_px: metadata.heightPx ?? metadata.height, duration_seconds: metadata.durationSeconds }).filter(([, value]) => value != null))),
-    recordPendingPresignedUpload: ({ storageKey, userId = null, expiresAt = null }) => s.upsert("pending_presigned_uploads", { storage_key: storageKey }, { user_id: userId, expires_at: time(expiresAt), created_at: now() }),
+    recordPendingPresignedUpload: ({ storageKey, userId = null, chatId = null, messageId = null, clientRequestId = null, purpose = null, expiresAt = null }) => s.insert("pending_presigned_uploads", { storage_key: storageKey, user_id: userId, chat_id: chatId, message_id: messageId, client_request_id: clientRequestId, purpose, expires_at: time(expiresAt), created_at: now() }),
+    findPendingPresignedUpload: (storageKey) => s.one("pending_presigned_uploads", { storage_key: storageKey }),
     removePendingPresignedUploads: (keys = []) => s.remove("pending_presigned_uploads", { storage_key: { $in: unique(keys) } }),
     listPendingPresignedUploads: (cutoff = null) => s.many("pending_presigned_uploads", cutoff ? { created_at: { $lte: time(cutoff) } } : {}),
     async rewriteStorageKeys(pairs = []) {
@@ -291,14 +309,40 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     upsertPushSubscription: (userId, endpoint, p256dh, auth, messagePreview = 1, locale = "fa") => s.upsert("push_subscriptions", { endpoint }, { user_id: userId, p256dh, auth, message_preview: Number(messagePreview), locale: locale === "en" ? "en" : "fa" }),
     deletePushSubscription: (endpoint, userId) => s.remove("push_subscriptions", { endpoint, ...(userId ? { user_id: userId } : {}) }),
     listPushSubscriptionsByUserIds: (ids = []) => s.many("push_subscriptions", { user_id: { $in: unique(ids) } }),
-    createSession: (userId, token) => s.insert("sessions", { id: crypto.randomUUID(), user_id: userId, token, last_seen: now() }),
-    async getSession(token) { const session = token ? await s.one("sessions", { token }) : null; if (!session) return null; const user = await R.findUserById(session.user_id); return user && !user.banned ? { ...publicUser(user), chat_appearance: user.chat_appearance, session_id: session.id, token: session.token } : null; },
-    touchSession: (token) => s.update("sessions", { token }, { last_seen: now() }),
-    async deleteSession(token) {
+    createSession: (userId, token) => s.insert("sessions", { id: crypto.randomUUID(), user_id: userId, token: sessionTokenStorageValue(token), last_seen: now() }),
+    async getSession(token) {
+      const candidates = sessionTokenLookupValues(token);
+      const session = candidates.length ? await s.one("sessions", { token: { $in: candidates } }) : null;
+      if (!session) return null;
+      if (!isStoredSessionToken(session.token)) {
+        const replacement = sessionTokenStorageValue(token);
+        try {
+          await s.update("sessions", { id: session.id, token: session.token }, { token: replacement });
+          session.token = replacement;
+        } catch (error) {
+          if (error?.code !== 11000) throw error;
+        }
+      }
+      const user = await R.findUserById(session.user_id);
+      return user && !user.banned ? {
+        ...publicUser(user),
+        chat_appearance: user.chat_appearance,
+        session_id: session.id,
+        session_created_at: session.created_at,
+        session_last_seen: session.last_seen,
+      } : null;
+    },
+    touchSession: (token) => {
+      const candidates = sessionTokenLookupValues(token);
+      return candidates.length ? s.update("sessions", { token: { $in: candidates } }, { last_seen: now() }) : 0;
+    },
+    async deleteSession(token, { acceptStored = false } = {}) {
       if (typeof token !== "string" || !token) return 0;
+      const candidates = sessionTokenLookupValues(token, { acceptStored });
+      if (!candidates.length) return 0;
       return s.transaction(async () => {
-        await s.remove("session_devices", { token_hash: sessionTokenHash(token) });
-        return s.remove("sessions", { token });
+        await s.remove("session_devices", { token_hash: sessionDeviceId(token) });
+        return s.remove("sessions", { token: { $in: candidates } });
       });
     },
     async deleteSessionsByUserId(userId) {

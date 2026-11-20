@@ -1,6 +1,6 @@
 # Media Worker
 
-Ouj Chat includes a dedicated, lightweight, stateless HTTP push **Media Worker** microservice (`worker/`) designed to offload CPU-intensive video transcoding, faststart optimization, thumbnail generation, and metadata extraction from the primary chat server.
+Ouj Chat includes a dedicated, lightweight HTTP push **Media Worker** microservice (`worker/`) designed to offload CPU-intensive video transcoding, faststart optimization, thumbnail generation, and metadata extraction from the primary chat server. It has no database, but its accepted-job queue is process memory and is therefore not durable across a worker restart.
 
 Whether deployed as a built-in background process or as a standalone cloud microservice across separate machines or container instances, the Media Worker ensures fast, reliable media processing without degrading real-time chat responsiveness.
 
@@ -16,7 +16,7 @@ Whether deployed as a built-in background process or as a standalone cloud micro
 - **Metadata Extraction**: Measures video dimensions (width and height) and duration in seconds, reporting them to the Ouj Chat backend for instant client layout rendering.
 - **Orphan File Cleanup**: Upon successful transcoding, the worker automatically deletes the original raw video from remote storage to prevent duplicate storage consumption.
 - **Application Envelope Encryption**: When Ouj Chat's encryption-at-rest (`STORAGE_ENCRYPTION_MODE=local`) is enabled, the worker decrypts files in memory using `STORAGE_ENCRYPTION_KEY`, processes the video, and re-encrypts the output before saving.
-- **Resilient Webhook Callbacks**: Uses exponential backoff retries (up to 5 attempts) to notify the Ouj Chat server when processing completes, ensuring reliable delivery even during brief network interruptions.
+- **Retried Webhook Callbacks**: Uses exponential backoff retries (up to 5 attempts) to notify the Ouj Chat server after processing. These retries tolerate brief network interruptions, but are not a durable outbox and do not survive a worker restart.
 
 ## Architecture & Workflow
 
@@ -39,7 +39,7 @@ Whether deployed as a built-in background process or as a standalone cloud micro
 
 1. **Media Upload**: The client uploads media either directly to the local server or via a presigned URL to S3-compatible object storage.
 2. **Dispatch**: Ouj Chat dispatches a `POST /transcode` request to the Media Worker containing the file identifier, storage key, encryption settings, and optional callback URLs.
-3. **Queueing**: The worker immediately acknowledges receipt with `202 Accepted` and enqueues the job in its asynchronous queue (`AsyncQueue`), strictly governed by `WORKER_CONCURRENCY`.
+3. **Queueing**: The worker returns `202 Accepted` only after its bounded asynchronous queue accepts the job. A full queue returns `503` with `Retry-After`; concurrency and waiting depth are independently bounded. Acceptance is not durable persistence: a process restart loses queued/in-flight work, so the server must retain enough state for reconciliation or retry.
 4. **Processing**: The worker retrieves the raw media, decrypts it in memory if envelope encryption is active, inspects codecs, performs transcoding/faststart copy with FFmpeg, and creates a JPEG thumbnail.
 5. **Callback Notification**: The worker posts the completed status, dimensions, duration, and processed storage keys back to Ouj Chat via `POST /api/uploads/webhook/processed` (authenticated via `x-ouj-chat-webhook-secret`).
 6. **Real-time Broadcast**: Ouj Chat updates the database record to `ready` and broadcasts an SSE/WebSocket update to all participants in the chat.
@@ -64,7 +64,11 @@ Configure these variables in the worker's environment (`.env` in `worker/` or co
 |---|---|---:|---|
 | `WORKER_PORT` | `integer` | `8080` | HTTP port the Media Worker listens on. |
 | `WORKER_CONCURRENCY` | `integer` | `2` | Maximum number of concurrent FFmpeg transcode jobs. |
-| `WEBHOOK_SECRET` | `string` | `""` | Secret token to authenticate incoming dispatch requests and outgoing webhook callbacks (`x-ouj-chat-webhook-secret`). Must match Ouj Chat's `WEBHOOK_SECRET`. |
+| `WORKER_MAX_QUEUE_DEPTH` | `integer` | `32` | Maximum waiting jobs (bounded in code to 1–256). Full queues return `503`. |
+| `WORKER_MAX_INPUT_BYTES` | `integer` | `78643200` | Maximum downloaded/processed input bytes; streamed downloads are stopped at the limit. |
+| `WORKER_FETCH_TIMEOUT_MS` | `integer` | `300000` | Per-request timeout for worker HTTP fetches (bounded to 5 seconds–10 minutes). |
+| `WORKER_ALLOWED_URL_ORIGINS` | CSV origins | `""` | Explicit origins allowed when caller-selected URLs need private/HTTP access. Metadata endpoints, non-loopback reserved/private literal IPs, unsafe schemes and URL credentials are rejected by default; loopback remains allowed for the local worker flow. |
+| `WEBHOOK_SECRET` | `string` | `""` | Shared secret for incoming dispatch and outgoing callbacks (`x-ouj-chat-webhook-secret`). It must match Ouj Chat. A standalone worker with an empty secret fails closed with `503`; never expose it publicly. |
 | `STORAGE_DRIVER` | `string` | `local` | Storage driver (`local` for local disk or `remote` / `s3` for object storage). |
 | `DATA_DIR` | `string` | `/opt/ouj-chat/data` | Path to Ouj Chat data directory (used when `STORAGE_DRIVER=local`). |
 | `STORAGE_BUCKET` | `string` | `""` | S3 / R2 bucket name. |
@@ -86,7 +90,7 @@ Configure these variables in the Ouj Chat backend `.env`:
 | `STORAGE_PROCESSING_MODE` | `string` | `auto` | Media processing strategy (`auto`, `local`, or `remote`). |
 | `STORAGE_PROCESSING_TIMEOUT_MS` | `integer` | `120000` | Total retry timeout in milliseconds when dispatching transcode jobs to the remote worker before falling back to local processing in `auto` mode or failing the dispatch in `remote` mode. |
 | `WEBHOOK_URL` | `string` | `""` | Public Ouj Chat webhook callback URL sent to external workers (e.g., `https://ouj-chat.example.com/api/uploads/webhook/processed`). Fallback: `WEBHOOK_CALLBACK_URL`. |
-| `WEBHOOK_SECRET` | `string` | *(Auto-generated)* | Shared secret token used to authenticate webhook communications. Generated automatically on startup if omitted. |
+| `WEBHOOK_SECRET` | `string` | Deployment-managed | Shared secret for worker dispatch/callbacks. Ensure the same high-entropy value reaches server and worker; do not rely on an empty value. |
 | `FILE_UPLOAD_TRANSCODE_VIDEOS` | `boolean` | `true` | When set to `false`, completely disables video transcoding, skips sending any transcode dispatch calls (`POST /transcode`) to either remote or local Media Workers, and prevents spawning or probing the local Media Worker process. |
 
 ## Deployment Options
@@ -95,7 +99,7 @@ Configure these variables in the Ouj Chat backend `.env`:
 
 If you run Ouj Chat via standard Docker Compose or systemd, you do not need to configure or launch the Media Worker separately.
 
-- In Docker deployments, `scripts/docker-entrypoint.sh` automatically launches the worker process in the background.
+- In Docker deployments, `scripts/docker-entrypoint.sh` starts the worker early only when `WEBHOOK_SECRET` is already present. If the secret is absent, it defers startup so Chat can generate/load the secret first; the server then starts the worker through `localWorkerManager` with the authenticated environment.
 - In manual/Node deployments, Ouj Chat's `localWorkerManager` automatically detects whether the worker is listening on `WORKER_PORT` and starts `worker/index.js` as a managed child process if needed.
 
 :::tip Disabling Video Transcoding & Local Worker
@@ -292,8 +296,7 @@ Dispatches a media file for asynchronous processing.
   "storedName": "original-video.mov",
   "mimeType": "video/quicktime",
   "encryptionType": "none",
-  "callbackUrl": "https://ouj-chat.example.com/api/uploads/webhook/processed",
-  "webhookSecret": "your-webhook-secret"
+  "callbackUrl": "https://ouj-chat.example.com/api/uploads/webhook/processed"
 }
 ```
 
@@ -346,20 +349,21 @@ Sent by the worker to Ouj Chat upon completion.
 
 Remote Channel Telegram mirroring reuses this worker for heavy media work and offloads size enforcement, video probing, and bucket upload to the worker.
 
-- **Dispatch:** `POST /mirror-media` accepts a job with a per-job secret.
+- **Dispatch:** `POST /mirror-media` requires the configured shared worker secret. The separate per-job secret protects only the subsequent byte-pull URL.
 - **Byte pull:** the worker fetches the decrypted source bytes from the server via the secret-gated `GET /api/remote-channel/blob/:jobId`.
 - **Result callback:** `POST /api/remote-channel/webhook/mirror-done` attaches the files, emits SSE updates, and dedupes repeat deliveries.
-- **Fallback:** when a remote worker is not available, the server uses the local inline path with a timeout timer as fallback. Also, Mirrored media uses local-disk fallback so media is never lost. Mirrored videos still enter the normal transcode pipeline.
+- **Fallback:** when a remote worker is not available, the server can use the local inline path with a timeout. Mirrored media can fall back to local disk and mirrored videos still enter the normal transcode pipeline. This fallback is not a durability guarantee; retain source/checkpoint state and reconcile interrupted jobs.
 
 ## Security & Best Practices
 
-1. **Synchronize `WEBHOOK_SECRET`**: Always set an identical, high-entropy `WEBHOOK_SECRET` string on both the Ouj Chat server and Media Worker. Requests lacking a matching `x-ouj-chat-webhook-secret` header are rejected with `401 Unauthorized`.
+1. **Synchronize `WEBHOOK_SECRET`**: Always set an identical, high-entropy `WEBHOOK_SECRET` string on both the Ouj Chat server and Media Worker. A missing configured secret fails closed with `503`; a missing/mismatched request header returns `401`. The current secret is static, so rotate it through a coordinated deployment; it is not an expiring credential.
 2. **Private Network Isolation**: When deploying across dedicated cloud instances or internal VPCs, bind the Media Worker to internal private IPs or protect it behind a firewall (e.g. UFW or security groups) so that only Ouj Chat server nodes can access `POST /transcode`.
 3. **Concurrency & Resource Allocation**:
    - Transcoding is CPU and RAM intensive.
    - Recommended `WORKER_CONCURRENCY`: Set to `1` transcode job per 1–2 dedicated vCPUs.
    - For a 4-vCPU worker node, set `WORKER_CONCURRENCY=2` or `3` to avoid CPU throttling.
 4. **Temporary Disk Space**: Ensure the worker host has sufficient temporary disk storage in `/tmp` (or system temp directory) to hold raw and transcoded video files during active processing.
+5. **URL and size policy**: Keep `WORKER_ALLOWED_URL_ORIGINS` minimal, prefer HTTPS, and set `WORKER_MAX_INPUT_BYTES`, queue depth, and fetch timeout for the 4-vCPU/~8-GiB shared-host budget. Do not use the worker as a general URL fetcher. The current validation rejects literal private/metadata targets but does not pin DNS answers, so review DNS/rebinding controls at the deployment boundary.
 
 ## Troubleshooting
 
@@ -372,7 +376,7 @@ Remote Channel Telegram mirroring reuses this worker for heavy media work and of
 
 - Confirm `WEBHOOK_URL` on Ouj Chat points to an externally accessible URL reachable from the worker instance (e.g., `https://ouj-chat.example.com/api/uploads/webhook/processed`).
 - When using loopback or private hostnames (`localhost`, `127.0.0.1`), ensure the worker is running on the same host or network namespace.
-- Inspect worker logs for retry attempts (`[worker] Callback webhook returned HTTP ...`).
+- Inspect structured worker events such as `worker.callback.rejected` and their bounded `status`/`errorCode` fields.
 
 ### Transcoding fails with FFmpeg errors
 

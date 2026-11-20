@@ -69,13 +69,19 @@ COPY VERSION ./
 COPY CHANGELOG.md ./
 COPY package.json ./
 
-RUN mkdir -p /app/data /app/data/uploads /app/data/backups
+RUN mkdir -p /app/data /app/data/uploads /app/data/backups \
+  && chown -R node:node /app
 
 ENV APP_ENV=production
 ENV NODE_ENV=production
 ENV SERVER_PORT=5174
 ENV BIND_ADDRESS=0.0.0.0
 EXPOSE 5174
+
+# The application, embedded media worker, and runtime data directory do not
+# require host-level privileges. Existing named volumes must be owned by the
+# image's node user (uid/gid 1000) before upgrading.
+USER node
 
 # Health check for container orchestrators
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

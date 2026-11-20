@@ -39,6 +39,7 @@ describe("Avatar S3 Client Helpers", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           uploadType: "avatar",
+          uploadPurpose: "profile-avatar",
           filename: "my-pic.png",
           contentType: "image/png",
           fileSize: file.size,

@@ -84,20 +84,38 @@ function assertArchivePath(archivePath) {
 
 function commandError(tool, error, connection) {
   if (error?.code === "ENOENT") {
-    return new Error(`${tool} is not installed or is unavailable in PATH.`);
+    const unavailable = new Error(
+      `${tool} is not installed or is unavailable in PATH.`,
+    );
+    unavailable.code = "postgres_tool_unavailable";
+    return unavailable;
   }
   let details = (error?.stderr || error?.message || "").trim();
   if (connection?.password) {
     details = details.replaceAll(connection.password, "[REDACTED]");
   }
   if (details) {
-    console.error(`[postgresMaintenance] ${tool} failed: ${details}`);
-    return new Error(`${tool} failed: ${details}`);
+    console.error(JSON.stringify({
+      service: "ouj-chat",
+      event: "postgres_maintenance.failed",
+      tool: String(tool || "postgres_tool").slice(0, 32),
+      errorCode: "postgres_tool_failed",
+    }));
+    const failure = new Error(`${tool} failed: ${details}`);
+    failure.code = "postgres_tool_failed";
+    return failure;
   }
-  console.error(`[postgresMaintenance] ${tool} failed with unknown error.`);
-  return new Error(
+  console.error(JSON.stringify({
+    service: "ouj-chat",
+    event: "postgres_maintenance.failed",
+    tool: String(tool || "postgres_tool").slice(0, 32),
+    errorCode: "postgres_tool_failed",
+  }));
+  const failure = new Error(
     `${tool} failed. Check PostgreSQL permissions and server logs.`,
   );
+  failure.code = "postgres_tool_failed";
+  return failure;
 }
 
 export function createPostgresMaintenance({ config, execute = execFile } = {}) {

@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { createWebSocketGateway } from "../../lib/websocketGateway.js";
 
 describe("WebSocket Gateway Call Signaling", () => {
+  const CHAT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   test("handles call_signal messages and delegates to callManager", async () => {
     const callManager = {
       startCall: vi.fn(async () => ({ status: 200, call: {} })),
@@ -32,7 +33,7 @@ describe("WebSocket Gateway Call Signaling", () => {
         JSON.stringify({
           action: "call_signal",
           signalType: "start",
-          chatId: "chat-uuid-1",
+          chatId: CHAT_ID,
           data: { type: "video" },
         }),
       ),
@@ -43,7 +44,7 @@ describe("WebSocket Gateway Call Signaling", () => {
 
     expect(callManager.startCall).toHaveBeenCalledWith({
       user: session,
-      chatId: "chat-uuid-1",
+      chatId: CHAT_ID,
       type: "video",
     });
 
@@ -54,7 +55,7 @@ describe("WebSocket Gateway Call Signaling", () => {
         JSON.stringify({
           action: "call_signal",
           signalType: "offer",
-          chatId: "chat-uuid-1",
+          chatId: CHAT_ID,
           data: { sdp: "dummy-sdp" },
         }),
       ),
@@ -64,7 +65,7 @@ describe("WebSocket Gateway Call Signaling", () => {
 
     expect(callManager.relaySignal).toHaveBeenCalledWith({
       user: session,
-      chatId: "chat-uuid-1",
+      chatId: CHAT_ID,
       signalType: "offer",
       payload: { sdp: "dummy-sdp" },
     });
@@ -115,7 +116,7 @@ describe("WebSocket Gateway Call Signaling", () => {
         JSON.stringify({
           action: "call_signal",
           signalType: "start",
-          chatId: "chat-uuid-1",
+          chatId: CHAT_ID,
           data: { type: "video" },
         }),
       ),
@@ -126,7 +127,7 @@ describe("WebSocket Gateway Call Signaling", () => {
         JSON.stringify({
           action: "call_signal",
           signalType: "camera-state",
-          chatId: "chat-uuid-1",
+          chatId: CHAT_ID,
           data: { cameraOff: true },
         }),
       ),
@@ -139,12 +140,46 @@ describe("WebSocket Gateway Call Signaling", () => {
     );
     expect(callManager.relaySignal).toHaveBeenCalledWith({
       user: { id: "user-1", username: "alice" },
-      chatId: "chat-uuid-1",
+      chatId: CHAT_ID,
       signalType: "camera-state",
       payload: { cameraOff: true },
     });
 
     ws.emit("close");
+    gateway.close();
+  });
+
+  test("rejects unknown call signal types instead of silently ignoring them", async () => {
+    const callManager = {
+      startCall: vi.fn(),
+      acceptCall: vi.fn(),
+      rejectCall: vi.fn(),
+      endCall: vi.fn(),
+      relaySignal: vi.fn(),
+    };
+    const gateway = createWebSocketGateway({ callManager });
+    const ws = new EventEmitter();
+    ws.readyState = 1;
+    ws.send = vi.fn();
+
+    gateway.wss.emit("connection", ws, {}, { id: "user-1", username: "alice" });
+    ws.emit(
+      "message",
+      Buffer.from(
+        JSON.stringify({
+          action: "call_signal",
+          signalType: "arbitrary-command",
+          chatId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          data: {},
+        }),
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(callManager.relaySignal).not.toHaveBeenCalled();
+    expect(ws.send).toHaveBeenCalledWith(
+      expect.stringContaining('"type":"call:error"'),
+    );
     gateway.close();
   });
 });

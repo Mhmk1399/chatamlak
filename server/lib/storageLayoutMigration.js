@@ -2,6 +2,21 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+function storageErrorCode(error, fallback) {
+  const raw = String(error?.code || "").trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(raw) ? raw : fallback;
+}
+
+function warnMigrationFailure(logger, event, errorCode) {
+  logger?.warn?.(
+    JSON.stringify({
+      service: "ouj-chat",
+      event,
+      errorCode,
+    }),
+  );
+}
+
 /**
  * Legacy → unified object-storage layout migration.
  *
@@ -222,10 +237,9 @@ export async function migrateLegacyStorageLayout({
       moved.push({ from, to });
       onProgress?.({ phase: "copied", from, to });
     } catch (err) {
-      logger?.warn?.(
-        `[storage-migrate] Failed to copy ${from} → ${to}: ${err?.message || err}`,
-      );
-      failed.push({ from, to, error: err?.message || String(err) });
+      const errorCode = storageErrorCode(err, "storage_copy_failed");
+      warnMigrationFailure(logger, "storage_migration.copy_failed", errorCode);
+      failed.push({ from, to, error: errorCode });
     }
   }
 
@@ -236,8 +250,11 @@ export async function migrateLegacyStorageLayout({
       dbUpdated = raw && typeof raw.then === "function" ? await raw : raw;
       if (typeof adminSave === "function") adminSave();
     } catch (err) {
-      logger?.warn?.(
-        `[storage-migrate] DB key rewrite failed: ${err?.message || err}`,
+      const errorCode = storageErrorCode(err, "storage_db_rewrite_failed");
+      warnMigrationFailure(
+        logger,
+        "storage_migration.db_rewrite_failed",
+        errorCode,
       );
       return {
         ...emptySummary,
@@ -246,7 +263,7 @@ export async function migrateLegacyStorageLayout({
         copySkipped,
         failed,
         dbUpdated: 0,
-        dbError: err?.message || String(err),
+        dbError: errorCode,
       };
     }
   }
@@ -260,10 +277,13 @@ export async function migrateLegacyStorageLayout({
         deletedLegacy.push(from);
         onProgress?.({ phase: "deleted-legacy", from, to });
       } catch (err) {
-        logger?.warn?.(
-          `[storage-migrate] Failed to delete legacy key ${from}: ${err?.message || err}`,
+        const errorCode = storageErrorCode(err, "storage_delete_failed");
+        warnMigrationFailure(
+          logger,
+          "storage_migration.delete_failed",
+          errorCode,
         );
-        deleteFailed.push({ key: from, error: err?.message || String(err) });
+        deleteFailed.push({ key: from, error: errorCode });
       }
     }
   }

@@ -21,6 +21,8 @@ describe("messaging tools API boundaries", () => {
       search: vi.fn(async () => ({ messages: [], nextCursor: null })), sync: vi.fn(async () => ({ events: [], cursor: 0, hasMore: false })),
       poll: vi.fn(async () => ({ id: MESSAGE, chat_id: CHAT, message_id: MESSAGE, user_id: USER, closed: 0 })),
       pollOptionCount: vi.fn(async () => 2), vote: vi.fn(), createPoll: vi.fn(),
+      topic: vi.fn(async () => ({ id: TARGET, chat_id: CHAT, closed: 0 })),
+      setTopicClosed: vi.fn(),
       devices: vi.fn(async () => []), deviceToken: vi.fn(async () => null),
       groupPeers: vi.fn(async () => []), joinGroupCall: vi.fn(async () => ({ id: PEER })),
       groupPeer: vi.fn(async (id) => ({ id, user_id: id === PEER ? USER : OTHER, chat_id: CHAT })),
@@ -32,6 +34,7 @@ describe("messaging tools API boundaries", () => {
       getChatMemberRole: vi.fn(async () => "member"),
       findMessageById: vi.fn(async () => ({ id: MESSAGE, user_id: USER, chat_id: CHAT })),
       emitChatEvent: vi.fn(), emitSseEvent: vi.fn(),
+      deleteSession: vi.fn(async () => {}), disconnectSession: vi.fn(),
     };
     const fixture = makeApp({ userStore: makeUserStore([{ id: USER, username: "alice" }, { id: OTHER, username: "bob" }]), deps });
     fixture.sessionStore.createSession(USER, "session-a");
@@ -108,9 +111,35 @@ describe("messaging tools API boundaries", () => {
     expect((await authenticated(request(app).put(`/api/messaging/polls/${MESSAGE}/vote`)).send({ option: 0 })).status).toBe(409);
     expect(db.vote).not.toHaveBeenCalled();
   });
+  test("closes a topic through the repository contract", async () => {
+    deps.getChatMemberRole.mockResolvedValue("admin");
+    const response = await authenticated(
+      request(app).put(`/api/messaging/chats/${CHAT}/topics/${TARGET}`),
+    ).send({ closed: true });
+    expect(response.status).toBe(200);
+    expect(db.setTopicClosed).toHaveBeenCalledWith(TARGET, true);
+    expect(deps.emitChatEvent).toHaveBeenCalledWith(CHAT, {
+      type: "chat_tools_updated",
+      chatId: CHAT,
+    });
+  });
   test("does not revoke sessions belonging to another account", async () => {
     expect((await authenticated(request(app).delete(`/api/messaging/devices/${TARGET}`))).status).toBe(404);
     expect(db.deviceToken).toHaveBeenCalledWith(USER, TARGET);
+  });
+  test("uses the explicit trusted path when revoking a stored session digest", async () => {
+    const storedToken = `sha256:${"a".repeat(64)}`;
+    db.deviceToken.mockResolvedValue(storedToken);
+
+    const response = await authenticated(
+      request(app).delete(`/api/messaging/devices/${TARGET}`),
+    );
+
+    expect(response.status).toBe(200);
+    expect(deps.deleteSession).toHaveBeenCalledWith(storedToken, {
+      acceptStored: true,
+    });
+    expect(deps.disconnectSession).toHaveBeenCalledWith(storedToken);
   });
   test("joins group calls with validated membership and room capacity", async () => {
     expect((await authenticated(request(app).post(`/api/messaging/chats/${CHAT}/call/join`)).send({ video: false })).status).toBe(201);

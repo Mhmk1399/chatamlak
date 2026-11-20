@@ -55,6 +55,80 @@ describe("Remote Uploads & File Management Routes", () => {
     appObj.sessionStore.createSession(userId, sessionToken);
   });
 
+  function makeAuthorizedMessageFileApp({
+    fileRecord,
+    deps = {},
+    username = "authorized-media-user",
+    chatId = "42000000-0000-4000-8000-000000000090",
+    messageId = fileRecord?.message_id ||
+      "50000000-0000-4000-8000-000000000090",
+    pending = {},
+  }) {
+    const actor = { id: null };
+    fileRecord.message_id = messageId;
+    const customApp = makeApp({
+      deps: {
+        ...deps,
+        findMessageFileById:
+          deps.findMessageFileById ||
+          ((id) =>
+            String(id) === String(fileRecord.id) ? fileRecord : null),
+        findMessageById:
+          deps.findMessageById ||
+          ((id) =>
+            String(id) === String(messageId)
+              ? { id: messageId, chat_id: chatId, user_id: actor.id }
+              : null),
+        findChatById:
+          deps.findChatById ||
+          ((id) =>
+            String(id) === String(chatId)
+              ? { id: chatId, type: "group" }
+              : null),
+        isMember:
+          deps.isMember ||
+          ((candidateChatId, candidateUserId) =>
+            String(candidateChatId) === String(chatId) &&
+            String(candidateUserId) === String(actor.id)),
+      },
+    });
+
+    actor.id = customApp.userStore.createUser(
+      username,
+      "pass",
+      "Authorized Media User",
+      null,
+      "#fff",
+    );
+    customApp.sessionStore.createSession(actor.id, sessionToken);
+    customApp.pendingUploadsStore.push({
+      storage_key: fileRecord.storage_key,
+      user_id: actor.id,
+      chat_id: chatId,
+      message_id: messageId,
+      purpose: "message",
+      ...pending,
+    });
+    return { customApp, actorId: actor.id, chatId, messageId };
+  }
+
+  function publicMediaAuthorization(fileRecord, chatId) {
+    const messageId =
+      fileRecord.message_id || "50000000-0000-4000-8000-000000000091";
+    fileRecord.message_id = messageId;
+    return {
+      findMessageById: (id) =>
+        String(id) === String(messageId)
+          ? { id: messageId, chat_id: chatId }
+          : null,
+      findChatById: (id) =>
+        String(id) === String(chatId)
+          ? { id: chatId, type: "channel", group_visibility: "public" }
+          : null,
+      isMember: () => false,
+    };
+  }
+
   describe("POST /api/uploads/presign", () => {
     test("returns 401 when not authenticated", async () => {
       const res = await request(appObj.app).post("/api/uploads/presign").send({
@@ -81,6 +155,9 @@ describe("Remote Uploads & File Management Routes", () => {
     });
 
     test("returns 200 with presigned upload details when authenticated and valid", async () => {
+      const messageId = "c0c0c0c0-d1d1-4e2e-af3f-060606060606";
+      const chatId = "42000000-0000-4000-8000-000000000096";
+      const actor = { id: null };
       const filesStore = [];
       const createMessageFilesMock = vi.fn((msgId, files) => {
         files.forEach((f, idx) => {
@@ -100,6 +177,15 @@ describe("Remote Uploads & File Management Routes", () => {
           createMessageFiles: createMessageFilesMock,
           findMessageFileById: (id) =>
             filesStore.find((f) => String(f.id) === String(id)) || null,
+          findMessageById: (id) =>
+            String(id) === messageId
+              ? { id: messageId, chat_id: chatId, user_id: actor.id }
+              : null,
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (candidateChatId, actorId) =>
+            String(candidateChatId) === chatId &&
+            String(actorId) === String(actor.id),
           adminGetRow: (sql, params) => {
             if (sql.includes("chat_message_files")) {
               return filesStore[filesStore.length - 1] || null;
@@ -116,13 +202,15 @@ describe("Remote Uploads & File Management Routes", () => {
         null,
         "#fff",
       );
+      actor.id = uId;
       customApp.sessionStore.createSession(uId, sessionToken);
 
       const res = await request(customApp.app)
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
-          messageId: "c0c0c0c0-d1d1-4e2e-af3f-060606060606",
+          chatId,
+          messageId,
           filename: "sample.png",
           contentType: "image/png",
           fileSize: 2048,
@@ -144,13 +232,120 @@ describe("Remote Uploads & File Management Routes", () => {
       expect(createMessageFilesMock).toHaveBeenCalled();
     });
 
+    test("binds the real session id and immutable chat/message purpose, returning an awaited numeric file id", async () => {
+      const messageId = "c0c0c0c0-d1d1-4e2e-af3f-060606060606";
+      const chatId = "42000000-0000-4000-8000-000000000099";
+      const recordPending = vi.fn(async (binding) => binding);
+      const createMessageFiles = vi.fn(async () => [73]);
+      const customApp = makeApp({
+        deps: {
+          storageProvider: mockRemoteProvider,
+          createMessageFiles,
+          recordPendingPresignedUpload: recordPending,
+          findMessageById: () => ({
+            id: messageId,
+            chat_id: chatId,
+            user_id: userId,
+          }),
+          findChatById: () => ({ id: chatId, type: "group" }),
+          isMember: (_chatId, actorId) => actorId === userId,
+          MESSAGE_FILE_LIMITS: { maxFileSizeBytes: 50 * 1024 * 1024 },
+        },
+      });
+      customApp.userStore.users.set("remoteuser", {
+        id: userId,
+        username: "remoteuser",
+        password_hash: "hash",
+        nickname: "Remote User",
+        role: "user",
+        status: "online",
+      });
+      customApp.sessionStore.createSession(userId, sessionToken);
+
+      const res = await request(customApp.app)
+        .post("/api/uploads/presign")
+        .set("Cookie", [`sid=${sessionToken}`])
+        .send({
+          chatId,
+          messageId,
+          uploadPurpose: "message",
+          filename: "sample.png",
+          contentType: "image/png",
+          fileSize: 2048,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.fileId).toBe(73);
+      expect(createMessageFiles).toHaveBeenCalledWith(
+        messageId,
+        expect.any(Array),
+      );
+      expect(recordPending).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId,
+          chatId,
+          messageId,
+          purpose: "message",
+          storageKey: res.body.storageKey,
+        }),
+      );
+    });
+
+    test("rejects attaching a presigned upload to another user's message", async () => {
+      const messageId = "c0c0c0c0-d1d1-4e2e-af3f-060606060607";
+      const chatId = "42000000-0000-4000-8000-000000000098";
+      const createMessageFiles = vi.fn();
+      const customApp = makeApp({
+        deps: {
+          storageProvider: mockRemoteProvider,
+          createMessageFiles,
+          findMessageById: () => ({
+            id: messageId,
+            chat_id: chatId,
+            user_id: "10000000-0000-4000-8000-000000000099",
+          }),
+          findChatById: () => ({ id: chatId, type: "group" }),
+          isMember: () => true,
+          MESSAGE_FILE_LIMITS: { maxFileSizeBytes: 50 * 1024 * 1024 },
+        },
+      });
+      customApp.userStore.users.set("remoteuser", {
+        id: userId,
+        username: "remoteuser",
+        password_hash: "hash",
+        nickname: "Remote User",
+        role: "user",
+        status: "online",
+      });
+      customApp.sessionStore.createSession(userId, sessionToken);
+
+      const res = await request(customApp.app)
+        .post("/api/uploads/presign")
+        .set("Cookie", [`sid=${sessionToken}`])
+        .send({
+          chatId,
+          messageId,
+          filename: "stolen.png",
+          contentType: "image/png",
+          fileSize: 1024,
+        });
+
+      expect(res.status).toBe(403);
+      expect(createMessageFiles).not.toHaveBeenCalled();
+    });
+
     test("presign returns storageKey and no fileId when messageId is absent (no row inserted)", async () => {
+      const chatId = "42000000-0000-4000-8000-000000000094";
       const createMessageFilesMock = vi.fn(() => []);
       const customApp = makeApp({
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
           createMessageFiles: createMessageFilesMock,
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (candidateChatId, actorId) =>
+            String(candidateChatId) === chatId && String(actorId) === String(uId),
           MESSAGE_FILE_LIMITS: { maxFileSizeBytes: 50 * 1024 * 1024 },
         },
       });
@@ -167,6 +362,8 @@ describe("Remote Uploads & File Management Routes", () => {
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
+          chatId,
+          clientRequestId: "upload-rowless-1",
           filename: "clip.mp4",
           contentType: "video/mp4",
           fileSize: 1024,
@@ -181,14 +378,20 @@ describe("Remote Uploads & File Management Routes", () => {
     });
 
     test("presign returns remote upload URL for video when storageProcessingMode is 'local'", async () => {
+      const chatId = "42000000-0000-4000-8000-000000000095";
+      let uId = null;
       const customApp = makeApp({
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "local",
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (candidateChatId, actorId) =>
+            String(candidateChatId) === chatId && String(actorId) === String(uId),
           MESSAGE_FILE_LIMITS: { maxFileSizeBytes: 50 * 1024 * 1024 },
         },
       });
-      const uId = customApp.userStore.createUser(
+      uId = customApp.userStore.createUser(
         "localmodeuser",
         "pass",
         "LocalModeUser",
@@ -201,6 +404,8 @@ describe("Remote Uploads & File Management Routes", () => {
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
+          chatId,
+          clientRequestId: "upload-local-mode-1",
           filename: "clip_local.mp4",
           contentType: "video/mp4",
           fileSize: 1024,
@@ -231,22 +436,72 @@ describe("Remote Uploads & File Management Routes", () => {
       expect(res.status).toBe(404);
     });
 
+    test("rejects completion when the pending upload belongs to another actor", async () => {
+      const fileId = 77;
+      const messageId = "50000000-0000-4000-8000-000000000077";
+      const chatId = "42000000-0000-4000-8000-000000000077";
+      const storageKey = "uploads/messages/actor-bound.png";
+      const file = {
+        id: fileId,
+        message_id: messageId,
+        storage_key: storageKey,
+        storage_driver: "s3",
+        mime_type: "image/png",
+      };
+      const customApp = makeApp({
+        deps: {
+          storageProvider: mockRemoteProvider,
+          findMessageFileById: () => file,
+          findMessageById: () => ({
+            id: messageId,
+            chat_id: chatId,
+            user_id: userId,
+          }),
+          findChatById: () => ({ id: chatId, type: "group" }),
+          isMember: () => true,
+          findPendingPresignedUpload: () => ({
+            storage_key: storageKey,
+            user_id: "10000000-0000-4000-8000-000000000099",
+            chat_id: chatId,
+            message_id: messageId,
+            purpose: "message",
+          }),
+        },
+      });
+      customApp.userStore.users.set("remoteuser", {
+        id: userId,
+        username: "remoteuser",
+        password_hash: "hash",
+        nickname: "Remote User",
+        role: "user",
+        status: "online",
+      });
+      customApp.sessionStore.createSession(userId, sessionToken);
+
+      const res = await request(customApp.app)
+        .post("/api/uploads/complete")
+        .set("Cookie", [`sid=${sessionToken}`])
+        .send({ fileId, storageKey });
+
+      expect(res.status).toBe(403);
+    });
+
     test("updates status to ready in sync mode", async () => {
       let fileStatus = "pending";
       const uuidFileId = "10000000-0000-4000-8000-000000000010";
       const fileRecord = {
         id: uuidFileId,
-        message_id: null,
         storage_driver: "s3",
         storage_key: "uploads/file10.mp4",
         processing_status: fileStatus,
       };
 
-      const customApp = makeApp({
+      const { customApp } = makeAuthorizedMessageFileApp({
+        fileRecord,
+        username: "testuser10",
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "local",
-          findMessageFileById: (id) => (String(id) === uuidFileId ? fileRecord : null),
           adminGetRow: (sql) =>
             sql.includes("chat_message_files") ? fileRecord : null,
           adminRun: (sql, params) => {
@@ -258,14 +513,6 @@ describe("Remote Uploads & File Management Routes", () => {
           adminSave: () => {},
         },
       });
-      const uId = customApp.userStore.createUser(
-        "testuser10",
-        "pass",
-        "Test",
-        null,
-        "#fff",
-      );
-      customApp.sessionStore.createSession(uId, sessionToken);
 
       const res = await request(customApp.app)
         .post("/api/uploads/complete")
@@ -283,17 +530,17 @@ describe("Remote Uploads & File Management Routes", () => {
       const uuidFileId = "10000000-0000-4000-8000-000000000011";
       const fileRecord = {
         id: uuidFileId,
-        message_id: null,
         storage_driver: "s3",
         storage_key: "uploads/file11.mp4",
         processing_status: fileStatus,
       };
 
-      const customApp = makeApp({
+      const { customApp } = makeAuthorizedMessageFileApp({
+        fileRecord,
+        username: "testuser11",
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
-          findMessageFileById: (id) => (String(id) === uuidFileId ? fileRecord : null),
           adminGetRow: (sql) =>
             sql.includes("chat_message_files") ? fileRecord : null,
           adminRun: (sql, params) => {
@@ -305,14 +552,6 @@ describe("Remote Uploads & File Management Routes", () => {
           adminSave: () => {},
         },
       });
-      const uId = customApp.userStore.createUser(
-        "testuser11",
-        "pass",
-        "Test",
-        null,
-        "#fff",
-      );
-      customApp.sessionStore.createSession(uId, sessionToken);
 
       const res = await request(customApp.app)
         .post("/api/uploads/complete")
@@ -329,7 +568,6 @@ describe("Remote Uploads & File Management Routes", () => {
       const uuidFileId = "10000000-0000-4000-8000-000000000012";
       const fileRecord = {
         id: uuidFileId,
-        message_id: null,
         storage_driver: "s3",
         storage_key: "uploads/file12.mp4",
         mime_type: "video/mp4",
@@ -345,28 +583,21 @@ describe("Remote Uploads & File Management Routes", () => {
         return { ok: true, status: 202 };
       });
 
-      const customApp = makeApp({
+      const { customApp } = makeAuthorizedMessageFileApp({
+        fileRecord,
+        username: "testuser12",
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
           mediaWorkerUrl: "https://media-worker.onrender.com",
           webhookSecret: "secret-token",
           fetchImpl: mockFetch,
-          findMessageFileById: (id) => (String(id) === uuidFileId ? fileRecord : null),
           adminGetRow: (sql) =>
             sql.includes("chat_message_files") ? fileRecord : null,
           adminRun: () => {},
           adminSave: () => {},
         },
       });
-      const uId = customApp.userStore.createUser(
-        "testuser12",
-        "pass",
-        "Test",
-        null,
-        "#fff",
-      );
-      customApp.sessionStore.createSession(uId, sessionToken);
 
       const res = await request(customApp.app)
         .post("/api/uploads/complete")
@@ -385,7 +616,6 @@ describe("Remote Uploads & File Management Routes", () => {
       let updatedStatus = null;
       const fileRecord = {
         id: uuidFileId,
-        message_id: null,
         storage_driver: "s3",
         storage_key: "uploads/file13.mp4",
         mime_type: "video/mp4",
@@ -395,7 +625,9 @@ describe("Remote Uploads & File Management Routes", () => {
 
       const mockFetch = vi.fn();
 
-      const customApp = makeApp({
+      const { customApp } = makeAuthorizedMessageFileApp({
+        fileRecord,
+        username: "testuser13",
         deps: {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
@@ -403,7 +635,6 @@ describe("Remote Uploads & File Management Routes", () => {
           webhookSecret: "secret-token",
           fetchImpl: mockFetch,
           getSetting: (key) => (key === "FILE_UPLOAD_TRANSCODE_VIDEOS" ? false : null),
-          findMessageFileById: (id) => (String(id) === uuidFileId ? fileRecord : null),
           adminGetRow: (sql) =>
             sql.includes("chat_message_files") ? fileRecord : null,
           adminRun: (sql, params) => {
@@ -414,14 +645,6 @@ describe("Remote Uploads & File Management Routes", () => {
           adminSave: () => {},
         },
       });
-      const uId = customApp.userStore.createUser(
-        "testuser13",
-        "pass",
-        "Test",
-        null,
-        "#fff",
-      );
-      customApp.sessionStore.createSession(uId, sessionToken);
 
       const res = await request(customApp.app)
         .post("/api/uploads/complete")
@@ -436,6 +659,21 @@ describe("Remote Uploads & File Management Routes", () => {
   });
 
   describe("POST /api/uploads/webhook/processed", () => {
+    test("fails closed when no webhook secret is configured", async () => {
+      const customApp = makeApp({
+        deps: {
+          webhookSecret: null,
+          findMessageFileById: () => ({ id: 10 }),
+        },
+      });
+
+      const res = await request(customApp.app)
+        .post("/api/uploads/webhook/processed")
+        .send({ fileId: 10, status: "ready" });
+
+      expect(res.status).toBe(503);
+    });
+
     test("returns 401 when webhook secret is invalid", async () => {
       const res = await request(appObj.app)
         .post("/api/uploads/webhook/processed")
@@ -519,8 +757,8 @@ describe("Remote Uploads & File Management Routes", () => {
               width: 1280,
               height: 720,
               durationSeconds: 15.4,
-              thumbUrl: "https://cdn.example.com/thumbs/thumb21.jpg",
-              url: "https://cdn.example.com/transcoded/video21.mp4",
+              thumbUrl: `/api/uploads/thumbs/${fileUuid}`,
+              url: `/api/uploads/file/${fileUuid}`,
             }),
           ]),
         }),
@@ -592,6 +830,7 @@ describe("Remote Uploads & File Management Routes", () => {
   describe("GET /api/uploads/file/:id", () => {
     test("redirects 302 to S3 download URL when encryption_type is none", async () => {
       const fileUuid = "30000000-0000-4000-8000-000000000030";
+      const chatId = "42000000-0000-4000-8000-000000000030";
       const fileRecord = {
         id: fileUuid,
         storage_driver: "s3",
@@ -599,9 +838,11 @@ describe("Remote Uploads & File Management Routes", () => {
         encryption_type: "none",
         mime_type: "image/jpeg",
       };
+      const authorization = publicMediaAuthorization(fileRecord, chatId);
 
       const customApp = makeApp({
         deps: {
+          ...authorization,
           storageProvider: mockRemoteProvider,
           findMessageFileById: (id) => (String(id) === fileUuid ? fileRecord : null),
           adminGetRow: () => fileRecord,
@@ -618,6 +859,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
     test("redirects 302 to S3 download URL when encryption_type is provider_sse", async () => {
       const fileUuid = "30000000-0000-4000-8000-000000000031";
+      const chatId = "42000000-0000-4000-8000-000000000031";
       const fileRecord = {
         id: fileUuid,
         storage_driver: "s3",
@@ -625,9 +867,11 @@ describe("Remote Uploads & File Management Routes", () => {
         encryption_type: "provider_sse",
         mime_type: "image/png",
       };
+      const authorization = publicMediaAuthorization(fileRecord, chatId);
 
       const customApp = makeApp({
         deps: {
+          ...authorization,
           storageProvider: mockRemoteProvider,
           findMessageFileById: (id) => (String(id) === fileUuid ? fileRecord : null),
           adminGetRow: () => fileRecord,
@@ -649,6 +893,7 @@ describe("Remote Uploads & File Management Routes", () => {
       const plainText = "Hello Decrypted S3 Data!";
       const encryptedBuf = enc.encryptBuffer(Buffer.from(plainText));
       const fileUuid = "30000000-0000-4000-8000-000000000032";
+      const chatId = "42000000-0000-4000-8000-000000000032";
 
       const fileRecord = {
         id: fileUuid,
@@ -657,6 +902,7 @@ describe("Remote Uploads & File Management Routes", () => {
         encryption_type: "aes-256-gcm",
         mime_type: "text/plain",
       };
+      const authorization = publicMediaAuthorization(fileRecord, chatId);
 
       // Mock fetch globally or pass custom fetch implementation in deps
       const originalFetch = global.fetch;
@@ -672,6 +918,7 @@ describe("Remote Uploads & File Management Routes", () => {
       try {
         const customApp = makeApp({
           deps: {
+            ...authorization,
             storageProvider: mockRemoteProvider,
             storageEncryption: enc,
             findMessageFileById: (id) =>
@@ -710,14 +957,17 @@ describe("Remote Uploads & File Management Routes", () => {
 
     test("GET /api/uploads/messages/:storedName redirects 302 to remote storage URL", async () => {
       const storedName = "test-remote-file.png";
+      const chatId = "42000000-0000-4000-8000-000000000033";
       const fileRecord = {
         storage_driver: "s3",
         storage_key: `uploads/${storedName}`,
         stored_name: storedName,
       };
+      const authorization = publicMediaAuthorization(fileRecord, chatId);
 
       const customApp = makeApp({
         deps: {
+          ...authorization,
           storageProvider: mockRemoteProvider,
           adminGetRow: () => fileRecord,
         },
@@ -740,7 +990,10 @@ describe("Remote Uploads & File Management Routes", () => {
         storageEncryption: { decryptFileToBuffer: () => null, getDecryptedFileSize: () => 0 },
         storageProvider: mockRemoteProvider,
       });
-      uploadTools.registerUploadRoutes(customApp.app, { adminGetRow: () => fileRecord });
+      uploadTools.registerUploadRoutes(customApp.app, {
+        adminGetRow: () => fileRecord,
+        ...authorization,
+      });
 
       const res = await request(customApp.app).get(`/api/uploads/messages/${storedName}`);
 

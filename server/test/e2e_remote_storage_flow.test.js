@@ -6,6 +6,8 @@ import { RemoteStorageProvider } from "../lib/storage/RemoteStorageProvider.js";
 
 describe("E2E S3 & Local Upload Lifecycle", () => {
   const sessionToken = "e2e-session-token";
+  const chatId = "c0c0c0c0-d1d1-4e2e-af3f-060606060606";
+  const messageId = "d0d0d0d0-e1e1-4f2f-bf4f-070707070707";
   let userId;
 
   describe("STORAGE_DRIVER=local full lifecycle", () => {
@@ -40,6 +42,14 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
         deps: {
           storageProvider: localProvider,
           storageProcessingMode: "local",
+          findMessageById: (id) =>
+            String(id) === messageId
+              ? { id: messageId, chat_id: chatId, user_id: userId }
+              : null,
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (targetChatId, targetUserId) =>
+            String(targetChatId) === chatId && String(targetUserId) === String(userId),
           createMessageFiles: createMessageFilesMock,
           findMessageFileById: (id) =>
             filesStore.find((f) => String(f.id) === String(id)) || null,
@@ -80,7 +90,8 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
-          messageId: "c0c0c0c0-d1d1-4e2e-af3f-060606060606",
+          messageId,
+          chatId,
           filename: "test-document.pdf",
           contentType: "application/pdf",
           fileSize: 1024,
@@ -110,11 +121,12 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       expect(completeRes.body.status).toBe("ready");
 
       // 3. Download call
-      const downloadRes = await request(appObj.app).get(
-        `/api/uploads/file/${fileId}`,
-      );
+      const downloadRes = await request(appObj.app)
+        .get(`/api/uploads/file/${fileId}`)
+        .set("Cookie", [`sid=${sessionToken}`]);
 
-      expect(downloadRes.status).toBe(200);
+      expect(downloadRes.status).toBe(302);
+      expect(downloadRes.headers.location).toMatch(/^\/api\/uploads\/messages\//);
     });
 
     test("fallback multipart form upload POST /api/uploads", async () => {
@@ -136,6 +148,35 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       const appObj = makeApp({
         deps: {
           storageProvider: localProvider,
+          uploadFiles: {
+            array: () => (_req, _res, next) => next(),
+            single: () => (req, _res, next) => {
+              req.body = {
+                messageId,
+                chatId,
+                filename: "sample.png",
+                contentType: "image/png",
+                fileSize: "2048",
+                width: "800",
+                height: "600",
+              };
+              req.file = {
+                filename: "sample.png",
+                originalname: "sample.png",
+                mimetype: "image/png",
+                size: 2048,
+              };
+              next();
+            },
+          },
+          findMessageById: (id) =>
+            String(id) === messageId
+              ? { id: messageId, chat_id: chatId, user_id: userId }
+              : null,
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (targetChatId, targetUserId) =>
+            String(targetChatId) === chatId && String(targetUserId) === String(userId),
           createMessageFiles: createMessageFilesMock,
           findMessageFileById: (id) =>
             filesStore.find((f) => String(f.id) === String(id)) || null,
@@ -163,11 +204,7 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       const uploadRes = await request(appObj.app)
         .post("/api/uploads")
         .set("Cookie", [`sid=${sessionToken}`])
-        .field("filename", "sample.png")
-        .field("contentType", "image/png")
-        .field("fileSize", "2048")
-        .field("width", "800")
-        .field("height", "600");
+        .send({ messageId, chatId });
 
       expect(uploadRes.status).toBe(200);
       expect(uploadRes.body.success).toBe(true);
@@ -177,11 +214,12 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       );
 
       // Verify download endpoint
-      const downloadRes = await request(appObj.app).get(
-        `/api/uploads/file/${uploadRes.body.fileId}`,
-      );
+      const downloadRes = await request(appObj.app)
+        .get(`/api/uploads/file/${uploadRes.body.fileId}`)
+        .set("Cookie", [`sid=${sessionToken}`]);
 
-      expect(downloadRes.status).toBe(200);
+      expect(downloadRes.status).toBe(302);
+      expect(downloadRes.headers.location).toMatch(/^\/api\/uploads\/messages\//);
     });
   });
 
@@ -239,6 +277,14 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
           webhookSecret: "super-secret-webhook-key",
+          findMessageById: (id) =>
+            String(id) === messageId
+              ? { id: messageId, chat_id: chatId, user_id: userId }
+              : null,
+          findChatById: (id) =>
+            String(id) === chatId ? { id: chatId, type: "group" } : null,
+          isMember: (targetChatId, targetUserId) =>
+            String(targetChatId) === chatId && String(targetUserId) === String(userId),
           createMessageFiles: createMessageFilesMock,
           findMessageFileById: (id) =>
             filesStore.find((f) => String(f.id) === String(id)) || null,
@@ -284,7 +330,8 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
-          messageId: "c0c0c0c0-d1d1-4e2e-af3f-060606060606",
+          messageId,
+          chatId,
           filename: "video.mp4",
           contentType: "video/mp4",
           fileSize: 1048576,
@@ -333,9 +380,9 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
       expect(updatedFile.storage_key).toBe("transcoded/video_720p.mp4");
 
       // 4. Download URL resolution (302 redirect)
-      const downloadRes = await request(appObj.app).get(
-        `/api/uploads/file/${fileId}`,
-      );
+      const downloadRes = await request(appObj.app)
+        .get(`/api/uploads/file/${fileId}`)
+        .set("Cookie", [`sid=${sessionToken}`]);
 
       expect(downloadRes.status).toBe(302);
       expect(downloadRes.headers.location).toBe(
@@ -368,7 +415,7 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "local",
           isMember: () => true,
-          findChatById: () => ({ id: "c0c0c0c0-d1d1-4e2e-af3f-060606060606", type: "group" }),
+          findChatById: () => ({ id: chatId, type: "group" }),
           enqueueVideoTranscodeJob: enqueueTranscodeMock,
           createMessageFiles: createMessageFilesMock,
           listMessageFilesByMessageIds: () => filesStore,
@@ -393,11 +440,14 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
 
       userId = appObj.userStore.createUser("s3user", "pass", "S3 User", null, "#10b981");
       appObj.sessionStore.createSession(userId, sessionToken);
+      const clientRequestId = "e2e-remote-video-request";
 
       const presignRes = await request(appObj.app)
         .post("/api/uploads/presign")
         .set("Cookie", [`sid=${sessionToken}`])
         .send({
+          chatId,
+          clientRequestId,
           filename: "remote_video.mp4",
           contentType: "video/mp4",
           fileSize: 5000000,
@@ -412,10 +462,11 @@ describe("E2E S3 & Local Upload Lifecycle", () => {
         .send({
           chatId: "c0c0c0c0-d1d1-4e2e-af3f-060606060606",
           username: "s3user",
+          clientRequestId,
           uploadType: "media",
           presignedFiles: [
             {
-              storageKey: "uploads/remote_video.mp4",
+              storageKey: presignRes.body.storageKey,
               originalName: "remote_video.mp4",
               mimeType: "video/mp4",
               sizeBytes: 5000000,

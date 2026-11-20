@@ -33,6 +33,7 @@ function makeAuditApp({ owner = true } = {}) {
     deps: {
       isUserAdmin: (userId) => userId === admin.id,
       isUserOwner: () => owner,
+      operatorApiToken: "audit-operator-token",
     },
   });
   return { ...built, admin, user };
@@ -115,7 +116,8 @@ describe("DELETE /api/admin/logs (DB-backed audit trail)", () => {
 
     const res = await request(app)
       .delete("/api/admin/logs")
-      .set("Cookie", "sid=admin-session");
+      .set("Cookie", "sid=admin-session")
+      .set("x-ouj-chat-operator-token", "audit-operator-token");
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     // Clear wipes everything, then the clear action itself is recorded.
@@ -127,7 +129,25 @@ describe("DELETE /api/admin/logs (DB-backed audit trail)", () => {
     const { app } = makeAuditApp({ owner: false });
     const res = await request(app)
       .delete("/api/admin/logs")
-      .set("Cookie", "sid=admin-session");
+      .set("Cookie", "sid=admin-session")
+      .set("x-ouj-chat-operator-token", "audit-operator-token");
     expect(res.status).toBe(403);
+  });
+
+  test("rejects an owner session without the operator credential", async () => {
+    const { app } = makeAuditApp();
+    const res = await request(app)
+      .delete("/api/admin/logs")
+      .set("Cookie", "sid=admin-session");
+    expect(res.status).toBe(401);
+  });
+
+  test("rejects an invalid operator credential", async () => {
+    const { app } = makeAuditApp();
+    const res = await request(app)
+      .delete("/api/admin/logs")
+      .set("Cookie", "sid=admin-session")
+      .set("x-ouj-chat-operator-token", "wrong-operator-token");
+    expect(res.status).toBe(401);
   });
 });

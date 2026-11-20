@@ -9,7 +9,7 @@
  * Affected settings: MESSAGE_FILE_RETENTION, MESSAGE_TEXT_RETENTION (and any
  * future nullable int where min >= 1).
  */
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, afterAll } from "vitest";
 import {
   validateSetting,
   setSetting,
@@ -42,9 +42,25 @@ function makeDbStubs() {
 
 // Re-seed the module-level _cache by calling loadSettings with the stub.
 // We need a fresh state before each test.
-beforeEach(() => {
+const originalRetentionEnv = {
+  MESSAGE_FILE_RETENTION: process.env.MESSAGE_FILE_RETENTION,
+  MESSAGE_TEXT_RETENTION: process.env.MESSAGE_TEXT_RETENTION,
+};
+
+beforeEach(async () => {
+  // These tests exercise the DB-backed path. A developer's real `.env` may
+  // intentionally lock either setting and must not leak into test behavior.
+  delete process.env.MESSAGE_FILE_RETENTION;
+  delete process.env.MESSAGE_TEXT_RETENTION;
   const { dbGetAll } = makeDbStubs();
-  loadSettings(dbGetAll); // resets _cache to env/default values
+  await loadSettings(dbGetAll); // resets _cache to hard-coded defaults
+});
+
+afterAll(() => {
+  for (const [key, value] of Object.entries(originalRetentionEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
 });
 
 // ─── validateSetting — nullable int accepts 0 ─────────────────────────────────

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { normalizeEnvSecret, updateEnvValue } from "./secrets.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 const TEXT_PREFIX = "ouj-enc-v1:";
 const LEGACY_TEXT_PREFIX = String.fromCharCode(
@@ -39,10 +40,11 @@ function ensureStorageEncryptionKey({
   try {
     updateEnvValue(envPath, "STORAGE_ENCRYPTION_KEY", generated, { fsImpl });
   } catch (error) {
-    console.warn(
-      "[storage-encryption] Unable to update .env with generated storage key:",
-      String(error?.message || error),
-    );
+    console.warn(JSON.stringify({
+      service: "ouj-chat",
+      event: "storage_encryption.env_update_failed",
+      errorCode: safeErrorCode(error, "storage_key_env_update_failed"),
+    }));
   }
 
   process.env.STORAGE_ENCRYPTION_KEY = generated;

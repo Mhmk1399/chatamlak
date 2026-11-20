@@ -15,12 +15,11 @@ services:
       APP_ENV: ${APP_ENV:-production}
       SERVER_PORT: ${SERVER_PORT:-5174}
       BIND_ADDRESS: "0.0.0.0"
+      # This service is reachable only through the compose-managed Nginx proxy.
+      WS_TRUST_PROXY: ${WS_TRUST_PROXY:-true}
       DB_CLIENT: mongodb
       MONGODB_URI: ${MONGODB_URI:?Set your MongoDB replica-set or Atlas URI in the selected environment file}
       MONGODB_DATABASE: ${MONGODB_DATABASE:-ouj_chat}
-      # Tell the admin panel which container to use via the Docker API.
-      # Defaults to "ouj-chat" which matches the container_name above.
-      OUJ_CHAT_CONTAINER_NAME: ${OUJ_CHAT_CONTAINER_NAME:-ouj-chat}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
@@ -31,10 +30,10 @@ services:
       WEBHOOK_SECRET: ${WEBHOOK_SECRET:-}
     volumes:
       - ouj-chat-data:/app/data
-      # Required for the admin panel's services.
-      # The container uses the Docker Engine API (via this socket) to control itself.
-      # Remove this mount if you do not need service control from the admin panel.
-      - /var/run/docker.sock:/var/run/docker.sock
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   nginx:
     image: nginx:alpine

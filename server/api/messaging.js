@@ -1,4 +1,5 @@
 import { isValidUuid } from "../lib/uuidUtils.js";
+import { sessionTokenMatches } from "../lib/sessionTokens.js";
 
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const text = (value, max) => typeof value === "string" && value.trim().length <= max ? value.trim() : "";
@@ -160,9 +161,9 @@ export function registerMessagingRoutes(app, deps) {
   app.delete("/api/messaging/devices/:id", wrap(async (req, res, user) => {
     const token = await db.deviceToken(user.id, req.params.id);
     if (!token) throw fail(404, "Session not found.");
-    await deps.deleteSession(token);
+    await deps.deleteSession(token, { acceptStored: true });
     deps.disconnectSession?.(token);
-    if (token === deps.parseCookies(req).sid) deps.clearSessionCookie(req, res);
+    if (sessionTokenMatches(token, deps.parseCookies(req).sid)) deps.clearSessionCookie(req, res);
     return res.json({ ok: true });
   }));
   app.get("/api/messaging/chats/:chatId/scheduled", wrap(async (req, res, user) => {

@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import request from "supertest";
 import bcrypt from "bcryptjs";
 import { makeApp, makeUserStore } from "../helpers/makeApp.js";
@@ -328,5 +328,17 @@ describe("POST /api/logout", () => {
       c.startsWith("sid="),
     );
     expect(cookie).toMatch(/Max-Age=0/i);
+  });
+
+  test("disconnects the WebSocket authenticated by the revoked session", async () => {
+    const disconnectSession = vi.fn();
+    const { app } = makeApp({ deps: { disconnectSession } });
+
+    const res = await request(app)
+      .post("/api/logout")
+      .set("Cookie", "sid=session-token");
+
+    expect(res.status).toBe(200);
+    expect(disconnectSession).toHaveBeenCalledWith("session-token");
   });
 });

@@ -185,6 +185,33 @@ describe("migrateLegacyStorageLayout", () => {
     expect(provider.deleteFile).not.toHaveBeenCalled();
   });
 
+  test("logs stable failure codes without object keys or provider error text", async () => {
+    const privateKey = "avatars/private-customer-token.png";
+    const privateError = "request failed at https://bucket.example/private?signature=secret";
+    const provider = makeProvider(
+      { "avatars/": [privateKey] },
+      {
+        copyFile: vi.fn(async () => {
+          throw new Error(privateError);
+        }),
+      },
+    );
+    const warn = vi.fn();
+
+    const summary = await migrateLegacyStorageLayout({
+      storageProvider: provider,
+      rewriteStorageKeys,
+      adminSave,
+      logger: { warn },
+    });
+
+    const logged = JSON.stringify(warn.mock.calls);
+    expect(logged).not.toContain(privateKey);
+    expect(logged).not.toContain(privateError);
+    expect(logged).toContain("storage_copy_failed");
+    expect(summary.failed[0].error).toBe("storage_copy_failed");
+  });
+
   test("skips local-driver providers", async () => {
     const provider = makeProvider({});
     provider.type = "local";

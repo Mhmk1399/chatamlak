@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   createPostgresMaintenance,
   resolvePostgresCliConfig,
@@ -144,5 +144,26 @@ describe("postgresMaintenance", () => {
     await expect(maintenanceWithStderr.backup("/tmp/test.dump")).rejects.toThrow(
       "pg_dump failed: pg_dump: error: server version: 18.0; pg_dump version: 15.0 with [REDACTED]",
     );
+  });
+
+  test("logs a stable tool error code instead of command stderr", async () => {
+    const marker = "private-db-host.example user=customer";
+    const maintenance = createPostgresMaintenance({
+      config,
+      execute: async () => {
+        const error = new Error("failed");
+        error.stderr = marker;
+        throw error;
+      },
+    });
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(maintenance.backup("/tmp/test.dump")).rejects.toThrow();
+      const logged = JSON.stringify(errorLog.mock.calls);
+      expect(logged).not.toContain(marker);
+      expect(logged).toContain("postgres_tool_failed");
+    } finally {
+      errorLog.mockRestore();
+    }
   });
 });

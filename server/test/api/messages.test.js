@@ -726,9 +726,15 @@ describe("GET /api/messages — replyTo shape", () => {
     const res = await getMessages(app);
     expect(res.status).toBe(200);
     expect(res.body.messages[0].files).toHaveLength(2);
-    expect(res.body.messages[0].files[0].url).toBe("/api/uploads/messages/test-file.png");
+    expect(res.body.messages[0].files[0].url).toBe(
+      "/api/uploads/file/file-uuid-1",
+    );
     expect(res.body.messages[0].files[0].thumbUrl).toBeNull();
-    expect(res.body.messages[0].files[1].url).toBe("https://s3.example.com/messages/video.mp4");
-    expect(res.body.messages[0].files[1].thumbUrl).toBe("https://s3.example.com/thumbs/video-thumb.jpg");
+    expect(res.body.messages[0].files[1].url).toBe(
+      "/api/uploads/file/file-uuid-2",
+    );
+    expect(res.body.messages[0].files[1].thumbUrl).toBe(
+      "/api/uploads/thumbs/file-uuid-2",
+    );
   });
 });

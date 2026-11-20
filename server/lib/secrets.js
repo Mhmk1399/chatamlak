@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import webpush from "web-push";
 import { dbKnex } from "../db/query.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 export function normalizeEnvSecret(value) {
   const raw = String(value ?? "").trim();
@@ -90,10 +91,11 @@ export async function ensureSystemSecrets({
           .merge({ value }),
       );
     } catch (err) {
-      console.warn(
-        `[secrets] Unable to save secret ${key} to database:`,
-        err?.message || err,
-      );
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "secrets.persist_failed",
+        errorCode: safeErrorCode(err, "secret_persist_failed"),
+      }));
     }
   }
 
@@ -211,10 +213,11 @@ export async function ensureSystemSecrets({
         updateEnvValue(envPath, "VAPID_SUBJECT", subject, { fsImpl });
       }
     } catch (err) {
-      console.warn(
-        "[secrets] Unable to generate VAPID keys:",
-        err?.message || err,
-      );
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "secrets.vapid_generation_failed",
+        errorCode: safeErrorCode(err, "vapid_generation_failed"),
+      }));
     }
   }
 

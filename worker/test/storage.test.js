@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -98,6 +98,31 @@ describe("worker storage", () => {
       await expect(
         storage.downloadToPath("nonexistent.mp4", dest),
       ).rejects.toThrow(path.join(tmpDir, "uploads", "messages", "nonexistent.mp4"));
+    });
+
+    it("does not log object keys or raw filesystem errors when deletion fails", async () => {
+      const storage = createStorage({ driver: "local", dataDir: tmpDir });
+      const privateKey = "private-customer-object.mp4";
+      const privateError = "filesystem error containing a private path";
+      const filePath = path.join(tmpDir, "uploads", "messages", privateKey);
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      fs.writeFileSync(filePath, "bytes");
+      const unlink = vi
+        .spyOn(fs.promises, "unlink")
+        .mockRejectedValue(Object.assign(new Error(privateError), { code: "EACCES" }));
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      try {
+        await storage.deleteFile(privateKey);
+        const output = warn.mock.calls.flat().map(String).join(" ");
+        expect(output).toContain('"event":"worker.storage.delete_failed"');
+        expect(output).toContain('"errorCode":"EACCES"');
+        expect(output).not.toContain(privateKey);
+        expect(output).not.toContain(privateError);
+      } finally {
+        warn.mockRestore();
+        unlink.mockRestore();
+      }
     });
   });
 

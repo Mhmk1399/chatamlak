@@ -8,6 +8,12 @@ import { ensureBucketCorsForRequest } from "../lib/bucketCors.js";
 import { resolveWebhookCallbackUrl } from "../lib/webhookUrl.js";
 import { resolveThumbUrl } from "../lib/thumbUrl.js";
 import { readEnvBool } from "../settings/env.js";
+import { safeErrorCode } from "../lib/requestLogging.js";
+import {
+  authorizeMessageFileAccess,
+  getSessionActorId,
+  setMessageMediaCacheHeaders,
+} from "../lib/messageMediaAccess.js";
 
 export function registerRemoteUploadRoutes(app, deps) {
   const {
@@ -19,8 +25,13 @@ export function registerRemoteUploadRoutes(app, deps) {
     getSession,
     createMessageFiles,
     findMessageFileById,
+    findMessageById,
+    findChatById,
+    isMember,
     emitChatEvent,
     recordPendingPresignedUpload,
+    findPendingPresignedUpload,
+    removePendingPresignedUploads,
     storageProcessingMode = "auto",
     s3ProcessingMode = "auto",
     webhookSecret,
@@ -43,6 +54,7 @@ export function registerRemoteUploadRoutes(app, deps) {
     listMessageFilesByMessageIds = deps.listMessageFilesByMessageIds,
     ALLOWED_AVATAR_MIME_TYPES = deps.ALLOWED_AVATAR_MIME_TYPES,
     AVATAR_FILE_LIMITS = deps.AVATAR_FILE_LIMITS,
+    uploadFiles = deps.uploadFiles,
   } = deps;
 
   function toSql(builder, p = []) {
@@ -95,6 +107,132 @@ export function registerRemoteUploadRoutes(app, deps) {
     return session;
   };
 
+  const resolveMaybePromise = async (value) =>
+    value && typeof value.then === "function" ? await value : value;
+
+  const loadMessage = async (messageId) => {
+    let message = null;
+    if (typeof findMessageById === "function") {
+      message = await resolveMaybePromise(findMessageById(messageId));
+    }
+    if (!message && typeof adminGetRow === "function") {
+      message = await resolveMaybePromise(
+        callAdminGetRow(dbKnex("chat_messages").where("id", messageId).first()),
+      );
+    }
+    return message;
+  };
+
+  const loadChat = async (chatId) => {
+    let chat = null;
+    if (typeof findChatById === "function") {
+      chat = await resolveMaybePromise(findChatById(chatId));
+    }
+    if (!chat && typeof adminGetRow === "function") {
+      chat = await resolveMaybePromise(
+        callAdminGetRow(dbKnex("chats").where("id", chatId).first()),
+      );
+    }
+    return chat;
+  };
+
+  const loadPendingUpload = async (storageKey) => {
+    if (!storageKey || typeof findPendingPresignedUpload !== "function") {
+      return null;
+    }
+    return await resolveMaybePromise(findPendingPresignedUpload(storageKey));
+  };
+
+  const recordPendingUpload = async (binding) => {
+    if (typeof recordPendingPresignedUpload !== "function") {
+      throw new Error("Pending upload ownership storage is unavailable.");
+    }
+    return await resolveMaybePromise(recordPendingPresignedUpload(binding));
+  };
+
+  const removePendingUpload = async (storageKey) => {
+    if (!storageKey || typeof removePendingPresignedUploads !== "function") {
+      throw new Error("Pending upload ownership storage is unavailable.");
+    }
+    return await resolveMaybePromise(removePendingPresignedUploads([storageKey]));
+  };
+
+  const extractInsertedFileId = (inserted) => {
+    const first = Array.isArray(inserted) ? inserted[0] : inserted;
+    if (first === null || first === undefined || first === "") return null;
+    if (typeof first === "string" || typeof first === "number") return first;
+    return first?.id ?? null;
+  };
+
+  const requireOwnedMessageTarget = async ({
+    actorId,
+    messageId,
+    requestedChatId,
+    res,
+  }) => {
+    const message = await loadMessage(messageId);
+    if (!message) {
+      res.status(404).json({ error: "Message not found." });
+      return null;
+    }
+    const messageOwnerId = message.user_id ?? message.userId ?? null;
+    if (!messageOwnerId || String(messageOwnerId) !== String(actorId)) {
+      res.status(403).json({ error: "Access denied." });
+      return null;
+    }
+    const chatId = message.chat_id ?? message.chatId ?? null;
+    if (!chatId || (requestedChatId && String(requestedChatId) !== String(chatId))) {
+      res.status(400).json({ error: "Upload target does not match the message chat." });
+      return null;
+    }
+    if (typeof isMember !== "function") {
+      res.status(503).json({ error: "Upload authorization is unavailable." });
+      return null;
+    }
+    const member = await resolveMaybePromise(isMember(chatId, actorId));
+    if (!member) {
+      res.status(403).json({ error: "Access denied." });
+      return null;
+    }
+    return { chatId, message };
+  };
+
+  const requireChatTarget = async ({ actorId, chatId, res }) => {
+    if (!chatId) {
+      res.status(400).json({ error: "chatId or messageId is required." });
+      return null;
+    }
+    const chat = await loadChat(chatId);
+    if (!chat) {
+      res.status(404).json({ error: "Chat not found." });
+      return null;
+    }
+    if (typeof isMember !== "function") {
+      res.status(503).json({ error: "Upload authorization is unavailable." });
+      return null;
+    }
+    const member = await resolveMaybePromise(isMember(chatId, actorId));
+    if (!member) {
+      res.status(403).json({ error: "Access denied." });
+      return null;
+    }
+    return { chat, chatId };
+  };
+
+  const authorizeFileRequest = (req, res, file) =>
+    authorizeMessageFileAccess({
+      req,
+      res,
+      file,
+      requireSession,
+      getSessionFromRequest,
+      findMessageById,
+      findChatById,
+      isMember,
+      loadMessage,
+      loadChat,
+    });
+
   const presignRateLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 30,
@@ -124,13 +262,16 @@ export function registerRemoteUploadRoutes(app, deps) {
           req,
         );
         if (corsResult.status === "applied") {
-          console.log(
-            `[server] Bucket CORS policy applied for presign origin (uploadsRemote).`,
-          );
+          console.log(JSON.stringify({
+            service: "ouj-chat",
+            event: "uploads.cors_applied",
+          }));
         } else if (corsResult.status === "error") {
-          console.warn(
-            `[server] Presign CORS self-heal failed: ${corsResult.error}`,
-          );
+          console.warn(JSON.stringify({
+            service: "ouj-chat",
+            event: "uploads.cors_failed",
+            errorCode: "bucket_cors_failed",
+          }));
         }
       } catch (_) {}
     }
@@ -152,6 +293,10 @@ export function registerRemoteUploadRoutes(app, deps) {
       encryptionType,
       encryption_type,
       uploadType,
+      uploadPurpose,
+      purpose,
+      chatId,
+      clientRequestId,
     } = req.body || {};
 
     const name = filename || originalName || "upload.bin";
@@ -159,6 +304,10 @@ export function registerRemoteUploadRoutes(app, deps) {
     const size = Number(fileSize ?? sizeBytes ?? 0);
 
     const isAvatarUpload = String(uploadType || "").toLowerCase() === "avatar";
+    const actorId = getSessionActorId(session);
+    if (!actorId) {
+      return res.status(401).json({ error: "Not authenticated." });
+    }
 
     if (isAvatarUpload) {
       const avatarLimit =
@@ -216,25 +365,14 @@ export function registerRemoteUploadRoutes(app, deps) {
           uploadResult.storageKey || uploadResult.key || generatedKey;
         const providerType = storageProvider.type || uploadResult.type || "s3";
 
-        if (typeof recordPendingPresignedUpload === "function") {
-          try {
-            recordPendingPresignedUpload({
-              storageKey: finalStorageKey,
-              userId: session?.userId || null,
-            });
-          } catch (_) {}
-        } else if (typeof adminRun === "function") {
-          try {
-            callAdminRun(
-              dbKnex("pending_presigned_uploads").insert({
-                storage_key: finalStorageKey,
-                user_id: session?.userId || null,
-                created_at: new Date().toISOString(),
-              }),
-            );
-            if (typeof adminSave === "function") adminSave();
-          } catch (_) {}
-        }
+        await recordPendingUpload({
+          storageKey: finalStorageKey,
+          userId: actorId,
+          chatId: chatId || null,
+          messageId: null,
+          clientRequestId: clientRequestId || null,
+          purpose: String(uploadPurpose || purpose || "profile-avatar").toLowerCase(),
+        });
 
         return res.json({
           success: true,
@@ -244,8 +382,13 @@ export function registerRemoteUploadRoutes(app, deps) {
           avatarUrl: `/api/uploads/avatars/${generatedName}`,
         });
       } catch (err) {
+        console.warn(JSON.stringify({
+          service: "ouj-chat",
+          event: "uploads.avatar_presign_failed",
+          errorCode: safeErrorCode(err, "presign_failed"),
+        }));
         return res.status(500).json({
-          error: err.message || "Failed to generate presigned upload URL.",
+          error: "Failed to generate presigned upload URL.",
         });
       }
     }
@@ -263,6 +406,36 @@ export function registerRemoteUploadRoutes(app, deps) {
 
     const ext = path.extname(name).toLowerCase();
     const generatedKey = `uploads/messages/${Date.now()}_${crypto.randomBytes(8).toString("hex")}${ext}`;
+
+    const targetMsgId = messageId || null;
+    let targetChatId = chatId || null;
+    const normalizedClientRequestId = String(clientRequestId || "").trim();
+    if (normalizedClientRequestId.length > 120) {
+      return res.status(400).json({ error: "clientRequestId is too long." });
+    }
+    if (!targetMsgId && !normalizedClientRequestId) {
+      return res.status(400).json({
+        error: "clientRequestId is required before a message is created.",
+      });
+    }
+    if (targetMsgId) {
+      const target = await requireOwnedMessageTarget({
+        actorId,
+        messageId: targetMsgId,
+        requestedChatId: targetChatId,
+        res,
+      });
+      if (!target) return;
+      targetChatId = target.chatId;
+    } else {
+      const target = await requireChatTarget({
+        actorId,
+        chatId: targetChatId,
+        res,
+      });
+      if (!target) return;
+      targetChatId = target.chatId;
+    }
 
     if (
       !storageProvider ||
@@ -321,46 +494,31 @@ export function registerRemoteUploadRoutes(app, deps) {
           "remote",
       };
 
-      const targetMsgId = messageId || null;
+      await recordPendingUpload({
+        storageKey: finalStorageKey,
+        userId: actorId,
+        chatId: targetChatId,
+        messageId: targetMsgId,
+        clientRequestId: normalizedClientRequestId || null,
+        purpose: "message",
+      });
+
       let fileId = null;
       if (targetMsgId && typeof createMessageFiles === "function") {
-        const rawInserted = createMessageFiles(targetMsgId, [fileObj]);
-        const inserted = rawInserted && typeof rawInserted.then === "function" ? await rawInserted : rawInserted;
-        if (Array.isArray(inserted) && inserted[0]?.id) {
-          fileId = inserted[0].id;
-        } else if (inserted && typeof inserted === "object" && inserted.id) {
-          fileId = inserted.id;
-        }
+        const inserted = await resolveMaybePromise(
+          createMessageFiles(targetMsgId, [fileObj]),
+        );
+        fileId = extractInsertedFileId(inserted);
       }
       if (!fileId && targetMsgId && typeof adminGetRow === "function") {
-        const row = callAdminGetRow(
+        const row = await resolveMaybePromise(callAdminGetRow(
           dbKnex("chat_message_files")
             .select("id")
             .where("storage_key", finalStorageKey)
             .orderBy("id", "desc")
             .first(),
-        );
+        ));
         fileId = row?.id || null;
-      }
-
-      if (typeof recordPendingPresignedUpload === "function") {
-        try {
-          recordPendingPresignedUpload({
-            storageKey: finalStorageKey,
-            userId: session?.userId || null,
-          });
-        } catch (_) {}
-      } else if (typeof adminRun === "function") {
-        try {
-          callAdminRun(
-            dbKnex("pending_presigned_uploads").insert({
-              storage_key: finalStorageKey,
-              user_id: session?.userId || null,
-              created_at: new Date().toISOString(),
-            }),
-          );
-          if (typeof adminSave === "function") adminSave();
-        } catch (_) {}
       }
 
       return res.json({
@@ -371,8 +529,13 @@ export function registerRemoteUploadRoutes(app, deps) {
         fileId,
       });
     } catch (err) {
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "uploads.message_presign_failed",
+        errorCode: safeErrorCode(err, "presign_failed"),
+      }));
       return res.status(500).json({
-        error: err.message || "Failed to generate presigned upload URL.",
+        error: "Failed to generate presigned upload URL.",
       });
     }
   });
@@ -381,6 +544,10 @@ export function registerRemoteUploadRoutes(app, deps) {
   app.post("/api/uploads/complete", async (req, res) => {
     const session = await authenticateSession(req, res);
     if (!session) return;
+    const actorId = getSessionActorId(session);
+    if (!actorId) {
+      return res.status(401).json({ error: "Not authenticated." });
+    }
 
     const { fileId, storageKey } = req.body || {};
     if (!fileId) {
@@ -405,22 +572,55 @@ export function registerRemoteUploadRoutes(app, deps) {
       return res.status(400).json({ error: "Storage key mismatch." });
     }
 
-    if (
-      file.message_id &&
-      typeof adminGetRow === "function"
-    ) {
-      const rawMsg = callAdminGetRow(
-        dbKnex("chat_messages").select("user_id", "username").where("id", file.message_id).first(),
-      );
-      const msg = rawMsg && typeof rawMsg.then === "function" ? await rawMsg : rawMsg;
-      if (
-        msg &&
-        msg.user_id &&
-        session.userId &&
-        msg.user_id !== session.userId
-      ) {
-        return res.status(403).json({ error: "Access denied." });
+    const finalStorageKey = file.storage_key || storageKey || null;
+    if (!finalStorageKey || typeof findPendingPresignedUpload !== "function") {
+      return res
+        .status(503)
+        .json({ error: "Upload ownership verification is unavailable." });
+    }
+    const target = await requireOwnedMessageTarget({
+      actorId,
+      messageId: file.message_id,
+      requestedChatId: null,
+      res,
+    });
+    if (!target) return;
+
+    const pending = await loadPendingUpload(finalStorageKey);
+    const completedAt = file.upload_completed_at ?? file.uploadCompletedAt ?? null;
+    if (!pending) {
+      if (!completedAt) {
+        return res.status(403).json({ error: "Upload ownership could not be verified." });
       }
+      return res.json({
+        success: true,
+        fileId,
+        status: file.processing_status || file.processingStatus || "ready",
+        deduped: true,
+      });
+    }
+    const pendingActorId = pending.user_id ?? pending.userId ?? null;
+    const pendingChatId = pending.chat_id ?? pending.chatId ?? null;
+    const pendingMessageId = pending.message_id ?? pending.messageId ?? null;
+    const pendingPurpose = String(pending.purpose || "").toLowerCase();
+    if (
+      String(pendingActorId || "") !== String(actorId) ||
+      pendingPurpose !== "message" ||
+      String(pendingMessageId || "") !== String(file.message_id || "") ||
+      String(target.chatId) !== String(pendingChatId || "")
+    ) {
+      return res.status(403).json({ error: "Access denied." });
+    }
+
+    const currentStatus = file.processing_status || file.processingStatus || null;
+    if (completedAt && currentStatus === "ready") {
+      await removePendingUpload(finalStorageKey);
+      return res.json({
+        success: true,
+        fileId,
+        status: currentStatus,
+        deduped: true,
+      });
     }
 
     const mode = String(
@@ -444,10 +644,15 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     if (typeof adminRun === "function") {
-      callAdminRun(
-        dbKnex("chat_message_files").where("id", fileId).update({ processing_status: newStatus }),
-      );
-      if (typeof adminSave === "function") adminSave();
+      await resolveMaybePromise(callAdminRun(
+        dbKnex("chat_message_files").where("id", fileId).update({
+          processing_status: newStatus,
+          upload_completed_at: completedAt || new Date().toISOString(),
+        }),
+      ));
+      if (typeof adminSave === "function") {
+        await resolveMaybePromise(adminSave());
+      }
     }
 
     if (isVideo && transcodeEnabled) {
@@ -492,11 +697,20 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     if (newStatus === "pending" && mediaQueueManager?.scheduleFallbackCheck) {
-      mediaQueueManager.scheduleFallbackCheck({
+      const scheduled = await resolveMaybePromise(mediaQueueManager.scheduleFallbackCheck({
         fileId,
         storageKey: file.storage_key || storageKey,
-      });
+      }));
+      if (scheduled?.accepted === false && scheduled.reason !== "remote_mode") {
+        res.setHeader("Retry-After", "5");
+        return res.status(503).json({
+          error: "Media processing queue is temporarily unavailable.",
+          retryable: true,
+        });
+      }
     }
+
+    await removePendingUpload(finalStorageKey);
 
     return res.json({
       success: true,
@@ -521,13 +735,16 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
     if (!file) return res.status(404).end();
 
+    const authorization = await authorizeFileRequest(req, res, file);
+    if (!authorization) return;
+
     const thumbKey = file.thumb_storage_key || file.thumbStorageKey;
     if (!thumbKey) return res.status(404).end();
 
     const enc = storageEncryption || defaultStorageEncryption;
     const sendJpeg = (buf) => {
       res.setHeader("Content-Type", "image/jpeg");
-      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      setMessageMediaCacheHeaders(res, authorization);
       return res.send(buf);
     };
     // NOTE: filesystem helpers come from deps.* (never shadow node:path).
@@ -583,14 +800,26 @@ export function registerRemoteUploadRoutes(app, deps) {
   app.post("/api/uploads/webhook/processed", async (req, res) => {
     const expectedSecret =
       deps.webhookSecret !== undefined ? deps.webhookSecret : webhookSecret;
-    if (expectedSecret) {
-      const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
-      if (headerSecret !== expectedSecret) {
-        console.warn(
-          `[uploads] Rejected webhook for file ${req.body?.fileId ?? "unknown"}: invalid webhook secret.`,
-        );
-        return res.status(401).json({ error: "Unauthorized webhook request." });
-      }
+    if (!String(expectedSecret || "").trim()) {
+      return res
+        .status(503)
+        .json({ error: "Upload processing callback is not configured." });
+    }
+    const headerSecret = String(
+      req.headers["x-ouj-chat-webhook-secret"] || "",
+    );
+    const expectedBuffer = Buffer.from(String(expectedSecret));
+    const providedBuffer = Buffer.from(headerSecret);
+    const validSecret =
+      expectedBuffer.length === providedBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+    if (!validSecret) {
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "uploads.webhook_rejected",
+        errorCode: "invalid_webhook_secret",
+      }));
+      return res.status(401).json({ error: "Unauthorized webhook request." });
     }
 
     const {
@@ -605,9 +834,12 @@ export function registerRemoteUploadRoutes(app, deps) {
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required." });
     }
-    console.log(
-      `[uploads] Webhook received for file ${fileId} (status=${status || "ready"}).`,
-    );
+    console.log(JSON.stringify({
+      service: "ouj-chat",
+      event: "uploads.webhook_received",
+      fileId: String(fileId).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 200),
+      status: String(status || "ready").replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 40),
+    }));
 
     let file = null;
     if (typeof findMessageFileById === "function") {
@@ -620,7 +852,12 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     if (!file) {
-      console.warn(`[uploads] Webhook for unknown file ${fileId}: ignored.`);
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "uploads.webhook_unknown_file",
+        fileId: String(fileId).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 200),
+        errorCode: "file_not_found",
+      }));
       return res.status(404).json({ error: "File not found." });
     }
 
@@ -645,7 +882,9 @@ export function registerRemoteUploadRoutes(app, deps) {
         dbKnex("chat_message_files").where("id", fileId).update(updatePayload),
       );
       if (rawUpdate && typeof rawUpdate.then === "function") await rawUpdate;
-      if (typeof adminSave === "function") adminSave();
+      if (typeof adminSave === "function") {
+        await resolveMaybePromise(adminSave());
+      }
     }
 
     if (mediaQueueManager?.cancelFallbackCheck) {
@@ -686,24 +925,19 @@ export function registerRemoteUploadRoutes(app, deps) {
               ? thumbStorageKey
               : (f.thumb_storage_key || f.thumbStorageKey);
             const storedName = f.stored_name || f.storedName || "";
-            let fileUrl = storedName ? `/api/uploads/messages/${storedName}` : null;
+            const resolvedFileId = f?.id ?? (isTargetFile ? fileId : null);
+            const fileUrl =
+              resolvedFileId !== null && resolvedFileId !== undefined
+                ? `/api/uploads/file/${encodeURIComponent(resolvedFileId)}`
+                : storedName
+                  ? `/api/uploads/messages/${encodeURIComponent(storedName)}`
+                  : null;
             let thumbUrl = await resolveThumbUrl({
               storageProvider,
               file: f,
               thumbKey,
               fileId: f?.id ?? fileId,
             });
-            if (
-              (driver === "remote" || driver === "s3") &&
-              storageProvider &&
-              typeof storageProvider.getDownloadUrl === "function"
-            ) {
-              if (sKey) {
-                try {
-                  fileUrl = await storageProvider.getDownloadUrl(sKey);
-                } catch (_) {}
-              }
-            }
             const isThisPending = isTargetFile
               ? finalStatus === "pending"
               : (f.processing_status || f.processingStatus) === "pending";
@@ -765,18 +999,27 @@ export function registerRemoteUploadRoutes(app, deps) {
       });
     }
 
-    console.log(
-      `[uploads] Webhook processed file ${fileId}: status=${finalStatus}` +
-        (transcodedStorageKey ? ` storageKey=${transcodedStorageKey}` : "") +
-        (thumbStorageKey ? ` thumb=${thumbStorageKey}` : ""),
-    );
+    console.log(JSON.stringify({
+      service: "ouj-chat",
+      event: "uploads.webhook_processed",
+      fileId: String(fileId).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 200),
+      status: String(finalStatus).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 40),
+    }));
     return res.json({ success: true });
   });
 
-  // POST /api/uploads (fallback multipart upload)
-  app.post("/api/uploads", async (req, res) => {
+  // POST /api/uploads (fallback multipart upload for an existing message)
+  const fallbackUploadMiddleware =
+    uploadFiles && typeof uploadFiles.single === "function"
+      ? uploadFiles.single("file")
+      : (_req, _res, next) => next();
+  app.post("/api/uploads", fallbackUploadMiddleware, async (req, res) => {
     const session = await authenticateSession(req, res);
     if (!session) return;
+    const actorId = getSessionActorId(session);
+    if (!actorId) {
+      return res.status(401).json({ error: "Not authenticated." });
+    }
 
     if (deps.getSetting && !deps.getSetting("FILE_UPLOAD")) {
       return res
@@ -785,6 +1028,21 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     const file = req.file || (Array.isArray(req.files) ? req.files[0] : null);
+    if (!file) {
+      return res.status(400).json({ error: "Upload file is required." });
+    }
+    const messageId = String(req.body?.messageId || "").trim();
+    if (!messageId) {
+      return res.status(400).json({ error: "messageId is required." });
+    }
+    const target = await requireOwnedMessageTarget({
+      actorId,
+      messageId,
+      requestedChatId: req.body?.chatId || null,
+      res,
+    });
+    if (!target) return;
+
     const filename =
       req.body?.filename || file?.originalname || file?.name || "upload.bin";
     const mimeType =
@@ -797,8 +1055,11 @@ export function registerRemoteUploadRoutes(app, deps) {
       req.body?.fileSize || req.body?.size || file?.size || 0,
     );
 
-    const ext = path.extname(filename).toLowerCase();
-    const generatedKey = `uploads/messages/${Date.now()}_${crypto.randomBytes(8).toString("hex")}${ext}`;
+    const storedName = path.basename(file.filename || file.name || "");
+    if (!storedName) {
+      return res.status(500).json({ error: "Uploaded file was not stored." });
+    }
+    const generatedKey = `uploads/messages/${storedName}`;
 
     let kind = "document";
     if (mimeType.startsWith("image/")) kind = "image";
@@ -808,7 +1069,7 @@ export function registerRemoteUploadRoutes(app, deps) {
     const fileObj = {
       kind,
       originalName: filename,
-      storedName: path.basename(generatedKey),
+      storedName,
       mimeType,
       sizeBytes: fileSize,
       widthPx: Number.isFinite(Number(req.body?.width))
@@ -829,30 +1090,29 @@ export function registerRemoteUploadRoutes(app, deps) {
           ? req.body.waveform
           : JSON.stringify(req.body.waveform)
         : null,
-      encryptionType: "none",
+      encryptionType: "local",
     };
 
-    let inserted = null;
-    if (typeof createMessageFiles === "function") {
-      inserted = createMessageFiles(0, [fileObj]);
+    if (typeof createMessageFiles !== "function") {
+      return res.status(503).json({ error: "File metadata storage is unavailable." });
     }
+    const inserted = await resolveMaybePromise(
+      createMessageFiles(messageId, [fileObj]),
+    );
 
-    let fileId = null;
-    if (Array.isArray(inserted) && inserted[0]?.id) {
-      fileId = inserted[0].id;
-    } else if (inserted && typeof inserted === "object" && inserted.id) {
-      fileId = inserted.id;
-    } else if (typeof adminGetRow === "function") {
-      const row = callAdminGetRow(
+    let fileId = extractInsertedFileId(inserted);
+    if (!fileId && typeof adminGetRow === "function") {
+      const row = await resolveMaybePromise(callAdminGetRow(
         dbKnex("chat_message_files")
           .select("id")
           .where("storage_key", generatedKey)
           .orderBy("id", "desc")
           .first(),
-      );
-      fileId = row?.id || 1;
-    } else {
-      fileId = 1;
+      ));
+      fileId = row?.id || null;
+    }
+    if (!fileId) {
+      return res.status(500).json({ error: "Unable to persist uploaded file." });
     }
 
     return res.json({
@@ -889,6 +1149,9 @@ export function registerRemoteUploadRoutes(app, deps) {
     }
 
     if (!file) return res.status(404).end();
+    const authorization = await authorizeFileRequest(req, res, file);
+    if (!authorization) return;
+    setMessageMediaCacheHeaders(res, authorization);
 
     const driver = file.storage_driver || file.storageDriver;
     if (driver === "s3" || driver === "remote") {
@@ -936,14 +1199,25 @@ export function registerRemoteUploadRoutes(app, deps) {
 
         return res.redirect(302, downloadUrl);
       } catch (err) {
+        console.warn(JSON.stringify({
+          service: "ouj-chat",
+          event: "uploads.download_failed",
+          fileId: String(idParam).replace(/[^A-Za-z0-9_.:-]/g, "_").slice(0, 200),
+          errorCode: safeErrorCode(err, "download_failed"),
+        }));
         return res
           .status(500)
-          .json({ error: err.message || "Download failed." });
+          .json({ error: "Download failed." });
       }
     }
 
-    // Local storage driver
-    if (file.mime_type) res.type(file.mime_type);
-    return res.status(200).send("OK");
+    // Local storage is served by the range-aware stored-name route, which
+    // repeats the same authorization check before opening the file.
+    const storedName = path.basename(file.stored_name || file.storedName || "");
+    if (!storedName) return res.status(404).end();
+    return res.redirect(
+      302,
+      `/api/uploads/messages/${encodeURIComponent(storedName)}`,
+    );
   });
 }

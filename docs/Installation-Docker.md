@@ -148,24 +148,11 @@ mkdir -p ./data
 sudo chown -R ouj-chat:ouj-chat ./data
 ```
 
-## Admin panel service control
+## Infrastructure-managed service control
 
-The admin panel's **Restart service** and **Stop service** actions work in Docker deployments by calling the Docker Engine API through the mounted socket (`/var/run/docker.sock`). The compose file sets `OUJ_CHAT_CONTAINER_NAME=ouj-chat` so the app knows which container to target.
+The application container deliberately does **not** mount `/var/run/docker.sock`. The final image runs as the non-root `node` user, drops Linux capabilities, and uses `no-new-privileges`. The admin panel reports restart, stop, and Nginx reload as infrastructure-managed operations; it cannot control the Docker host.
 
-If you rename the container or use a custom name, set the env var to match:
-
-```yaml
-# docker-compose.yaml
-environment:
-  OUJ_CHAT_CONTAINER_NAME: my-custom-name
-```
-
-If you do not need service control from the admin panel, you can remove the socket mount from `docker-compose.yaml`:
-
-```yaml
-# Remove or comment out this line under ouj-chat volumes:
-# - /var/run/docker.sock:/var/run/docker.sock
-```
+Run these actions through an authenticated deployment/operations channel outside the Chat process, for example `docker compose restart ouj-chat` on the host. Do not restore the Docker-socket mount as a shortcut. Before upgrading an existing named volume, ensure `/app/data` is writable by uid/gid 1000 (the image's `node` user) and keep a tested database/media backup.
 
 ## Updating
 

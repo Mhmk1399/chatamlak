@@ -3,14 +3,23 @@ import request from "supertest";
 import { makeApp } from "../helpers/makeApp.js";
 
 const presignPayload = {
+  chatId: "c0c0c0c0-d1d1-4e2e-af3f-060606060606",
+  clientRequestId: "rate-limit-presign-request",
   filename: "rate-limit-test.png",
   contentType: "image/png",
   fileSize: 1024,
 };
 
 function makeAuthedApp() {
-  const appObj = makeApp({});
-  const userId = appObj.userStore.createUser(
+  let userId = null;
+  const appObj = makeApp({
+    deps: {
+      findChatById: (chatId) => ({ id: chatId, type: "group" }),
+      isMember: (_chatId, candidateUserId) =>
+        String(candidateUserId) === String(userId),
+    },
+  });
+  userId = appObj.userStore.createUser(
     "presignuser",
     "pass",
     "Presign User",

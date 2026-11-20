@@ -10,6 +10,19 @@ setup() {
 echo "node_started: $@"
 EOF
   chmod +x "$TEST_DIR/bin/node"
+  export WEBHOOK_SECRET="test-worker-shared-secret"
+}
+
+@test "docker-entrypoint defers local worker startup when the shared secret is missing" {
+  export PATH="$TEST_DIR/bin:$PATH"
+  export STORAGE_PROCESSING_MODE=auto
+  export START_LOCAL_WORKER=auto
+  unset WEBHOOK_SECRET
+
+  run "$ENTRYPOINT_SCRIPT" echo "app_started"
+  [ "$status" -eq 0 ]
+  [[ ! "$output" =~ "Starting local Ouj Chat Media Worker" ]]
+  [[ "$output" =~ "app_started" ]]
 }
 
 teardown() {

@@ -1,3 +1,20 @@
+import { safeErrorCode } from "./requestLogging.js";
+
+function writePushLog(level, event, { status, errorCode } = {}) {
+  const entry = {
+    service: "ouj-chat",
+    event,
+    ...(Number.isFinite(Number(status))
+      ? { status: Math.max(0, Math.round(Number(status))) }
+      : {}),
+    ...(errorCode ? { errorCode: String(errorCode).slice(0, 128) } : {}),
+  };
+  const method = ["log", "info", "warn", "error"].includes(level)
+    ? level
+    : "log";
+  console[method](JSON.stringify(entry));
+}
+
 export function createPushService({
   webpush,
   listPushSubscriptionsByUserIds,
@@ -27,19 +44,17 @@ export function createPushService({
       if (proxyUrl) {
         import('https-proxy-agent').then(({ HttpsProxyAgent }) => {
           proxyAgent = new HttpsProxyAgent(proxyUrl);
-          console.log(`[push] Using proxy: ${proxyUrl}`);
+          writePushLog("log", "push.proxy_configured");
         }).catch((error) => {
-          console.error(
-            "[push] Failed to configure proxy:",
-            String(error?.message || error),
-          );
+          writePushLog("error", "push.proxy_configuration_failed", {
+            errorCode: safeErrorCode(error, "proxy_configuration_failed"),
+          });
         });
       }
     } catch (error) {
-      console.error(
-        "[push] VAPID setup failed:",
-        String(error?.message || error),
-      );
+      writePushLog("error", "push.vapid_setup_failed", {
+        errorCode: safeErrorCode(error, "vapid_setup_failed"),
+      });
     }
   }
 
@@ -103,24 +118,16 @@ export function createPushService({
             status === 403 ||
             (status === 400 && errBody.includes("VapidPkHashMismatch"));
           if (isGone) {
-            console.info(
-              `[push] Pruned stale subscription endpoint=${sub.endpoint.slice(-24)} (status=${status})`,
-            );
+            writePushLog("info", "push.subscription_pruned", { status });
             try {
               const res = deletePushSubscription(sub.endpoint);
               if (res && typeof res.then === "function") await res;
             } catch {}
           } else {
-            // Log detailed error information for debugging
-            let errorDetails = String(error?.message || error).slice(0, 120);
-            if (error?.errors && Array.isArray(error.errors)) {
-              // AggregateError contains multiple errors
-              errorDetails = error.errors.map(e => String(e?.message || e)).join('; ').slice(0, 200);
-            }
-
-            console.warn(
-              `[push] delivery failed endpoint=${sub.endpoint.slice(-24)} status=${status} body=${errBody.slice(0, 200)} err=${errorDetails}`,
-            );
+            writePushLog("warn", "push.delivery_failed", {
+              status,
+              errorCode: safeErrorCode(error, "push_delivery_failed"),
+            });
           }
         }
       }),

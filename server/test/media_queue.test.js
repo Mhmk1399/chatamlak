@@ -164,4 +164,47 @@ describe("MediaQueueManager (BullMQ / In-Process Fallback)", () => {
       }
     }
   });
+
+  it("rejects new in-memory work explicitly when the bounded queue is full", async () => {
+    const manager = createMediaQueueManager({
+      maxQueueDepth: 1,
+      s3ProcessingMode: "auto",
+      adminGetRow: async () => null,
+    });
+
+    expect(
+      manager.enqueueJob({ fileId: FILE_ID_1, storageKey: "one" }, 60_000),
+    ).toMatchObject({ accepted: true });
+    expect(
+      manager.enqueueJob({ fileId: FILE_ID_2, storageKey: "two" }, 60_000),
+    ).toEqual({ accepted: false, reason: "queue_full" });
+    expect(manager.getStats()).toMatchObject({ queued: 0, active: 0, delayed: 1 });
+
+    await manager.close();
+  });
+
+  it("limits concurrent in-memory media processing", async () => {
+    let active = 0;
+    let maximumActive = 0;
+    const manager = createMediaQueueManager({
+      maxQueueDepth: 10,
+      processingConcurrency: 2,
+      adminGetRow: async () => {
+        active += 1;
+        maximumActive = Math.max(maximumActive, active);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        active -= 1;
+        return null;
+      },
+    });
+
+    manager.enqueueJob({ fileId: FILE_ID_1 });
+    manager.enqueueJob({ fileId: FILE_ID_2 });
+    manager.enqueueJob({ fileId: FILE_ID_3 });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(maximumActive).toBe(2);
+    expect(manager.getStats()).toMatchObject({ queued: 0, active: 0 });
+    await manager.close();
+  });
 });

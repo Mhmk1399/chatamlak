@@ -47,15 +47,28 @@ describe("Task 5: Server — prune orphan R2 objects", () => {
         storageProvider: mockRemoteProvider,
         isMember: () => true,
         findChatById: () => ({ id: chatId, name: "test-chat", type: "group" }),
-        recordPendingPresignedUpload: ({ storageKey, userId }) => {
+        recordPendingPresignedUpload: ({
+          storageKey,
+          userId,
+          chatId: pendingChatId,
+          messageId = null,
+          clientRequestId = null,
+          purpose = null,
+        }) => {
           const rec = {
             storage_key: storageKey,
             user_id: userId,
+            chat_id: pendingChatId,
+            message_id: messageId,
+            client_request_id: clientRequestId,
+            purpose,
             created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
           };
           pendingStore.push(rec);
           return rec;
         },
+        findPendingPresignedUpload: (storageKey) =>
+          pendingStore.find((row) => row.storage_key === storageKey) || null,
         removePendingPresignedUploads: (keys) => {
           const keyArr = Array.isArray(keys) ? keys : [keys];
           const keySet = new Set(keyArr.map((k) => (typeof k === "string" ? k : k?.storageKey || k?.storage_key)));
@@ -75,10 +88,13 @@ describe("Task 5: Server — prune orphan R2 objects", () => {
   });
 
   test("POST /api/uploads/presign without messageId records a pending upload", async () => {
+    const clientRequestId = "orphan-presign-request";
     const res = await request(appObj.app)
       .post("/api/uploads/presign")
       .set("Cookie", [`sid=${sessionToken}`])
       .send({
+        chatId,
+        clientRequestId,
         filename: "test-file.png",
         contentType: "image/png",
         fileSize: 1024,
@@ -91,10 +107,13 @@ describe("Task 5: Server — prune orphan R2 objects", () => {
   });
 
   test("POST /api/messages/upload removes pending presigned upload upon message completion", async () => {
+    const clientRequestId = "claimed-presign-request";
     const presignRes = await request(appObj.app)
       .post("/api/uploads/presign")
       .set("Cookie", [`sid=${sessionToken}`])
       .send({
+        chatId,
+        clientRequestId,
         filename: "attached-file.png",
         contentType: "image/png",
         fileSize: 2048,
@@ -110,12 +129,12 @@ describe("Task 5: Server — prune orphan R2 objects", () => {
       .send({
         chatId,
         username: "remoteuser",
+        clientRequestId,
         body: "Here is the uploaded document",
         storageKeys: [key],
         fileMeta: JSON.stringify([{ originalName: "attached-file.png", mimeType: "image/png", sizeBytes: 2048 }]),
       });
 
-    if (uploadRes.status !== 200) console.log("UPLOAD RES ERROR:", uploadRes.body);
     expect(uploadRes.status).toBe(200);
     expect(pendingStore.some((r) => r.storage_key === key)).toBe(false);
   });

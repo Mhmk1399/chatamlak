@@ -24,17 +24,18 @@ describe("resolveThumbUrl", () => {
     expect(getDownloadUrl).not.toHaveBeenCalled();
   });
 
-  test("keeps presigned redirects for plaintext remote thumbs", async () => {
+  test("routes plaintext remote thumbs through the authorization proxy", async () => {
     const getDownloadUrl = vi.fn(async (k) => `https://cdn.example.com/${k}`);
     const url = await resolveThumbUrl({
       storageProvider: { getDownloadUrl },
       file: { id: 7, storage_driver: "s3", encryption_type: "remote" },
       thumbKey: "thumbs/t.jpg",
     });
-    expect(url).toBe("https://cdn.example.com/thumbs/t.jpg");
+    expect(url).toBe("/api/uploads/thumbs/7");
+    expect(getDownloadUrl).not.toHaveBeenCalled();
   });
 
-  test("returns null for local driver and missing keys", async () => {
+  test("routes local thumbs through the proxy and returns null for missing keys", async () => {
     const getDownloadUrl = vi.fn();
     expect(
       await resolveThumbUrl({
@@ -42,7 +43,7 @@ describe("resolveThumbUrl", () => {
         file: { id: 7, storage_driver: "local", encryption_type: "local" },
         thumbKey: "t-thumb.jpg",
       }),
-    ).toBeNull();
+    ).toBe("/api/uploads/thumbs/7");
     expect(
       await resolveThumbUrl({
         storageProvider: { getDownloadUrl },
@@ -63,6 +64,8 @@ describe("resolveThumbUrl", () => {
 });
 
 describe("GET /api/uploads/thumbs/:fileId", () => {
+  const messageId = "50000000-0000-4000-8000-000000000099";
+  const chatId = "42000000-0000-4000-8000-000000000099";
   let tmpDir;
   let originalFetch;
 
@@ -78,21 +81,32 @@ describe("GET /api/uploads/thumbs/:fileId", () => {
     realFs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  function appWithFile(fileRecord, { withKey = true } = {}) {
+  function appWithFile(
+    fileRecord,
+    { withKey = true, storageProvider = null } = {},
+  ) {
     if (withKey) process.env.STORAGE_ENCRYPTION_KEY = "thumb-route-key";
     else delete process.env.STORAGE_ENCRYPTION_KEY;
     const storageEncryption = createStorageEncryption({
       fsImpl: realFs,
       pathImpl: realPath,
     });
+    const authorizedFile = { message_id: messageId, ...fileRecord };
     return makeApp({
       deps: {
         fs: realFs,
         path: realPath,
         uploadRootDir: tmpDir,
         storageEncryption,
+        ...(storageProvider ? { storageProvider } : {}),
         findMessageFileById: (id) =>
-          String(id) === String(fileRecord.id) ? fileRecord : null,
+          String(id) === String(authorizedFile.id) ? authorizedFile : null,
+        findMessageById: (id) =>
+          String(id) === messageId ? { id: messageId, chat_id: chatId } : null,
+        findChatById: (id) =>
+          String(id) === chatId
+            ? { id: chatId, type: "channel", group_visibility: "public" }
+            : null,
       },
     });
   }
@@ -151,15 +165,21 @@ describe("GET /api/uploads/thumbs/:fileId", () => {
       ok: true,
       arrayBuffer: async () => cipher,
     });
-    const appObj = appWithFile({
-      id: 13,
-      storage_driver: "s3",
-      encryption_type: "local",
-      thumb_storage_key: "thumbs/clip-thumb.jpg",
-    });
-    appObj.deps.storageProvider = {
-      getDownloadUrl: vi.fn(async () => "https://cdn.example.com/thumbs/x"),
-    };
+    const appObj = appWithFile(
+      {
+        id: 13,
+        storage_driver: "s3",
+        encryption_type: "local",
+        thumb_storage_key: "thumbs/clip-thumb.jpg",
+      },
+      {
+        storageProvider: {
+          getDownloadUrl: vi.fn(
+            async () => "https://cdn.example.com/thumbs/x",
+          ),
+        },
+      },
+    );
 
     const res = await request(appObj.app).get("/api/uploads/thumbs/13");
     expect(res.status).toBe(200);

@@ -9,7 +9,8 @@ test("exposes native maintenance, owner details and backups through the authenti
   await R.setUserRole(alice, "owner"); await R.createSession(alice, "mongo-admin-test");
   const chat = await group();
   const sessions = createSessionHelpers({ getSession: R.getSession, touchSession: R.touchSession, isProduction: false });
-  const { app } = makeApp({ deps: { ...R, ...sessions, mongoRepository: R, dbConfig: { client: "mongodb" } } });
+  const operatorApiToken = "mongo-test-operator-token";
+  const { app } = makeApp({ deps: { ...R, ...sessions, mongoRepository: R, dbConfig: { client: "mongodb" }, operatorApiToken } });
   const cookie = "sid=mongo-admin-test";
   const info = await request(app).get("/api/admin/maintenance/info").set("Cookie", cookie);
   expect(info.status).toBe(200);
@@ -19,12 +20,12 @@ test("exposes native maintenance, owner details and backups through the authenti
   expect(users.body.users.every((user) => !("password_hash" in user))).toBe(true);
   const chats = await request(app).get("/api/admin/chats").set("Cookie", cookie);
   expect(chats.status).toBe(200); expect(chats.body.chats.find((row) => row.id === chat)).toMatchObject({ owner_id: alice, owner_role: "owner" });
-  const backup = await request(app).get("/api/admin/maintenance/download-db").set("Cookie", cookie).buffer(true).parse((response, done) => {
+  const backup = await request(app).get("/api/admin/maintenance/download-db").set("Cookie", cookie).set("x-ouj-chat-operator-token", operatorApiToken).buffer(true).parse((response, done) => {
     const chunks = []; response.on("data", (chunk) => chunks.push(chunk)); response.on("end", () => done(null, Buffer.concat(chunks)));
   });
   expect(backup.status).toBe(200); expect(backup.headers["content-disposition"]).toContain(".json.gz");
   expect(JSON.parse(gunzipSync(backup.body).toString()).format).toBe("ouj-chat-mongodb-backup");
-  const restore = await request(app).post("/api/admin/maintenance/restore").set("Cookie", cookie);
+  const restore = await request(app).post("/api/admin/maintenance/restore").set("Cookie", cookie).set("x-ouj-chat-operator-token", operatorApiToken);
   expect(restore.status).toBe(409);
   expect(await R.store.count("users")).toBe(2);
 });

@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import request from "supertest";
 import {
+  AsyncQueue,
   createWorkerServer,
   isLoopbackUrl,
   hasEncryptedMagic,
@@ -12,6 +13,21 @@ import {
 import { isEncryptedFileBuffer } from "../encryption.js";
 
 describe("Media Worker HTTP Server", () => {
+  it("does not log raw worker errors that can contain presigned credentials", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const queue = new AsyncQueue(1, 1);
+
+    queue.push(async () => {
+      throw new Error("download failed: https://storage.example/file?token=private-token");
+    });
+    await vi.waitFor(() => expect(queue.pending).toBe(0));
+
+    const serialized = errorSpy.mock.calls.flat().map(String).join(" ");
+    expect(serialized).not.toContain("private-token");
+    expect(serialized).not.toContain("https://storage.example");
+    errorSpy.mockRestore();
+  });
+
   it("GET /health returns 200 OK with worker status and queue metrics", async () => {
     const server = createWorkerServer();
     const res = await request(server).get("/health");
@@ -36,10 +52,22 @@ describe("Media Worker HTTP Server", () => {
     expect(res.body.error).toBe("Unauthorized");
   });
 
-  it("POST /transcode rejects invalid request with missing fileId or storageKey", async () => {
+  it("POST /transcode fails closed when webhookSecret is not configured", async () => {
     const server = createWorkerServer({ webhookSecret: "" });
 
     const res = await request(server).post("/transcode").send({ fileId: null });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/not configured/i);
+  });
+
+  it("POST /transcode rejects invalid request with missing fileId or storageKey", async () => {
+    const server = createWorkerServer({ webhookSecret: "valid-secret" });
+
+    const res = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "valid-secret")
+      .send({ fileId: null });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("required");
@@ -67,6 +95,125 @@ describe("Media Worker HTTP Server", () => {
     expect(res.body.fileId).toBe("file-99");
   });
 
+  it("uses the authenticated secret instead of a caller-selected callback secret", async () => {
+    const mockProcessJob = vi.fn().mockResolvedValue(true);
+    const server = createWorkerServer({
+      webhookSecret: "trusted-secret",
+      processTranscodeJob: mockProcessJob,
+    });
+
+    const res = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({
+        fileId: "file-1",
+        storageKey: "uploads/video.mp4",
+        webhookSecret: "attacker-selected-secret",
+      });
+
+    expect(res.status).toBe(202);
+    await vi.waitFor(() => expect(mockProcessJob).toHaveBeenCalledTimes(1));
+    expect(mockProcessJob.mock.calls[0][0].webhookSecret).toBe("trusted-secret");
+  });
+
+  it("rejects metadata-network URLs and unsafe storage endpoints", async () => {
+    const mockProcessJob = vi.fn().mockResolvedValue(true);
+    const server = createWorkerServer({
+      webhookSecret: "trusted-secret",
+      processTranscodeJob: mockProcessJob,
+    });
+
+    const downloadResponse = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({
+        fileId: "file-1",
+        downloadUrl: "http://169.254.169.254/latest/meta-data",
+      });
+    const storageResponse = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({
+        fileId: "file-2",
+        storageKey: "uploads/video.mp4",
+        storageConfig: { endpoint: "http://169.254.169.254/storage" },
+      });
+
+    expect(downloadResponse.status).toBe(400);
+    expect(downloadResponse.body.error).toMatch(/downloadUrl/i);
+    expect(storageResponse.status).toBe(400);
+    expect(storageResponse.body.error).toMatch(/storageConfig\.endpoint/i);
+    expect(mockProcessJob).not.toHaveBeenCalled();
+  });
+
+  it("rejects mirror jobs above the configured processing cap", async () => {
+    const processMirrorJob = vi.fn().mockResolvedValue(true);
+    const server = createWorkerServer({
+      webhookSecret: "trusted-secret",
+      maxInputBytes: 1024,
+      processMirrorJob,
+    });
+
+    const res = await request(server)
+      .post("/mirror-media")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({
+        jobId: "job-1",
+        storageKey: "uploads/file.bin",
+        maxBytes: 2048,
+      });
+
+    expect(res.status).toBe(413);
+    expect(res.body.error).toMatch(/processing limit/i);
+    expect(processMirrorJob).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized request bodies before queuing work", async () => {
+    const mockProcessJob = vi.fn().mockResolvedValue(true);
+    const server = createWorkerServer({
+      webhookSecret: "trusted-secret",
+      processTranscodeJob: mockProcessJob,
+    });
+
+    const res = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({
+        fileId: "file-1",
+        storageKey: "uploads/video.mp4",
+        padding: "x".repeat(1024 * 1024),
+      });
+
+    expect(res.status).toBe(413);
+    expect(mockProcessJob).not.toHaveBeenCalled();
+  });
+
+  it("returns overload without acknowledging a job when the queue is full", async () => {
+    const mockProcessJob = vi.fn().mockResolvedValue(true);
+    const fullQueue = {
+      pending: 4,
+      size: 32,
+      concurrency: 4,
+      maxDepth: 32,
+      push: vi.fn(() => false),
+    };
+    const server = createWorkerServer({
+      webhookSecret: "trusted-secret",
+      processTranscodeJob: mockProcessJob,
+      jobQueue: fullQueue,
+    });
+
+    const res = await request(server)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", "trusted-secret")
+      .send({ fileId: "file-1", storageKey: "uploads/video.mp4" });
+
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/queue is full/i);
+    expect(fullQueue.push).toHaveBeenCalledTimes(1);
+    expect(mockProcessJob).not.toHaveBeenCalled();
+  });
+
   it("handles 404 for unknown endpoints", async () => {
     const server = createWorkerServer({ webhookSecret: "" });
     const res = await request(server).get("/unknown-endpoint");
@@ -76,10 +223,10 @@ describe("Media Worker HTTP Server", () => {
   });
 
   describe("isLoopbackUrl", () => {
-    it("identifies 127.0.0.1, localhost, and 0.0.0.0 as loopback", () => {
+    it("identifies only explicit local loopback hosts as loopback", () => {
       expect(isLoopbackUrl("http://127.0.0.1:5174/api/uploads/webhook/processed")).toBe(true);
       expect(isLoopbackUrl("http://localhost:5174/api/uploads/webhook/processed")).toBe(true);
-      expect(isLoopbackUrl("http://0.0.0.0:8080/api/uploads/webhook/processed")).toBe(true);
+      expect(isLoopbackUrl("http://0.0.0.0:8080/api/uploads/webhook/processed")).toBe(false);
     });
 
     it("identifies public/remote domains as non-loopback", () => {

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
+import { sessionDeviceId, sessionTokenMatches } from "../lib/sessionTokens.js";
 const now = () => new Date().toISOString();
-const hash = (token) => crypto.createHash("sha256").update(token).digest("hex");
 const all = (...filters) => ({ $and: filters });
 export function createMessagingRepository(s, R, encryption, visibleFilter) {
   async function visibleIds(userId, chatId, ids) {
@@ -229,6 +229,8 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
         title,
       }),
     topic: (id) => s.one("chat_topics", { id }),
+    setTopicClosed: (id, closed) =>
+      s.update("chat_topics", { id }, { closed: Number(Boolean(closed)) }),
     assignTopic: (messageId, topicId) =>
       topicId
         ? s.upsert(
@@ -508,23 +510,23 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
     recordDevice: (token, label) =>
       s.ignore(
         "session_devices",
-        { token_hash: hash(token) },
+        { token_hash: sessionDeviceId(token) },
         {
-          token_hash: hash(token),
+          token_hash: sessionDeviceId(token),
           label: String(label || "Unknown device").slice(0, 180),
         },
       ),
     async devices(userId, currentToken) {
       const result = [];
       for (const session of await s.many("sessions", { user_id: userId })) {
-        const id = hash(session.token),
+        const id = sessionDeviceId(session.token),
           device = await s.one("session_devices", { token_hash: id });
         result.push({
           id,
           label: device?.label || "Browser session",
           created_at: session.created_at,
           last_seen: session.last_seen,
-          current: session.token === currentToken,
+          current: sessionTokenMatches(session.token, currentToken),
         });
       }
       return result;
@@ -532,7 +534,7 @@ export function createMessagingRepository(s, R, encryption, visibleFilter) {
     async deviceToken(userId, id) {
       return (
         (await s.many("sessions", { user_id: userId })).find(
-          (row) => hash(row.token) === id,
+          (row) => sessionDeviceId(row.token) === id,
         )?.token || null
       );
     },

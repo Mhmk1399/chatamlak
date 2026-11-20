@@ -10,8 +10,8 @@ import os from "node:os";
 import crypto from "node:crypto";
 import path from "node:path";
 import multer from "multer";
-import { execFile } from "node:child_process";
 import { checkTurnHealth } from "../lib/turnHealth.js";
+import { safeErrorCode } from "../lib/requestLogging.js";
 
 // Recursive uploads sizing is expensive; serve a short-lived cache so dashboard
 // gauges (and bursty admin traffic) do not walk the tree on every request.
@@ -375,6 +375,53 @@ function registerAdminPanelRoutes(app, deps) {
   const actorIsOwner = async (session) =>
     Boolean(await resolveMaybePromise(isUserOwner(session?.id)));
 
+  const getOperatorApiToken = () =>
+    String(
+      deps.operatorApiToken !== undefined
+        ? deps.operatorApiToken || ""
+        : process.env.OPERATOR_API_TOKEN || "",
+    );
+
+  const operatorTokensMatch = (providedValue, expectedValue) => {
+    const provided = Buffer.from(String(providedValue || ""));
+    const expected = Buffer.from(String(expectedValue || ""));
+    if (!provided.length || !expected.length || provided.length !== expected.length) {
+      return false;
+    }
+    try {
+      return crypto.timingSafeEqual(provided, expected);
+    } catch {
+      return false;
+    }
+  };
+
+  // High-risk host/database operations require both the canonical owner role
+  // and a separate operator credential. The browser session alone is not a
+  // sufficient credential for exports, destructive maintenance, or host ops.
+  const requireOperator = async (req, res) => {
+    const session = requireAdmin(req, res);
+    if (!session) return null;
+    if (!(await actorIsOwner(session))) {
+      res.status(403).json({ error: "Platform owner access required." });
+      return null;
+    }
+    const expectedToken = getOperatorApiToken();
+    if (!expectedToken) {
+      res.status(503).json({
+        error: "Operator step-up authentication is not configured.",
+      });
+      return null;
+    }
+    const providedToken = req.headers["x-ouj-chat-operator-token"];
+    if (!operatorTokensMatch(providedToken, expectedToken)) {
+      res.status(401).json({
+        error: "Operator step-up authentication required.",
+      });
+      return null;
+    }
+    return session;
+  };
+
   const emitGroupJoinMessage = async (chat, chatId, session, member) => {
     if (chat.type !== "group") return;
     const body = `[[system:joined:${member.nickname || member.username}]]`;
@@ -646,11 +693,8 @@ function registerAdminPanelRoutes(app, deps) {
   // rotate by setting the env var and restarting. Admins are denied: these
   // credentials outrank the admin role.
   app.get("/api/admin/secrets", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
-    if (!(await actorIsOwner(session))) {
-      return res.status(403).json({ error: "Owner access required." });
-    }
     return res.json({
       cronSecret: String(process.env.REMOTE_CHANNEL_CRON_SECRET || ""),
       webhookSecret: String(process.env.WEBHOOK_SECRET || ""),
@@ -835,6 +879,11 @@ function registerAdminPanelRoutes(app, deps) {
     await resolveMaybePromise(setUserRole(userId, "user"));
     if (banned) await resolveMaybePromise(callAdminRun(dbKnex("sessions").where("user_id", userId).del()));
     adminSave();
+    if (banned) {
+      await resolveMaybePromise(
+        deps.disconnectUserSessions?.(user.username, "banned"),
+      );
+    }
     log(session, banned ? "user.ban" : "user.unban", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true, banned });
   });
@@ -895,6 +944,9 @@ function registerAdminPanelRoutes(app, deps) {
     await resolveMaybePromise(callAdminRun(dbKnex("users").where("id", userId).update({ password_hash: hash })));
     await resolveMaybePromise(callAdminRun(dbKnex("sessions").where("user_id", userId).del()));
     adminSave();
+    await resolveMaybePromise(
+      deps.disconnectUserSessions?.(user.username, "password_changed"),
+    );
     log(session, "user.reset_password", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true });
   });
@@ -1005,6 +1057,9 @@ function registerAdminPanelRoutes(app, deps) {
     if (deps.cleanupDeletedFiles) await deps.cleanupDeletedFiles(deletion?.files || []);
     else if (Array.isArray(storedNames) && storedNames.length > 0) await removeStoredFileNames(storedNames);
     if (user?.avatar_url) removeAvatarByUrl(user.avatar_url);
+    await resolveMaybePromise(
+      deps.disconnectUserSessions?.(user.username, "account_deleted"),
+    );
     log(session, "user.delete", { targetType: "user", targetLabel: `@${user.username}` });
     res.json({ ok: true });
   });
@@ -1589,11 +1644,8 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   app.delete("/api/admin/logs", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
-    if (!(await actorIsOwner(session))) {
-      return res.status(403).json({ error: "Owner access required" });
-    }
     await deps.clearAdminAuditLogs();
     log(session, "logs.clear", { targetType: "system" });
     res.json({ ok: true });
@@ -1601,30 +1653,30 @@ function registerAdminPanelRoutes(app, deps) {
 
   // Installer / service / nginx logs
   app.get("/api/admin/logs/sources", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    if (!await requireOperator(req, res)) return;
     const sources = await probeLogSources();
     res.json({ sources });
   });
 
-  app.get("/api/admin/logs/installer", (req, res) => {
-    if (!requireAdmin(req, res)) return;
+  app.get("/api/admin/logs/installer", async (req, res) => {
+    if (!await requireOperator(req, res)) return;
     res.json(readInstallerLog({ maxLines: 400 }));
   });
 
   app.get("/api/admin/logs/nginx", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    if (!await requireOperator(req, res)) return;
     const result = await readNginxLog({ maxLines: 400 });
     res.json(result);
   });
 
   app.get("/api/admin/logs/service", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    if (!await requireOperator(req, res)) return;
     const result = await readServiceLog({ maxLines: 400 });
     res.json(result);
   });
 
   app.get("/api/admin/logs/worker", async (req, res) => {
-    if (!requireAdmin(req, res)) return;
+    if (!await requireOperator(req, res)) return;
     const result = await readWorkerLog({ maxLines: 400 });
     res.json(result);
   });
@@ -1634,7 +1686,11 @@ function registerAdminPanelRoutes(app, deps) {
   app.get("/api/admin/maintenance/info", (req, res) => {
     if (!requireAdmin(req, res)) return;
     const postgres = dbConfig?.client === "postgres";
-    if (deps.mongoRepository) return res.json({ engine: "mongodb", backupExtension: ".json.gz", restoreAccept: ".json.gz,application/gzip", deleteAvailable: false, offlineRestoreRequired: true, offlineDeleteRequired: true });
+    const operator = {
+      operatorStepUpRequired: true,
+      operatorConfigured: Boolean(getOperatorApiToken()),
+    };
+    if (deps.mongoRepository) return res.json({ engine: "mongodb", backupExtension: ".json.gz", restoreAccept: ".json.gz,application/gzip", deleteAvailable: false, offlineRestoreRequired: true, offlineDeleteRequired: true, ...operator });
     res.json({
       engine: postgres ? "postgres" : "sqlite",
       backupExtension: postgres ? ".dump" : ".db",
@@ -1642,11 +1698,12 @@ function registerAdminPanelRoutes(app, deps) {
       deleteAvailable: postgres,
       offlineRestoreRequired: postgres,
       offlineDeleteRequired: postgres,
+      ...operator,
     });
   });
 
   app.post("/api/admin/maintenance/vacuum", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
     try {
       if (dbConfig?.client === "postgres") await postgresMaintenance.vacuum();
@@ -1667,7 +1724,7 @@ function registerAdminPanelRoutes(app, deps) {
 
   // Danger zone — clear all messages & their files (keeps users and chats).
   app.post("/api/admin/maintenance/clear-messages", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
     if (req.body?.confirm !== "clear messages") {
       return res.status(400).json({ error: "Confirmation phrase required." });
@@ -1689,7 +1746,7 @@ function registerAdminPanelRoutes(app, deps) {
 
   // Danger zone — full reset: wipes users, chats, messages, sessions.
   app.post("/api/admin/maintenance/reset", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
     if (req.body?.confirm !== "reset everything") {
       return res.status(400).json({ error: "Confirmation phrase required." });
@@ -1709,7 +1766,7 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   app.post("/api/admin/maintenance/delete", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
     if (dbConfig?.client !== "postgres") {
       return res.status(400).json({ error: "Database deletion is only available in PostgreSQL mode." });
@@ -1722,228 +1779,51 @@ function registerAdminPanelRoutes(app, deps) {
   });
 
   // ─── Service control ─────────────────────────────────────────────────────────
-
-  const SERVICE_NAME = process.env.OUJ_CHAT_SERVICE_NAME || "ouj-chat";
-
-  // Sends a POST request to the Docker Engine API via the Unix socket to
-  // restart or stop this container. The container name / ID is read from the
-  // HOSTNAME env var, which Docker sets to the container ID by default, and
-  // can be overridden with OUJ_CHAT_CONTAINER_NAME for named containers.
-  const runDockerAction = (action) => new Promise((resolve) => {
-    const container = process.env.OUJ_CHAT_CONTAINER_NAME || process.env.HOSTNAME || "ouj-chat";
-    const socketPath = "/var/run/docker.sock";
-    // action is "restart" or "stop" — both are POST endpoints in the Docker API.
-    const path = `/containers/${container}/${action}`;
-    // Use the built-in http module to talk to the socket directly, avoiding any
-    // extra dependency. t=5 gives the container 5 s to stop gracefully.
-    const http = deps.http;
-    if (!http) return resolve({ ok: false, error: "http module not available." });
-    const req = http.request({ socketPath, path: `${path}?t=5`, method: "POST" }, (res) => {
-      // 204 = success for both restart and stop; 304 = already stopped (not an error).
-      resolve(res.statusCode === 204 || res.statusCode === 304
-        ? { ok: true }
-        : { ok: false, error: `Docker API returned HTTP ${res.statusCode}` });
-      res.resume(); // drain response body
-    });
-    req.on("error", (err) => resolve({ ok: false, error: `Docker socket error: ${err.message}` }));
-    req.end();
-  });
-
-  // Runs `systemctl <action> <service>`, falling back to sudo -n if needed.
-  const runSystemctl = (action) => new Promise((resolve) => {
-    execFile("systemctl", [action, SERVICE_NAME], { timeout: 8000 }, (err) => {
-      if (!err) return resolve({ ok: true });
-      // Try non-interactive sudo as a fallback.
-      execFile("sudo", ["-n", "systemctl", action, SERVICE_NAME], { timeout: 8000 }, (err2) => {
-        if (!err2) return resolve({ ok: true });
-        resolve({ ok: false, error: err2.code === "ENOENT" ? "systemctl not available." : "Insufficient permissions to control the service." });
-      });
-    });
-  });
-
-  // Docker mode and its service-control capability are fixed for a running
-  // process, so detect and probe them once while routes are registered.
-  const dockerMode = (() => {
-    try { return fs?.existsSync("/.dockerenv") ?? false; } catch { return false; }
-  })();
-
-  const probeDockerServiceControl = () => new Promise((resolve) => {
-    try {
-      const http = deps.http;
-      if (!http) return resolve(false);
-      const r = http.request(
-        { socketPath: "/var/run/docker.sock", path: "/info", method: "GET" },
-        (resp) => { resp.resume(); resolve(resp.statusCode < 500); },
-      );
-      r.on("error", () => resolve(false));
-      r.setTimeout(2000, () => { r.destroy(); resolve(false); });
-      r.end();
-    } catch { resolve(false); }
-  });
-
-  const probeSystemctlServiceControl = () => new Promise((resolve) => {
-    execFile("systemctl", ["--version"], { timeout: 2000 }, (err) => {
-      if (!err) return resolve(true);
-      execFile("sudo", ["-n", "systemctl", "--version"], { timeout: 2000 }, (err2) => resolve(!err2));
-    });
-  });
-
-  const serviceControlStatus = typeof deps.getServiceControlStatus === "function"
-    ? Promise.resolve(deps.getServiceControlStatus({ dockerMode }))
-    : (dockerMode
-      ? probeDockerServiceControl()
-      : probeSystemctlServiceControl()
-    ).then((available) => ({
-      available,
-      reason: available
-        ? null
-        : dockerMode ? "Docker socket not mounted." : "systemctl not available.",
-    }));
-
-  // Dispatches to the mechanism selected once during startup.
-  const runServiceAction = (action) =>
-    dockerMode ? runDockerAction(action) : runSystemctl(action);
+  const infrastructureManagedMessage =
+    "Host service and Nginx operations are managed by infrastructure tooling and are disabled in the application process.";
 
   app.get("/api/admin/service/available", async (req, res) => {
     if (!requireAdmin(req, res)) return;
-    res.json(await serviceControlStatus);
+    res.json({
+      available: false,
+      managedBy: "infrastructure",
+      reason: infrastructureManagedMessage,
+    });
   });
 
   app.post("/api/admin/service/restart", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
-    log(session, "service.restart", { targetType: "system", targetLabel: SERVICE_NAME });
-    // Respond first — a successful restart kills this process before the command returns.
-    res.json({ ok: true, pending: true });
-    setTimeout(() => { runServiceAction("restart"); }, 250);
+    log(session, "service.restart_blocked", { targetType: "system", status: "failure" });
+    res.status(503).json({
+      error: infrastructureManagedMessage,
+      managedBy: "infrastructure",
+    });
   });
 
   app.post("/api/admin/service/stop", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
-    log(session, "service.stop", { targetType: "system", targetLabel: SERVICE_NAME });
-    res.json({ ok: true, pending: true });
-    setTimeout(() => { runServiceAction("stop"); }, 250);
-  });
-
-  // ─── Nginx config update + reload ───────────────────────────────────────────
-  //
-  // Updates client_max_body_size in the nginx site config file to match the
-  // current FILE_UPLOAD_MAX_TOTAL_SIZE_MB setting, then reloads nginx.
-  // Only works for systemd-based deployments where nginx writes a site config.
-  // Docker deployments must update nginx/nginx.conf and restart nginx manually.
-
-  const NGINX_CONFIG_CANDIDATES = [
-    "/etc/nginx/sites-available/ouj-chat",
-    "/etc/nginx/sites-enabled/ouj-chat",
-    "/etc/nginx/conf.d/ouj-chat.conf",
-    "/etc/nginx/conf.d/default.conf",
-  ];
-
-  const runNginxReload = () => new Promise((resolve) => {
-    // Test config first, then reload.
-    execFile("nginx", ["-t"], { timeout: 8000 }, (testErr) => {
-      if (testErr) {
-        // Try with sudo.
-        execFile("sudo", ["-n", "nginx", "-t"], { timeout: 8000 }, (sudoTestErr) => {
-          if (sudoTestErr) {
-            return resolve({ ok: false, error: "nginx -t failed: " + (sudoTestErr.message || String(sudoTestErr)) });
-          }
-          execFile("sudo", ["-n", "systemctl", "reload", "nginx"], { timeout: 8000 }, (reloadErr) => {
-            if (reloadErr) return resolve({ ok: false, error: "nginx reload failed: " + (reloadErr.message || String(reloadErr)) });
-            resolve({ ok: true });
-          });
-        });
-        return;
-      }
-      execFile("systemctl", ["reload", "nginx"], { timeout: 8000 }, (reloadErr) => {
-        if (!reloadErr) return resolve({ ok: true });
-        execFile("sudo", ["-n", "systemctl", "reload", "nginx"], { timeout: 8000 }, (sudoReloadErr) => {
-          if (!sudoReloadErr) return resolve({ ok: true });
-          resolve({ ok: false, error: sudoReloadErr.code === "ENOENT" ? "systemctl not available." : "Insufficient permissions to reload nginx." });
-        });
-      });
+    log(session, "service.stop_blocked", { targetType: "system", status: "failure" });
+    res.status(503).json({
+      error: infrastructureManagedMessage,
+      managedBy: "infrastructure",
     });
   });
 
   app.post("/api/admin/nginx/reload", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
-
-    const maxTotalMb = getSetting("FILE_UPLOAD_MAX_TOTAL_SIZE_MB");
-
-    // Find the first writable nginx config candidate.
-    let configPath = null;
-    for (const candidate of NGINX_CONFIG_CANDIDATES) {
-      if (fs.existsSync(candidate)) {
-        configPath = candidate;
-        break;
-      }
-    }
-
-    if (!configPath) {
-      // Docker / custom deployment — no system nginx config found.
-      return res.status(200).json({
-        ok: false,
-        dockerMode: true,
-        message: `No nginx site config found on this host. If you are using Docker, update client_max_body_size in nginx/nginx.conf to ${maxTotalMb}m and restart the nginx container.`,
-        currentValueMb: maxTotalMb,
-      });
-    }
-
-    // Read and patch the config.
-    let configContent;
-    try {
-      configContent = fs.readFileSync(configPath, "utf8");
-    } catch (e) {
-      return res.status(500).json({ ok: false, error: "Could not read nginx config: " + String(e.message || e) });
-    }
-
-    const updated = configContent.replace(
-      /client_max_body_size\s+\d+[mMkKgG]?;/g,
-      `client_max_body_size ${maxTotalMb}m;`,
-    );
-
-    if (updated === configContent) {
-      // No client_max_body_size found — append it.
-      // This is a best-effort patch for non-standard configs.
-    }
-
-    try {
-      fs.writeFileSync(configPath, updated, "utf8");
-    } catch {
-      // Try with sudo via a temp file approach.
-      const tmpPath = nodePath.join(os.tmpdir(), `nginx-patch-${Date.now()}.conf`);
-      try {
-        fs.writeFileSync(tmpPath, updated, "utf8");
-        await new Promise((resolve, reject) => {
-          execFile("sudo", ["-n", "cp", tmpPath, configPath], { timeout: 5000 }, (err) => {
-            if (err) reject(err); else resolve();
-          });
-        });
-        fs.unlinkSync(tmpPath);
-      } catch (e) {
-        try { fs.unlinkSync(tmpPath); } catch {}
-        return res.status(500).json({ ok: false, error: "Insufficient permissions to write nginx config." });
-      }
-    }
-
-    const reloadResult = await runNginxReload();
-    if (!reloadResult.ok) {
-      return res.status(500).json({ ok: false, error: reloadResult.error });
-    }
-
-    log(session, "nginx.reload", {
-      targetType: "system",
-      targetLabel: configPath,
-      details: `client_max_body_size set to ${maxTotalMb}m`,
+    log(session, "nginx.reload_blocked", { targetType: "system", status: "failure" });
+    res.status(503).json({
+      error: infrastructureManagedMessage,
+      managedBy: "infrastructure",
     });
-    res.json({ ok: true, configPath, updatedValueMb: maxTotalMb });
   });
 
   // Download the live database file directly to the admin's device.
   app.get("/api/admin/maintenance/download-db", async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = await requireOperator(req, res);
     if (!session) return;
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 
@@ -1971,8 +1851,17 @@ function registerAdminPanelRoutes(app, deps) {
         });
       } catch (error) {
         try { fs.rmSync(backupPath, { force: true }); } catch {}
-        log(session, "db.backup", { targetType: "system", status: "error", details: error?.message || "maintenance command failed" });
-        if (!res.headersSent) res.status(500).json({ error: error?.message || "Backup failed." });
+        log(session, "db.backup", {
+          targetType: "system",
+          status: "error",
+          details: "postgres_backup_failed",
+        });
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: "Backup failed.",
+            errorCode: safeErrorCode(error, "postgres_backup_failed"),
+          });
+        }
       }
       return;
     }
@@ -2000,8 +1889,10 @@ function registerAdminPanelRoutes(app, deps) {
   app.post(
     "/api/admin/maintenance/restore",
     // Gate auth before multer buffers the upload.
-    (req, res, next) => {
-      if (!requireAdmin(req, res)) return;
+    async (req, res, next) => {
+      const session = await requireOperator(req, res);
+      if (!session) return;
+      req.operatorSession = session;
       if (deps.mongoRepository) return res.status(409).json({ error: "Stop the application, then run npm --prefix server run db:restore -- --file <backup.json.gz> --yes --offline." });
       // pg_restore --clean cannot safely run through the process that owns live
       // database connections. The offline CLI detects a running server first.
@@ -2014,7 +1905,7 @@ function registerAdminPanelRoutes(app, deps) {
     },
     dbUpload.single("database"),
     async (req, res) => {
-    const session = requireAdmin(req, res);
+    const session = req.operatorSession;
     if (!session) return;
 
     const file = req.file;
@@ -2052,7 +1943,11 @@ function registerAdminPanelRoutes(app, deps) {
       log(session, "db.restore", { targetType: "system", targetLabel: file.originalname || "uploaded.db" });
       res.json({ ok: true });
     } catch (e) {
-      log(session, "db.restore", { targetType: "system", status: "error", details: String(e?.message || e) });
+      log(session, "db.restore", {
+        targetType: "system",
+        status: "error",
+        details: "database_restore_failed",
+      });
       res.status(500).json({ error: "Restore failed while replacing the database." });
     }
   });
@@ -2092,7 +1987,7 @@ function registerAdminPanelRoutes(app, deps) {
       log(session, "settings.update", {
         targetType: "system",
         targetLabel: key,
-        details: String(updates[key]),
+        details: "updated",
       });
     });
     if (!result.ok) {
@@ -2118,7 +2013,7 @@ function registerAdminPanelRoutes(app, deps) {
     log(session, "settings.update", {
       targetType: "system",
       targetLabel: key,
-      details: String(rawValue),
+      details: "updated",
     });
     res.json({ ok: true, key, value: result.value, settings: getAllSettings() });
   });
@@ -2135,7 +2030,7 @@ function registerAdminPanelRoutes(app, deps) {
     log(session, "settings.reset", {
       targetType: "system",
       targetLabel: key,
-      details: `reset to default: ${result.value}`,
+      details: "reset to default",
     });
     res.json({ ok: true, key, value: result.value, settings: getAllSettings() });
   });

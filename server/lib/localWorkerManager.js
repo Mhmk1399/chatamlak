@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readEnvBool } from "../settings/env.js";
+import { safeErrorCode } from "./requestLogging.js";
 
 let activeLocalWorkerChild = null;
 
@@ -117,9 +118,11 @@ export async function ensureLocalWorkerRunning(options = {}) {
 
   const workerScriptPath = resolveWorkerScriptPath(options.workerScriptPath);
   if (!fs.existsSync(workerScriptPath)) {
-    console.warn(
-      `[localWorkerManager] Media worker script not found at ${workerScriptPath}. Auto-start skipped.`,
-    );
+    console.warn(JSON.stringify({
+      service: "ouj-chat",
+      event: "media_worker.auto_start_skipped",
+      errorCode: "worker_script_missing",
+    }));
     return {
       started: false,
       error: "script_not_found",
@@ -143,10 +146,11 @@ export async function ensureLocalWorkerRunning(options = {}) {
     });
 
     child.on("error", (err) => {
-      console.warn(
-        `[localWorkerManager] Local worker process error on port ${workerPort}:`,
-        err?.message || err,
-      );
+      console.warn(JSON.stringify({
+        service: "ouj-chat",
+        event: "media_worker.process_failed",
+        errorCode: safeErrorCode(err, "worker_process_failed"),
+      }));
     });
 
     activeLocalWorkerChild = child;
@@ -175,11 +179,13 @@ export async function ensureLocalWorkerRunning(options = {}) {
       mode: storageProcessingMode,
     };
   } catch (err) {
-    console.error(
-      `[localWorkerManager] Failed to auto-start local worker on port ${workerPort}:`,
-      err?.message || err,
-    );
-    return { started: false, error: err?.message || String(err) };
+    const errorCode = safeErrorCode(err, "worker_start_failed");
+    console.error(JSON.stringify({
+      service: "ouj-chat",
+      event: "media_worker.auto_start_failed",
+      errorCode,
+    }));
+    return { started: false, error: errorCode };
   }
 }
 

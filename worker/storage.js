@@ -24,6 +24,22 @@ const toBool = (v) => {
   return str === "true" || str === "1" || v === true;
 };
 
+const safeStorageErrorCode = (error) => {
+  const value = String(error?.code || error?.name || "storage_delete_failed")
+    .replace(/[^A-Za-z0-9_.:-]/g, "_")
+    .slice(0, 128);
+  return value || "storage_delete_failed";
+};
+
+const logDeleteFailure = (driver, error) => {
+  console.warn(JSON.stringify({
+    service: "ouj-chat-media-worker",
+    event: "worker.storage.delete_failed",
+    driver: driver === "remote" ? "remote" : "local",
+    errorCode: safeStorageErrorCode(error),
+  }));
+};
+
 export function resolveDataDir(customDataDir) {
   const cleaned = cleanString(customDataDir || process.env.DATA_DIR);
   if (cleaned) return path.resolve(cleaned);
@@ -129,11 +145,7 @@ export function createStorage({
           await fs.promises.unlink(foundPath);
         }
       } catch (err) {
-        console.warn(
-          "[worker] Failed to delete local file %s:",
-          key,
-          err?.message || err,
-        );
+        logDeleteFailure("local", err);
       }
     };
 
@@ -190,11 +202,7 @@ export function createStorage({
         new DeleteObjectCommand({ Bucket: rawBucket, Key: cleanKey }),
       );
     } catch (err) {
-      console.warn(
-        "[worker] Failed to delete file %s:",
-        key,
-        err?.message || err,
-      );
+      logDeleteFailure("remote", err);
     }
   };
 

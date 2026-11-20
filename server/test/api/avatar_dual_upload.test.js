@@ -100,6 +100,24 @@ describe("Dual Avatar Upload (Presigned & Multipart S3)", () => {
         updateGroupChat: updateGroupChatMock,
         removeAvatarByUrl: removeAvatarByUrlMock,
         storeAvatarFile: storeAvatarFileMock,
+        findPendingPresignedUpload: (storageKey) => {
+          if (storageKey === "uploads/avatars/avatar-direct-123.png") {
+            return {
+              storage_key: storageKey,
+              user_id: ALICE_ID,
+              purpose: "profile-avatar",
+            };
+          }
+          if (storageKey === "uploads/avatars/avatar-group-123.png") {
+            return {
+              storage_key: storageKey,
+              user_id: ALICE_ID,
+              chat_id: CHAT_ID,
+              purpose: "chat-avatar",
+            };
+          }
+          return null;
+        },
         findChatById: () => chatRecord,
         listChatMembers: () => [{ id: ALICE_ID, role: "owner" }],
         findUserById: (id) => ({
