@@ -4,9 +4,15 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import net from "node:net";
+import dns from "node:dns/promises";
 import { Transform } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream/promises";
+import {
+  createServiceAuthHeaders,
+  createServiceReplayGuard,
+  verifyServiceAuth,
+} from "../shared/serviceAuth.js";
 import { createStorage } from "./storage.js";
 import { decryptFileToTempPath, encryptBuffer, isEncryptedFileBuffer } from "./encryption.js";
 import {
@@ -305,8 +311,56 @@ const createByteLimitTransform = (maxBytes) => {
 const fetchWithTimeout = (url, options = {}) =>
   fetch(url, {
     ...options,
+    // A caller-selected redirect is a second, otherwise unvalidated network
+    // destination. Presigned providers should return their bytes directly.
+    redirect: options.redirect || "error",
     signal: options.signal || AbortSignal.timeout(WORKER_FETCH_TIMEOUT_MS),
   });
+
+export async function validateResolvedWorkerJobPayload(
+  payload,
+  {
+    allowedOrigins = new Set(),
+    allowLoopbackUrls = true,
+    lookup = dns.lookup,
+  } = {},
+) {
+  for (const [field, rawValue] of [
+    ["downloadUrl", payload?.downloadUrl],
+    ["callbackUrl", payload?.callbackUrl],
+    ["uploadUrl", payload?.uploadUrl],
+    ["thumbUploadUrl", payload?.thumbUploadUrl],
+    ["storageConfig.endpoint", payload?.storageConfig?.endpoint],
+  ]) {
+    if (!rawValue) continue;
+    const parsed = new URL(String(rawValue));
+    if (allowedOrigins.has(parsed.origin) || (allowLoopbackUrls && isLoopbackUrl(parsed.href))) continue;
+    const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    if (net.isIP(hostname)) continue;
+    let addresses;
+    try {
+      addresses = await lookup(hostname, { all: true, verbatim: true });
+    } catch {
+      return { status: 400, error: `${field} hostname could not be resolved safely.` };
+    }
+    if (!Array.isArray(addresses) || addresses.length === 0) {
+      return { status: 400, error: `${field} hostname could not be resolved safely.` };
+    }
+    const forbidden = addresses.some(({ address }) => {
+      const normalized = String(address || "").replace(/^\[|\]$/g, "").toLowerCase();
+      const version = net.isIP(normalized);
+      return (
+        (version === 4 && isPrivateIpv4(normalized)) ||
+        (version === 6 && isPrivateIpv6(normalized)) ||
+        version === 0
+      );
+    });
+    if (forbidden) {
+      return { status: 400, error: `${field} resolves to a private or reserved address.` };
+    }
+  }
+  return { status: 200, error: "" };
+}
 
 export function validateWorkerJobPayload(
   payload,
@@ -520,22 +574,30 @@ async function notifyCallback(url, payload, secret, maxRetries = 5) {
     return;
   }
   const effectiveSecret = secret || WEBHOOK_SECRET || "";
-  if (!effectiveSecret) {
+  if (Buffer.byteLength(effectiveSecret, "utf8") < 16) {
     console.error(
       JSON.stringify({
         service: "ouj-chat-media-worker",
         event: "worker.callback.skipped",
-        errorCode: "callback_secret_missing",
+        errorCode: effectiveSecret
+          ? "callback_secret_too_short"
+          : "callback_secret_missing",
       }),
     );
     return false;
   }
   for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
     try {
+      const callbackPath = new URL(url).pathname;
       const res = await fetchWithTimeout(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...createServiceAuthHeaders({
+            secret: effectiveSecret,
+            method: "POST",
+            path: callbackPath,
+          }),
           ...(effectiveSecret
             ? { "x-ouj-chat-webhook-secret": effectiveSecret }
             : {}),
@@ -997,7 +1059,16 @@ export function createWorkerServer(options = {}) {
       ? options.allowedUrlOrigins
       : process.env.WORKER_ALLOWED_URL_ORIGINS,
   );
-  const allowLoopbackUrls = options.allowLoopbackUrls !== false;
+  const allowLoopbackUrls = options.allowLoopbackUrls !== undefined
+    ? options.allowLoopbackUrls === true
+    : String(process.env.WORKER_ALLOW_LOOPBACK_URLS || "").toLowerCase() === "true";
+  const requireSignedRequests = options.requireSignedRequests !== undefined
+    ? options.requireSignedRequests === true
+    : String(process.env.WORKER_REQUIRE_SIGNED_REQUESTS || "").toLowerCase() === "true" ||
+      String(process.env.APP_ENV || "").toLowerCase() === "production";
+  const serviceReplayGuard = options.serviceReplayGuard || createServiceReplayGuard({
+    maxEntries: boundedInteger(process.env.WORKER_AUTH_REPLAY_CACHE_SIZE, 10_000, 100, 100_000),
+  });
   const configuredMaxInputBytes = boundedInteger(
     options.maxInputBytes,
     WORKER_MAX_INPUT_BYTES,
@@ -1005,16 +1076,25 @@ export function createWorkerServer(options = {}) {
     WORKER_MAX_INPUT_BYTES,
   );
 
-  const checkSecret = (req, res) => {
+  const checkSecret = (req, res, requestPath) => {
     if (!effectiveWebhookSecret) {
       res.writeHead(503, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Worker webhook secret is not configured" }));
       return false;
     }
+    const signed = verifyServiceAuth({
+      headers: req.headers,
+      secret: effectiveWebhookSecret,
+      method: req.method,
+      path: requestPath,
+      replayGuard: serviceReplayGuard,
+      maxSkewMs: boundedInteger(process.env.WORKER_AUTH_MAX_SKEW_MS, 300_000, 30_000, 900_000),
+    });
     const incomingSecret = req.headers["x-ouj-chat-webhook-secret"];
-    if (!secretsMatch(incomingSecret, effectiveWebhookSecret)) {
+    const legacyValid = secretsMatch(incomingSecret, effectiveWebhookSecret);
+    if (!signed.ok && (requireSignedRequests || !legacyValid)) {
       res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "Unauthorized" }));
+      res.end(JSON.stringify({ error: "Unauthorized", code: signed.code }));
       return false;
     }
     return true;
@@ -1045,7 +1125,7 @@ export function createWorkerServer(options = {}) {
 
     // Transcode dispatch endpoint
     if (req.method === "POST" && url.pathname === "/transcode") {
-      if (!checkSecret(req, res)) return;
+      if (!checkSecret(req, res, url.pathname)) return;
 
       let payload;
       try {
@@ -1093,6 +1173,15 @@ export function createWorkerServer(options = {}) {
         res.writeHead(validation.status, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ error: validation.error }));
       }
+      const resolvedValidation = await validateResolvedWorkerJobPayload(payload, {
+        allowedOrigins,
+        allowLoopbackUrls,
+        lookup: options.dnsLookup || dns.lookup,
+      });
+      if (resolvedValidation.error) {
+        res.writeHead(resolvedValidation.status, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: resolvedValidation.error }));
+      }
 
       const queuePosition = Number(effectiveQueue.size || 0);
       const accepted = effectiveQueue.push(() =>
@@ -1133,7 +1222,7 @@ export function createWorkerServer(options = {}) {
 
     // Mirror dispatch endpoint (Remote Channel media handoff)
     if (req.method === "POST" && url.pathname === "/mirror-media") {
-      if (!checkSecret(req, res)) return;
+      if (!checkSecret(req, res, url.pathname)) return;
 
       let payload;
       try {
@@ -1182,6 +1271,15 @@ export function createWorkerServer(options = {}) {
       if (validation.error) {
         res.writeHead(validation.status, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ error: validation.error }));
+      }
+      const resolvedValidation = await validateResolvedWorkerJobPayload(payload, {
+        allowedOrigins,
+        allowLoopbackUrls,
+        lookup: options.dnsLookup || dns.lookup,
+      });
+      if (resolvedValidation.error) {
+        res.writeHead(resolvedValidation.status, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: resolvedValidation.error }));
       }
 
       const queuePosition = Number(effectiveQueue.size || 0);

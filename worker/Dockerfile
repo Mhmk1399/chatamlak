@@ -2,15 +2,16 @@ FROM node:24-alpine
 
 RUN apk add --no-cache ffmpeg
 
-WORKDIR /app
+WORKDIR /app/worker
 
-RUN mkdir -p /app/data && chown -R node:node /app
+RUN mkdir -p /app/data /app/shared && chown -R node:node /app
 
-COPY --chown=node:node package*.json ./
+COPY --chown=node:node worker/package*.json ./
 USER node
 RUN npm ci --omit=dev --no-audit --no-fund
 
-COPY --chown=node:node . ./
+COPY --chown=node:node worker/ ./
+COPY --chown=node:node shared/ /app/shared/
 
 ENV APP_ENV=production
 ENV WORKER_PORT=8080

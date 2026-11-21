@@ -45,9 +45,16 @@ function hasValidUuidReferences(payload = {}) {
   return true;
 }
 
-export function createSseHub({ listChatMembers, recordEvent }) {
+export function createSseHub({
+  listChatMembers,
+  recordEvent,
+  validateSessionToken,
+  sessionRevalidateIntervalMs = Number(process.env.SSE_SESSION_REVALIDATE_MS) || 60_000,
+}) {
   const sseClientsByUsername = new Map();
   const sessionTokenIdsByClient = new WeakMap();
+  const rawSessionTokensByClient = new WeakMap();
+  const clientsBeingRevalidated = new WeakSet();
   // Short-lived cache for chat member lists to avoid repeated DB queries on
   // rapid SSE event bursts (e.g., multiple messages in quick succession).
   const memberCache = new Map(); // chatId → { members, expiresAt }
@@ -62,6 +69,37 @@ export function createSseHub({ listChatMembers, recordEvent }) {
   if (typeof memberCacheSweepTimer.unref === "function") {
     memberCacheSweepTimer.unref();
   }
+  const effectiveSessionRevalidateMs = Math.max(
+    1_000,
+    Math.min(5 * 60_000, Number(sessionRevalidateIntervalMs) || 60_000),
+  );
+  const sessionRevalidateTimer = typeof validateSessionToken === "function"
+    ? setInterval(() => {
+        for (const [username, clients] of sseClientsByUsername) {
+          for (const client of [...clients]) {
+            const token = rawSessionTokensByClient.get(client);
+            if (!token || clientsBeingRevalidated.has(client)) continue;
+            clientsBeingRevalidated.add(client);
+            void Promise.resolve(validateSessionToken(token, { touch: false }))
+              .then((session) => {
+                if (
+                  !session?.username ||
+                  String(session.username).trim().toLowerCase() !== username
+                ) {
+                  disconnectClientSet(clients, (candidate) => candidate === client);
+                  if (!clients.size) sseClientsByUsername.delete(username);
+                }
+              })
+              .catch(() => {
+                disconnectClientSet(clients, (candidate) => candidate === client);
+                if (!clients.size) sseClientsByUsername.delete(username);
+              })
+              .finally(() => clientsBeingRevalidated.delete(client));
+          }
+        }
+      }, effectiveSessionRevalidateMs)
+    : null;
+  sessionRevalidateTimer?.unref?.();
 
   function getCachedMembers(chatId) {
     const entry = memberCache.get(chatId);
@@ -107,6 +145,9 @@ export function createSseHub({ listChatMembers, recordEvent }) {
     sseClientsByUsername.set(key, clients);
     const tokenId = sessionTokenStorageValue(sessionToken);
     if (tokenId) sessionTokenIdsByClient.set(res, tokenId);
+    if (typeof sessionToken === "string" && sessionToken) {
+      rawSessionTokensByClient.set(res, sessionToken);
+    }
   }
 
   function removeSseClient(username, res) {
@@ -116,6 +157,7 @@ export function createSseHub({ listChatMembers, recordEvent }) {
     if (!clients) return;
     clients.delete(res);
     sessionTokenIdsByClient.delete(res);
+    rawSessionTokensByClient.delete(res);
     if (!clients.size) {
       sseClientsByUsername.delete(key);
     }
@@ -128,6 +170,7 @@ export function createSseHub({ listChatMembers, recordEvent }) {
       if (!predicate(client)) continue;
       clients.delete(client);
       sessionTokenIdsByClient.delete(client);
+      rawSessionTokensByClient.delete(client);
       try { client.end(); } catch (_) {}
       disconnected += 1;
     }
@@ -174,12 +217,12 @@ export function createSseHub({ listChatMembers, recordEvent }) {
     });
   }
 
-  function emitChatEvent(chatId, payload) {
+  function emitChatEvent(chatId, payload, { record = true } = {}) {
     if (!isValidUuid(String(chatId || "")) || !hasValidUuidReferences(payload)) return;
     if (MEMBERSHIP_EVENT_TYPES.has(String(payload?.type || ""))) {
       invalidateChatMembers(chatId);
     }
-    if (recordEvent && !["chat_typing", "chat_read"].includes(payload.type)) {
+    if (record && recordEvent && !["chat_typing", "chat_read"].includes(payload.type)) {
       void Promise.resolve(recordEvent(chatId, payload)).catch((error) => console.error(JSON.stringify({
         service: "ouj-chat",
         event: "event_journal.record_failed",
@@ -245,6 +288,7 @@ export function createSseHub({ listChatMembers, recordEvent }) {
     },
     close() {
       clearInterval(memberCacheSweepTimer);
+      if (sessionRevalidateTimer) clearInterval(sessionRevalidateTimer);
       for (const clients of sseClientsByUsername.values()) {
         disconnectClientSet(clients);
       }

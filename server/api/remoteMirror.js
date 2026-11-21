@@ -1,4 +1,8 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import {
+  createServiceReplayGuard,
+  verifyServiceAuth,
+} from "../../shared/serviceAuth.js";
 
 /**
  * remoteMirror.js — server side of the Option A media handoff.
@@ -14,6 +18,8 @@ import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 function registerRemoteMirrorRoutes(app, deps) {
   const { mirrorJobRegistry, remoteChannelManager, webhookSecret, fs, crypto } =
     deps;
+  const workerCallbackReplayGuard = deps.workerCallbackReplayGuard ||
+    createServiceReplayGuard({ maxEntries: 10_000 });
 
   const expectedWebhookSecret =
     webhookSecret !== undefined
@@ -80,8 +86,19 @@ function registerRemoteMirrorRoutes(app, deps) {
         error: "Remote mirror webhook is not configured.",
       });
     }
+    const requireSignedWorkerAuth = deps.requireSignedWorkerAuth !== undefined
+      ? deps.requireSignedWorkerAuth === true
+      : String(process.env.WORKER_REQUIRE_SIGNED_REQUESTS || "").toLowerCase() === "true";
+    const signedAuth = verifyServiceAuth({
+      headers: req.headers,
+      secret: expectedWebhookSecret,
+      method: req.method,
+      path: req.path,
+      replayGuard: workerCallbackReplayGuard,
+      maxSkewMs: Number(process.env.WORKER_AUTH_MAX_SKEW_MS) || 300_000,
+    });
     const headerSecret = req.headers["x-ouj-chat-webhook-secret"];
-    if (!secretsMatch(headerSecret, expectedWebhookSecret)) {
+    if (!signedAuth.ok && (requireSignedWorkerAuth || !secretsMatch(headerSecret, expectedWebhookSecret))) {
       return res.status(401).json({ error: "Unauthorized webhook request." });
     }
     const {

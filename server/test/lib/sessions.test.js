@@ -256,6 +256,27 @@ describe("getSessionFromRequest", () => {
     expect(touchSession).toHaveBeenCalledWith("abc");
   });
 
+  test("can revalidate a live transport without extending the idle lifetime", async () => {
+    const touchSession = vi.fn();
+    const session = {
+      id: "11111111-1111-4111-a111-111111111111",
+      username: "alice",
+      session_created_at: "2026-01-01T00:00:00.000Z",
+      session_last_seen: "2026-01-01T00:00:10.000Z",
+    };
+    const { getSessionFromToken } = makeHelpers({
+      getSession: async () => session,
+      touchSession,
+      sessionIdleTimeoutMs: 60_000,
+      sessionAbsoluteTimeoutMs: 120_000,
+      now: () => Date.parse("2026-01-01T00:00:20.000Z"),
+    });
+
+    await expect(getSessionFromToken("transport-token", { touch: false }))
+      .resolves.toEqual(session);
+    expect(touchSession).not.toHaveBeenCalled();
+  });
+
   test("does not call touchSession when session is not found", () => {
     const touchSession = vi.fn();
     const { getSessionFromRequest } = makeHelpers({

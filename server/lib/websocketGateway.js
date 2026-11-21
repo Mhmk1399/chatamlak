@@ -54,6 +54,7 @@ export function createWebSocketGateway({
   maxMessagesPerWindow = Number(process.env.WS_MESSAGE_RATE_LIMIT) || 120,
   messageRateWindowMs = Number(process.env.WS_MESSAGE_RATE_WINDOW_MS) || 60_000,
   authTimeoutMs = Number(process.env.WS_AUTH_TIMEOUT_MS) || 5_000,
+  sessionRevalidateIntervalMs = Number(process.env.WS_SESSION_REVALIDATE_MS) || 60_000,
   trustProxy = ["1", "true", "yes"].includes(
     String(process.env.WS_TRUST_PROXY || "").trim().toLowerCase(),
   ),
@@ -63,6 +64,12 @@ export function createWebSocketGateway({
   const effectiveMaxMessagesPerWindow = boundedInteger(maxMessagesPerWindow, 120, 1, 10_000);
   const effectiveMessageRateWindowMs = boundedInteger(messageRateWindowMs, 60_000, 1_000, 60 * 60 * 1000);
   const effectiveAuthTimeoutMs = boundedInteger(authTimeoutMs, 5_000, 100, 30_000);
+  const effectiveSessionRevalidateMs = boundedInteger(
+    sessionRevalidateIntervalMs,
+    60_000,
+    1_000,
+    5 * 60_000,
+  );
   const configuredOrigins = new Set(
     (Array.isArray(allowedOrigins)
       ? allowedOrigins
@@ -78,6 +85,8 @@ export function createWebSocketGateway({
   const clientsByUsername = new Map();
   const connectionsByIp = new Map();
   const pendingUpgradesByIp = new Map();
+  const rawSessionTokensBySocket = new WeakMap();
+  const socketsBeingRevalidated = new WeakSet();
 
   const instanceId = Math.random().toString(36).substring(2);
 
@@ -280,6 +289,7 @@ export function createWebSocketGateway({
     let cookieToken = "";
     try { cookieToken = sessionCookie ? decodeURIComponent(sessionCookie[1]) : ""; } catch (_) {}
     ws._sessionTokenId = req?._wsSessionTokenId || sessionTokenStorageValue(cookieToken) || null;
+    if (cookieToken) rawSessionTokensBySocket.set(ws, cookieToken);
     ws._connectionIp = req?._wsClientIp || getClientIp(req);
     ws._messageRateWindowStartedAt = Date.now();
     ws._messageRateCount = 0;
@@ -321,6 +331,7 @@ export function createWebSocketGateway({
 
       if (typeof ws.on === "function") {
         ws.on("close", () => {
+          rawSessionTokensBySocket.delete(ws);
           clearHeartbeatTimeoutTimer(ws);
           if (ws._connectionCounted) {
             ws._connectionCounted = false;
@@ -454,6 +465,39 @@ export function createWebSocketGateway({
     }
   });
 
+  const sessionRevalidateTimer = typeof getSessionFromToken === "function"
+    ? setInterval(() => {
+        for (const ws of wss.clients) {
+          const token = rawSessionTokensBySocket.get(ws);
+          if (!token || socketsBeingRevalidated.has(ws)) continue;
+          socketsBeingRevalidated.add(ws);
+          void Promise.resolve(getSessionFromToken(token, { touch: false }))
+            .then((session) => {
+              const expectedUsername = [...clientsByUsername.entries()]
+                .find(([, clients]) => clients.has(ws))?.[0];
+              if (
+                !session?.username ||
+                !expectedUsername ||
+                String(session.username).trim().toLowerCase() !== expectedUsername
+              ) {
+                try {
+                  ws.send(JSON.stringify({ type: "session_revoked", reason: "expired" }));
+                } catch (_) {}
+                try { ws.close(1008, "Session expired or revoked"); } catch (_) {}
+              }
+            })
+            .catch(() => {
+              try {
+                ws.send(JSON.stringify({ type: "session_revoked", reason: "revalidation_failed" }));
+              } catch (_) {}
+              try { ws.close(1008, "Session expired or revoked"); } catch (_) {}
+            })
+            .finally(() => socketsBeingRevalidated.delete(ws));
+        }
+      }, effectiveSessionRevalidateMs)
+    : null;
+  sessionRevalidateTimer?.unref?.();
+
   if (server) {
     server.on("upgrade", (request, socket, head) => {
       let urlObj;
@@ -553,6 +597,7 @@ export function createWebSocketGateway({
     },
     close() {
       clearInterval(heartbeatTimer);
+      if (sessionRevalidateTimer) clearInterval(sessionRevalidateTimer);
       if (wss.clients && typeof wss.clients.forEach === "function") {
         wss.clients.forEach((ws) => clearHeartbeatTimeoutTimer(ws));
       }

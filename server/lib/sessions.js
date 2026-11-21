@@ -83,7 +83,7 @@ export function createSessionHelpers({
     return idleExpired || absoluteExpired;
   };
 
-  const resolveSession = (session, token) => {
+  const resolveSession = (session, token, { touch = true } = {}) => {
     if (!session) return null;
     if (isSessionExpired(session)) {
       try {
@@ -97,6 +97,7 @@ export function createSessionHelpers({
       return null;
     }
 
+    if (!touch) return session;
     const touched = touchSession(token);
     if (touched && typeof touched.then === "function") {
       return touched.then(() => session);
@@ -104,19 +105,19 @@ export function createSessionHelpers({
     return session;
   };
 
-  const getSessionFromToken = (token) => {
+  const getSessionFromToken = (token, options = {}) => {
     if (typeof token !== "string" || !token) return null;
     const rawSession = getSession(token);
     if (rawSession && typeof rawSession.then === "function") {
-      return rawSession.then((session) => resolveSession(session, token));
+      return rawSession.then((session) => resolveSession(session, token, options));
     }
-    return resolveSession(rawSession, token);
+    return resolveSession(rawSession, token, options);
   };
 
-  const getSessionFromRequest = (req) => {
+  const getSessionFromRequest = (req, options = {}) => {
     const cookies = parseCookies(req);
     if (!cookies.sid) return null;
-    return getSessionFromToken(cookies.sid);
+    return getSessionFromToken(cookies.sid, options);
   };
 
   const requireSession = (req, res) => {

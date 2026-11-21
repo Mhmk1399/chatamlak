@@ -197,6 +197,68 @@ describe("platform identity adapter", () => {
     });
   });
 
+  test("preserves verified bootstrap metadata and accepts staff only as an explicit agent token", async () => {
+    const adapter = createAdapter({
+      verifyCredential: async () => registeredClaims({
+        kind: "agent",
+        tokenUse: "support_agent",
+        scopes: ["support:agent"],
+        jti: "agent-assertion-1",
+        keyId: "web-key-1",
+        issuedAt: NOW - 1_000,
+        expiresAt: NOW + 60_000,
+      }),
+    });
+    await expect(adapter.authenticate({
+      credential: "signed-agent-assertion",
+      requiredScopes: ["support:agent"],
+      allowedTokenUses: ["support_agent"],
+      allowedScopes: ["support:agent"],
+    })).resolves.toMatchObject({
+      kind: "agent",
+      webUserId: "web-user-1",
+      chatUserId: "chat-user-1",
+      tokenUse: "support_agent",
+      jti: "agent-assertion-1",
+      keyId: "web-key-1",
+      issuedAt: NOW - 1_000,
+      expiresAt: NOW + 60_000,
+    });
+
+    const confused = createAdapter({
+      verifyCredential: async () => registeredClaims({
+        kind: "registered",
+        tokenUse: "support_guest",
+        jti: "confused",
+      }),
+    });
+    await expectCode(confused.authenticate({
+      credential: "signed-confused-assertion",
+      requiredScopes: ["chat:access"],
+    }), "IDENTITY_TOKEN_USE_INVALID");
+  });
+
+  test("forwards route scope and token-use policy before verifier replay consumption", async () => {
+    const verifyCredential = vi.fn(async () => registeredClaims({
+      scopes: ["support:conversation:create"],
+    }));
+    const adapter = createAdapter({ verifyCredential });
+    await adapter.authenticate({
+      credential: "signed-registered-assertion",
+      requiredScopes: ["support:conversation:create"],
+      allowedScopes: ["support:conversation:create"],
+      allowedTokenUses: ["support_registered"],
+    });
+    expect(verifyCredential).toHaveBeenCalledWith(
+      "signed-registered-assertion",
+      {
+        requiredScopes: ["support:conversation:create"],
+        allowedScopes: ["support:conversation:create"],
+        allowedTokenUses: ["support_registered"],
+      },
+    );
+  });
+
   test("uses stable typed errors without reflecting credential contents", () => {
     const error = new PlatformIdentityError(
       "IDENTITY_SCOPE_DENIED",

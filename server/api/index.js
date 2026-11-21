@@ -16,6 +16,7 @@ import { registerAdminPanelRoutes } from "./adminPanel.js";
 import { registerAdminRemoteChannelRoutes } from "./adminRemoteChannel.js";
 import { registerRemoteUploadRoutes } from "./uploadsRemote.js";
 import { registerMessagingRoutes } from "./messaging.js";
+import { registerSupportRoutes } from "./support.js";
 import { createMessagingService } from "../lib/services/messagingService.js";
 import { safeErrorCode } from "../lib/requestLogging.js";
 
@@ -23,6 +24,7 @@ function registerApiRoutes(app, deps) {
   const messagingService = createMessagingService(deps);
   deps = { ...deps, ensureChatPublishAllowed: messagingService.publicationError };
   registerMessagingRoutes(app, deps);
+  registerSupportRoutes(app, deps);
   if (deps.messagingDb) {
     const timer = setInterval(() => { void messagingService.tick().catch((error) => console.error(JSON.stringify({
       service: "ouj-chat",

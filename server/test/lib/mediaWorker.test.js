@@ -40,6 +40,8 @@ describe("dispatchMediaWorkerJob", () => {
     expect(capturedOptions.headers["x-ouj-chat-webhook-secret"]).toBe(
       "super-secret-token",
     );
+    expect(capturedOptions.headers["x-ouj-service-auth-version"]).toBe("1");
+    expect(capturedOptions.headers["x-ouj-service-auth-signature"]).toMatch(/^[a-f0-9]{64}$/);
     expect(capturedOptions.headers["Content-Type"]).toBe("application/json");
 
     const parsedBody = JSON.parse(capturedOptions.body);

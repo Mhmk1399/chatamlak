@@ -1,4 +1,4 @@
-import { describe, test, expect, vi } from "vitest";
+import { afterEach, describe, test, expect, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import {
   createWebSocketGateway,
@@ -8,6 +8,7 @@ import { createSseHub } from "../../lib/sse.js";
 import { createRedisClient } from "../../lib/redis.js";
 
 describe("WebSocket Gateway", () => {
+  afterEach(() => vi.useRealTimers());
   test("uses forwarded client IPs only when the deployment explicitly trusts its proxy", () => {
     const request = {
       headers: { "x-forwarded-for": "203.0.113.10, 172.18.0.2" },
@@ -141,6 +142,32 @@ describe("WebSocket Gateway", () => {
       JSON.stringify({ type: "session_revoked", reason: "banned" }),
     );
     expect(ws.close).toHaveBeenCalledWith(1008, "Session revoked");
+    gateway.close();
+  });
+
+  test("periodically closes an already-open socket after its session expires", async () => {
+    vi.useFakeTimers();
+    const getSessionFromToken = vi.fn(async () => null);
+    const gateway = createWebSocketGateway({
+      getSessionFromToken,
+      sessionRevalidateIntervalMs: 1_000,
+      heartbeatIntervalMs: 60_000,
+    });
+    const ws = new EventEmitter();
+    ws.readyState = 1;
+    ws.send = vi.fn();
+    ws.close = vi.fn();
+    gateway.wss.emit(
+      "connection",
+      ws,
+      { headers: { cookie: "sid=expiring-token" }, socket: { remoteAddress: "127.0.0.1" } },
+      { username: "Alice" },
+    );
+
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(getSessionFromToken).toHaveBeenCalledWith("expiring-token", { touch: false });
+    expect(ws.send).toHaveBeenCalledWith(expect.stringContaining("session_revoked"));
+    expect(ws.close).toHaveBeenCalledWith(1008, "Session expired or revoked");
     gateway.close();
   });
 

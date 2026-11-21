@@ -140,6 +140,9 @@ export async function ensureLocalWorkerRunning(options = {}) {
         WORKER_PORT: String(workerPort),
         PORT: String(workerPort),
         DATA_DIR: dataDir,
+        // The co-located compatibility worker calls back to the parent Chat
+        // process on loopback. Standalone workers default this protection off.
+        WORKER_ALLOW_LOOPBACK_URLS: "true",
       },
       stdio: "ignore",
       detached: false,

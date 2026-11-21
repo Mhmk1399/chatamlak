@@ -8,6 +8,8 @@ Method: static, read-only source and configuration inspection
 
 > **Sprint 1 update (2026-11-20):** Sections 1–23 below are the historical, pre-remediation audit baseline. They must not be read as the current state of the modified source tree. Section 24 records the subsequent CHAT-001–CHAT-010 implementation work, and [`docs/platform/CHAT_SPRINT_1_HANDOFF.md`](docs/platform/CHAT_SPRINT_1_HANDOFF.md) is the rollout handoff. The sprint changed source and tests only: it did not deploy, migrate production data, inspect customer messages, commit, push, or change any running container.
 
+> **Sprint 2 update (2026-11-20):** Section 25 is the exact implementation and verification log for CHAT-S2-01–CHAT-S2-11. It supersedes Sprint 1's status for Web identity, support sessions/API/realtime, open-stream expiry, worker authentication, durable media jobs, and local Docker. The work remained local and synthetic: no production service, database, message, media object, migration, secret, container, Web/Analytics repository, commit, push, registry, or deployment was touched.
+
 ## Audit conventions and scope
 
 The status labels in this report have the following strict meanings:
@@ -1733,3 +1735,427 @@ The focused private-media/upload matrix passed 75/75 tests. The final server agg
 The media worker suite passed 43/43. Client unit tests passed 457/457, and client browser component tests passed 334/334 in Chromium. Client lint passed and the production client build completed. The VitePress documentation build passed. Changed JavaScript syntax checks, Docker Compose configuration validation, and entrypoint shell syntax validation passed without loading the repository's actual `.env`; the manual missing-secret entrypoint check started only the application command. Restricted-sandbox HTTP runs initially reported `listen EPERM` and passed when rerun with local loopback access. Bats was unavailable, so the Bats entrypoint file was not executed.
 
 Real Mongo replica-set integration, live object storage, container image build, production load/resource benchmarking, deployment and migrations remain deliberately unexecuted. The `graphify` CLI was unavailable, so the required graph update could not be run.
+
+## 25. Sprint 2 implementation and verification log
+
+### 25.1 Evidence boundary and operating context
+
+This section is the complete engineering log for CHAT-S2-01 through CHAT-S2-11 performed on 2026-11-20.
+
+- **Active repository/service:** /home/mhmk/Documents/git/chatamlak, Owj Chat.
+- **Authoritative data owner:** Chat continues to own conversations, messages, memberships, support sessions, support assignment, realtime delivery and media metadata. Owj Web remains the proposed authority for human identity, account state and staff eligibility. No Web collection is read or written directly.
+- **Current-to-target change:** the dormant Sprint 1 identity helpers were connected to a new, support-only runtime. Registered and guest Web assertions can now bootstrap restricted Chat support sessions. Existing Chat IDs, messages, memberships and attachments remain in their existing collections.
+- **Interactive latency path:** assertion verification, support bootstrap, session validation, message reads/writes, assignment and realtime subscribe are request-path operations. JWKS and Web status calls have three-second timeouts; current Web authorization is cached for no more than 60 seconds. Media processing remains off the interactive path.
+- **Resource additions:** bounded JWKS/status/replay/service-nonce caches; three additive identity collections, two support collections and one durable media-job collection; indexed support and replay queries; one bounded media polling loop; and Web status/JWKS external requests. No Redis, Kafka, Socket.IO, search engine or orchestrator was added.
+- **Environment used:** only this local Ubuntu workspace, local Docker, local synthetic credentials, generated test RSA keys, strict Web mocks and disposable MongoDB replica sets. The local Compose data volume contains only synthetic probes.
+- **Explicit non-actions:** no production host, production MongoDB, customer conversation, production media, secret, Nginx, migration, container, Web/Analytics repository, registry, deployment, commit or push was accessed or changed. No Git command was run, as required by AGENTS.md.
+
+The repository knowledge graph existed, but the graphify executable was unavailable. The final required graphify update command returned command-not-found and did not alter graphify-out.
+
+### 25.2 Work sequence and test-first history
+
+Work was split into identity/migration, support API/realtime, reliability/Docker and bilingual-documentation workstreams, then integrated and reviewed centrally.
+
+1. The Sprint 1 handoff, identity/support/realtime contracts, audit and relevant runtime/database source were inspected. Active Mongo ownership and existing message/event/session paths were retained.
+2. Identity and support tests were written against missing or dormant behavior first. The initial focused runs failed because the new verifier, identity repositories, support repository/runtime and service-auth modules did not yet exist or were not wired.
+3. The RS256/JWKS verifier, durable assertion replay store, additive identity links, proof-gated linking service, dry-run migration planner/CLI and Web status client were implemented.
+4. The support repository, support-session store/service, internal bootstrap route, customer routes, staff routes, native SSE/WebSocket gateway and durable replay normalization were implemented and connected in server/index.js and server/api/index.js.
+5. HMAC service authentication, signed worker dispatch/callbacks, destination validation, the Mongo media queue and the independent local Docker topology were implemented.
+6. Integration review found and corrected several gaps without weakening authorization: strict numeric claim version checking; durable replay envelope normalization; SSE gap/hasMore reporting; same-key/different-body message conflicts; no-store bootstrap/session data; transactional staff assignment plus membership; repeated assignment/resolution event suppression; and open legacy WS/SSE expiry.
+7. Focused suites, strict mocks and disposable replica-set tests were run. An intermediate full server run passed 1,185 of 1,186 tests; its only failure was a stale test fixture whose service secret was shorter than the newly enforced minimum. The fixture was corrected, the affected upload API file passed 24/24, and the final aggregate passed 1,189/1,189.
+8. Local Docker was tested iteratively. Each failed startup was preserved as evidence, diagnosed and corrected before retry:
+   - keyfile initialization attempted a permission change after ownership had moved to the Mongo UID; file removal/write/mode/ownership ordering was corrected;
+   - the official Mongo entrypoint needed a narrow set of filesystem/user-switch capabilities after all capabilities had been dropped; only CHOWN, DAC_OVERRIDE, FOWNER, SETGID and SETUID were restored to Mongo;
+   - mongo:8.0.34 rejected this host's 7.0.0 kernel guard, so the local-only default was pinned to mongo:8.2.7;
+   - a raw synthetic key containing hyphens was not a valid Mongo keyfile, so the init container now writes a base64 representation with mode 0400;
+   - after the stack first became healthy, an application repository probe exposed that every startup attempted privileged collMod on media_processing_jobs. Schema initialization now reads installed collection options and skips collMod when the strict validator already matches. A mismatched validator still requires an explicit privileged migration.
+9. The final images rebuilt successfully. Chat, the media worker and Mongo became healthy; one-shot keyfile, volume and replica-set initializers exited zero. A message written through server/db.js survived a Chat-only restart. Mongo primary state, the exact Chat database role and cross-database denial were verified. The stack was stopped without deleting its three named volumes.
+10. Full server, real-Mongo, worker, client unit, client build, syntax, Compose and documentation checks were run. Unrelated pre-existing client lint/browser failures were recorded rather than silently changing client UI code.
+11. English and Persian contract, migration, realtime, Docker and handoff documents were synchronized. This section was then appended to the requested chat.md file.
+
+### 25.3 Milestone result
+
+| Milestone | Result in this repository | Exact boundary |
+|---|---|---|
+| CHAT-S2-01 | **Implemented locally** | Chat verifies the proposed RS256/JWKS contract and persists one-time JTI consumption. The real Web issuer and JWKS have not been exercised. |
+| CHAT-S2-02 | **Partially complete** | Additive one-to-one links, conflict-safe repository/service, deactivation handling, dry run, disposable-local apply tool and real-Mongo tests exist. Web's exact account-link proof verifier and orchestration endpoint are unresolved, so no historical account was migrated. |
+| CHAT-S2-03 | **Implemented locally** | The internal bootstrap route uses replay-resistant service authentication, verifies the Web assertion, creates/resumes one support conversation and returns an opaque support credential. It has only been tested with local keys/mocks. |
+| CHAT-S2-04 | **Partially complete** | Guest bootstrap, isolation, messaging, reconnect, logout and proof-gated conversion primitives exist. No public guest-conversion HTTP workflow is exposed until Web defines and verifies the exact conversion proof. |
+| CHAT-S2-05 | **Implemented locally** | The versioned restricted customer API and minimum staff API use the existing Chat message store and stable v1 responses/errors. The actual Web widget has not consumed it. |
+| CHAT-S2-06 | **Implemented locally** | Native WebSocket and SSE support origin/session/conversation enforcement, limits, heartbeat, replay, expiry and revocation. No Socket.IO was added. A real reverse proxy/browser integration remains untested. |
+| CHAT-S2-07 | **Implemented against a strict mock** | The bounded Web status client fails closed, caches for at most 60 seconds and revokes local sessions on denial. The actual Web endpoint has not been tested. |
+| CHAT-S2-08 | **Backend implemented locally** | Scoped agent bootstrap, queue/list/open/assign/reply/resolve routes and inbox updates exist. Web staff eligibility and a staff UI remain external dependencies. |
+| CHAT-S2-09 | **Safe bounded items implemented** | Open-stream expiry, HMAC worker auth, redirect/private-destination checks and a Mongo media queue are active. DNS is not pinned to the checked socket address, media-job restart recovery was not manually proven, and legacy operator-token redesign remains future work. |
+| CHAT-S2-10 | **Locally validated** | Both images built; authenticated replica-set startup, health, non-root/read-only application containers, internal ports, resource limits, volumes, restart persistence and database isolation passed with synthetic data. |
+| CHAT-S2-11 | **Partially complete** | Of the 24 requested cases, 21 passed, two are partial and one was not run. Actual Web+Chat and reverse-proxy integration must not be claimed complete. |
+
+### 25.4 Web identity adapter
+
+The active identity boundary is server/lib/webIdentityVerifier.js, composed by server/lib/supportRuntime.js through the existing platform adapter.
+
+- Only RS256 JWTs are accepted. Missing/invalid signatures, other algorithms, crit headers, unknown/invalid keys and malformed tokens fail closed.
+- Required claims are iss, sub, aud, iat, exp, jti, token_use and scope. A supplied ver must be the number 1; omission is interpreted as v1. Strings such as "1" are rejected.
+- The configured issuer must match exactly and aud must include owj-chat.
+- support_registered is limited to five minutes and support_guest to ten minutes, both with only support:conversation:create. support_agent is limited to five minutes, requires support:agent, and staff bootstrap also requires support:conversation:create.
+- Future timestamps, expiry, non-positive lifetimes, excessive lifetime, missing scopes and scopes outside the token-use allowlist are rejected. Clock tolerance is capped at 30 seconds and defaults to five seconds.
+- Assertion size is capped at 16 KiB; scopes at 16; audiences at four.
+- JWKS responses are HTTPS-only in production, redirect-free, timeout-bounded, capped at 128 KiB and eight keys. Cache TTL is bounded to 15 minutes. An unknown kid triggers a rate-bounded refresh for key rotation.
+- issuer+jti consumption is persisted with a unique index before authentication succeeds. Its expires_at field is a BSON Date with a TTL index, so process restart does not reopen a used bootstrap credential.
+- The internal Web-to-Chat bootstrap request uses versioned HMAC-SHA256 headers over method, path, timestamp and nonce. Signatures are constant-time compared, timestamps have bounded skew and nonces use a bounded replay cache.
+- Registered current-state checks call POST /api/internal/v1/identity/status with a Chat service bearer credential, a versioned body and request ID. Responses are bounded and schema-checked; failures deny new registered operations. Guest sessions do not impersonate registered users or invoke the registered status contract.
+
+No JWT_SECRET or old 240-hour HMAC Web token is accepted or shared.
+
+### 25.5 Existing-account association and migration
+
+The migration is additive. It does not rewrite users, chat_messages, chat_members, files or historical author IDs.
+
+New identity storage:
+
+- platform_identity_links: unique provider+web_user_id and unique chat_user_id enforce one Web identity to one Chat account in both directions. Status is active, revoked or deactivated.
+- platform_identity_assertion_jtis: unique issuer+jti plus expiry TTL provides durable bootstrap replay prevention.
+- support_guest_identity_links: records proof-bound guest conversion using only a SHA-256 guest-subject digest.
+
+The repository returns the existing record for the same link, rejects incompatible Web/Chat collisions and supports deactivation/revocation without deleting the historical Chat account. The high-level link service requires an independently verified proof bound to the exact Web and Chat IDs; it never guesses from username, phone number or display name.
+
+server/scripts/platform-identity-migrate.js:
+
+- defaults to a pure JSON dry run;
+- accepts only provider, webUserId, chatUserId and optional linkedByWebUserId;
+- reports row-number conflict codes without logging identity values;
+- bounds input and existing-link scans to 100,000;
+- requires --apply and --disposable-local for writes;
+- refuses non-loopback Mongo hosts and requires a database name containing test, e2e, local, dev or disposable;
+- verifies candidate Chat IDs exist before applying;
+- creates only the additive collections/indexes and applies idempotent links.
+
+No apply command was run against production. A later production migration requires an approved Web-generated mapping, backup/restore rehearsal, maintenance/canary plan, uniqueness-conflict review and rollback by link deactivation rather than deleting Chat data. The temporary Chat-local login remains untouched for unlinked legacy accounts and must remain separated from ordinary Owj website visitors.
+
+### 25.6 Guest, customer and staff support behavior
+
+Guest subjects are never stored raw in support conversation identity. Chat derives a SHA-256 digest and a deterministic synthetic support actor. Registered users retain their linked Chat UUID.
+
+One identity_key maps to one support conversation. Concurrent creation is protected by a unique index and transaction/retry logic. A new support conversation creates the existing private Chat document and registered-member relation; messages continue to use chat_messages and the existing transactional event journal.
+
+Customer routes:
+
+- POST /internal/v1/support/bootstrap
+- GET /support/v1/session
+- GET /support/v1/messages
+- POST /support/v1/messages
+- GET /support/v1/events
+- GET /support/v1/ws, with HTTP returning 426 unless a native upgrade is used
+- POST /support/v1/logout
+
+Staff routes:
+
+- GET /support/v1/staff/conversations
+- GET /support/v1/staff/conversations/:conversationId
+- POST /support/v1/staff/conversations/:conversationId/reply
+- POST /support/v1/staff/conversations/:conversationId/assign
+- POST /support/v1/staff/conversations/:conversationId/resolve
+
+Customer messages require a non-empty clientRequestId, are limited to 4,000 characters and 16 KiB, and reuse createOrReuseMessage. A retry with the same key/body returns the existing message; the same key with different content returns a 409 idempotency conflict. Reads use a stable createdAt+id cursor, a maximum page size of 100 and private no-store responses.
+
+Staff sessions require the support:agent scope and separate staff actions. Assignment and Chat membership are written in the same Mongo transaction. Only the assigned agent can read/reply/resolve. Repeating the same assignment/resolution idempotency key is safe, while reusing a resolution key with different state conflicts. Ordinary registered customers cannot enter the staff namespace.
+
+Known lifecycle boundaries:
+
+- A resolved/closed identity resumes the same conversation in read-only form; a new-case or reopen policy is not yet defined.
+- An assigned agent remains a historical Chat member after resolution. Support routes still enforce assignment/status, but later membership-retention policy should be explicit.
+- Conversion primitives require proof bound to guest subject, registered Web user and conversation. They preserve history, but no conversion endpoint is active until the Web proof contract is finalized.
+
+### 25.7 Support-session security
+
+Bootstrap returns a 32-byte-random opaque credential with the ocs_ prefix only to the authenticated Web backend. Mongo stores only a domain-separated SHA-256 digest. The raw credential is not logged.
+
+- Default idle timeout: 30 minutes.
+- Default absolute timeout: 12 hours, bounded to seven days.
+- Touch interval: 60 seconds.
+- Credentials are bound to actor kind, subject/Web user, Chat user, conversation, scopes and an explicit action allowlist.
+- Authentication checks status, idle and absolute expiry, action permission, conversation/member/link state and current Web status for registered/agent sessions.
+- Logout revokes locally even if Web is down, disconnects live streams and clears the owj_support_sid cookie at path /support/v1.
+- Web denial revokes all active sessions for that Web user. Realtime disconnect hooks close already-open streams.
+- Cache-control private, no-store is applied to bootstrap, session, message and staff private responses.
+- Expired/revoked sessions are periodically purged; raw session tokens never form a database lookup key.
+
+### 25.8 Native realtime and event schema
+
+No Socket.IO dependency or protocol was added. GET /support/v1/ws is handled by a native ws noServer upgrade on the existing HTTP server, while GET /support/v1/events is a streamed SSE response.
+
+Both transports:
+
+- require the HttpOnly support cookie and reject URL/query credentials;
+- require an explicitly allowed Origin;
+- bind one session to one authorized conversation;
+- periodically reauthenticate and also schedule an absolute-expiry close;
+- close on logout, identity denial, membership/assignment removal or session revocation;
+- enforce a maximum of four connections per support session through the event hub;
+- cap replay at 200 and deduplicate a bounded 400 event IDs/cursors per connection.
+
+WebSocket additionally caps payloads at 16 KiB, defaults to 20 connections per IP, has a five-second authentication timeout and ping/pong heartbeat. Its accepted client messages are ping and resume; other actions return stable v1 error envelopes. SSE sends no-transform/no-store headers, X-Accel-Buffering: no and heartbeat comments.
+
+The normalized v1 event envelope contains:
+
+- version: 1
+- type
+- conversationId and chatId for durable Chat events
+- cursor
+- eventId
+- occurredAt
+- optional sequence, messageId, userId and actorKind
+
+SSE connected and WebSocket replay_complete include cursor, hasMore and gap. Durable replay reads the existing chat_event_log in sequence order and resolves legacy message-backed entries into the normalized envelope. Live subscription starts before journal replay, buffers concurrent events and deduplicates the overlap.
+
+### 25.9 Web account-state client
+
+The status client sends only the verified Web user ID and requested support operation. It does not trust browser userId, role, consultantId or agencyId.
+
+- Request timeout defaults to three seconds.
+- Body size is capped at 32 KiB.
+- Cache age is capped at 60 seconds and entries at 5,000.
+- Response version, echoed subject, active/disabled/revoked/deleted status and authorized boolean are validated.
+- Missing configuration, timeout, non-2xx or malformed response fails closed.
+- Disabled/revoked/deleted or unauthorized results trigger local session revocation.
+- Message delivery/heartbeat does not unconditionally call Web on every event; the bounded cache and periodic stream revalidation control load.
+
+Actual Web behavior remains unverified because the concurrent Web implementation was not available in this local stack.
+
+### 25.10 Media and worker reliability
+
+shared/serviceAuth.js now provides the replay-resistant HMAC contract used for Web bootstrap and media-worker requests. Chat signs dispatch; the worker verifies method/path/timestamp/nonce/signature; callbacks are signed and verified when strict mode is enabled. Local Compose enables strict mode.
+
+Worker URL protections reject credentials/fragments, deny redirects, constrain allowed origins, resolve hostnames and reject loopback/private/reserved addresses unless an explicitly co-located local worker is configured. The remaining limitation is DNS TOCTOU: the checked address is not pinned into the actual outbound socket, so rebinding between resolution and connection is still possible.
+
+media_processing_jobs provides:
+
+- unique job_key deduplication;
+- due/claim and stale-lock indexes;
+- pending, processing, completed, cancelled and failed states;
+- atomic claim ownership;
+- stale processing recovery;
+- bounded one-to-four concurrency, default one;
+- one-to-twenty attempts, default five;
+- exponential retry capped at one hour;
+- a default two-second bounded polling interval;
+- BSON Date completed_at with seven-day TTL.
+
+The Mongo queue is used when the prior media queue would otherwise fall back to memory. Runtime initialization and shutdown are wired through server/db.js and server/index.js. Matching installed validators no longer require collMod at startup. If an older media_processing_jobs validator differs, a privileged one-time schema migration is required before a readWrite-only application account can start; ordinary runtime credentials must not receive database-admin permission.
+
+Unit tests prove enqueue/dedupe/claim/retry/complete/stale recovery and runner behavior. Manual Chat message restart persistence passed, but a media job was not manually held across a container restart; that specific runtime recovery proof remains open.
+
+### 25.11 Local Docker validation
+
+docker-compose.local.yaml defines an independent synthetic stack:
+
+- authenticated single-node Mongo replica set ouj-rs;
+- dedicated application user with only readWrite on ouj_chat;
+- separate non-root Chat and media-worker images;
+- read-only Chat/worker root filesystems with tmpfs and one prepared shared data volume;
+- internal-only exposed ports 5174, 8080 and 27017; no host publication, Docker socket or second host Nginx;
+- health checks, restart policies, no-new-privileges, dropped application capabilities and PID limits;
+- Chat: 400 MiB, 0.75 CPU, pool size 10;
+- worker: 600 MiB, 1 CPU, concurrency 1, queue depth 16;
+- Mongo: 1.5 GiB and 1.25 CPU.
+
+Final local observations:
+
+- both Chat and worker images built successfully;
+- Mongo, worker and Chat reported healthy;
+- keyfile, volume and replica-set init containers exited 0;
+- Chat and worker ran non-root, could not write their read-only image layers and could write the named data volume;
+- repository write printed MESSAGE_WRITE_OK;
+- after docker compose restart chat, repository read printed MESSAGE_PERSISTENCE_AFTER_RESTART_OK;
+- replica-set check printed REPLICA_SET_PRIMARY_OK;
+- role check printed CHAT_APP_ROLE_READWRITE_OWJ_CHAT_ONLY_OK;
+- a Chat-credential read from owj_business_local failed with Mongo error 13 and printed CHAT_DB_CROSS_DATABASE_ACCESS_DENIED_OK;
+- docker compose config --quiet passed;
+- docker compose down stopped and removed containers/networks without -v; chat-data, mongo-data and mongo-keyfile remained.
+- the exact /tmp environment file holding the synthetic Docker credentials was deleted after validation; no credential file was added to the repository.
+
+The local Mongo default is mongo:8.2.7 because the tested host kernel was rejected by the 8.0.34 image. This is a local harness compatibility choice, not a production Mongo upgrade or migration.
+
+### 25.12 Requested 24-case integration matrix
+
+| # | Case | Result and evidence |
+|---:|---|---|
+| 1 | Valid registered assertion | **PASS** — verifier tests accept a correctly signed support_registered assertion. |
+| 2 | Invalid issuer | **PASS** — exact issuer rejection test. |
+| 3 | Invalid audience | **PASS** — owj-chat audience enforcement test. |
+| 4 | Invalid signature | **PASS** — signature rejection test. |
+| 5 | Expired token | **PASS** — expiry/lifetime tests. |
+| 6 | Missing scope | **PASS** — required and excessive scope tests. |
+| 7 | Guest bootstrap | **PASS** — guest verifier plus bootstrap API tests. |
+| 8 | Duplicate guest bootstrap | **PARTIAL** — durable JTI replay and race-safe identity-key conversation reuse are separately tested, but one end-to-end test does not submit the same guest assertion twice through the real bootstrap route. |
+| 9 | Guest conversation isolation | **PASS** — two guests are isolated on real Mongo; transport filtering blocks cross-conversation events. |
+| 10 | Registered account linking | **PASS locally** — repository/link service and real-Mongo association tests. Actual Web proof remains external. |
+| 11 | Identity-link collision | **PASS** — concurrent uniqueness and incompatible-link conflicts on real Mongo. |
+| 12 | Disabled Web account | **PASS with strict mock** — denial invokes revocation; actual Web not run. |
+| 13 | Session revocation | **PASS** — session and realtime disconnect tests. |
+| 14 | WebSocket session expiry | **PASS in automated transport tests** — periodic support revalidation and direct expiry close plus native gateway expiry regression. No real proxy socket was used. |
+| 15 | SSE session expiry | **PASS** — periodic revalidation/direct expiry and native SSE regression tests. |
+| 16 | Message creation/persistence | **PASS** — real Mongo uses existing chat_messages plus transactional journal. |
+| 17 | Duplicate message submission | **PASS** — concurrent same-key retries create one message; a different body conflicts. |
+| 18 | Event replay/reconnection | **PASS** — durable cursor replay, live/replay overlap dedupe, hasMore and gap tests. |
+| 19 | Unauthorized staff access | **PASS** — customer/ordinary registered sessions are denied staff routes. |
+| 20 | Persistence after container restart | **PASS manually** — application repository write, Chat-only restart and repository readback. This proves message persistence, not a held media job. |
+| 21 | Separate Web/Chat database access | **PASS manually** — app role is exactly readWrite on ouj_chat and cross-database read is denied with code 13. |
+| 22 | Web authentication service unavailable | **PASS with strict mock** — new registered operations fail closed; logout remains locally available. |
+| 23 | Reverse-proxy cookie/WS upgrade | **NOT RUN** — the Web-owned shared reverse-proxy harness was unavailable and this repository did not add another proxy. |
+| 24 | Chat restart while Web remains available | **PARTIAL** — Chat restarted healthy and recovered its message, but no Web process was running to prove simultaneous Web availability. |
+
+Therefore complete cross-repository integration is not claimed.
+
+### 25.13 Verification results, including non-green checks
+
+Green Sprint 2 evidence:
+
+- Focused support/identity/session matrix: **144/144 in 16 files**.
+- Focused initial real-Mongo support/identity matrix: **7/7 in 2 files**.
+- Focused reliability matrix: **33/33 in 6 files**.
+- Focused verifier/realtime regressions: **27/27 in 2 files**.
+- Focused support API: **14/14**.
+- Focused real-Mongo repository/support hardening: **24/24 in 2 files**.
+- Focused media schema regression: **4/4**.
+- Worker aggregate: **46/46 in 6 files**.
+- Final server aggregate: **1,189/1,189 in 140 files**.
+- Full disposable Mongo replica-set aggregate: **56/56 in 8 files**.
+- Client unit aggregate: **457/457 in 48 files**.
+- Client production build: **passed**; it emitted two existing ineffective-dynamic-import warnings.
+- Docker image build, health, restart persistence, database isolation and Compose configuration: **passed**.
+- Node syntax check across server/shared/worker/scripts JavaScript: **passed**.
+- Shell syntax using each script's declared interpreter: **passed**.
+- Bilingual VitePress documentation build and locale/code-fence parity: **passed**.
+
+Transparent failures and corrections:
+
+- Test-first focused runs initially failed because the target modules/behavior did not exist; they passed after implementation.
+- The intermediate full server result was **1,185/1,186**. One stale upload test used a service secret below the new minimum; the fixture was corrected and that file passed **24/24** before the final clean aggregate.
+- Restricted-sandbox HTTP tests initially produced listen EPERM; the same tests passed when rerun with local loopback permission.
+- Docker had the five startup/runtime issues listed in Section 25.2; each was fixed and the final stack passed.
+- A generic sh -n over every shell file incorrectly parsed Bash scripts and reported syntax errors. Rechecking #!/bin/sh scripts with sh -n and Bash scripts with bash -n passed.
+- graphify update . could not run because graphify was not installed.
+
+Out-of-scope pre-existing client checks:
+
+- Client lint exited nonzero because client/src/i18n/fa-ui.js contains two identical Ouj Chat keys; five warnings were also reported. The file predates Sprint 2 and was not changed.
+- The browser run completed **808/815 Chromium tests**, with seven failures in existing sidebar/header/menu UI tests; 66 files passed and five failed. Firefox could not start because its Playwright binary was absent. Sprint 2 changed no client UI source, so these unrelated failures were documented and not silently repaired.
+
+Live object storage, the actual Web service, a real reverse proxy, production load/resource benchmarks, production migration and deployment were not run.
+
+### 25.14 Exact Sprint 2 source-tree footprint
+
+Because repository rules prohibit Git commands, this is a reconstructed source-tree footprint from the Sprint 1 boundary, workstream records and file timestamps, not a claim of Git status. Generated dependency, dist, VitePress cache and test screenshot/cache output is excluded. chat.md is included as the seventy-seventh path after this log was appended.
+
+Infrastructure/shared:
+
+- .env.example
+- docker-compose.local.yaml
+- docker-compose.yaml
+- scripts/local-mongo-init.sh
+- shared/serviceAuth.js
+
+Server source:
+
+- server/api/index.js
+- server/api/remoteMirror.js
+- server/api/support.js
+- server/api/uploadsRemote.js
+- server/db.js
+- server/db/mongoMediaJobs.js
+- server/db/mongoRepository.js
+- server/db/mongoSchema.js
+- server/db/mongoSupport.js
+- server/db/platformIdentityRepository.js
+- server/db/platformIdentitySchema.js
+- server/index.js
+- server/lib/durableMediaQueue.js
+- server/lib/localWorkerManager.js
+- server/lib/mediaWorker.js
+- server/lib/platformIdentityAdapter.js
+- server/lib/platformIdentityLinkService.js
+- server/lib/platformIdentityMigration.js
+- server/lib/sessions.js
+- server/lib/sse.js
+- server/lib/supportRealtime.js
+- server/lib/supportRuntime.js
+- server/lib/supportSessionStore.js
+- server/lib/supportSessions.js
+- server/lib/webIdentityStatusClient.js
+- server/lib/webIdentityVerifier.js
+- server/lib/websocketGateway.js
+- server/scripts/platform-identity-migrate.js
+
+Server tests:
+
+- server/test/api/support.test.js
+- server/test/api_uploads_remote.test.js
+- server/test/db/mongoMediaJobs.test.js
+- server/test/db/mongoSupport.test.js
+- server/test/db/platformIdentityRepository.test.js
+- server/test/db/platformIdentitySchema.test.js
+- server/test/deploymentSecurity.test.js
+- server/test/lib/durableMediaQueue.test.js
+- server/test/lib/mediaWorker.test.js
+- server/test/lib/platformIdentityAdapter.test.js
+- server/test/lib/platformIdentityLinkService.test.js
+- server/test/lib/platformIdentityMigration.test.js
+- server/test/lib/serviceAuth.test.js
+- server/test/lib/sessions.test.js
+- server/test/lib/sse.sessionRevocation.test.js
+- server/test/lib/supportRealtime.test.js
+- server/test/lib/supportRuntime.test.js
+- server/test/lib/supportSessionStore.test.js
+- server/test/lib/supportSessions.test.js
+- server/test/lib/webIdentityStatusClient.test.js
+- server/test/lib/webIdentityVerifier.test.js
+- server/test/lib/websocketGateway.test.js
+- server/test/mongo/helpers.js
+- server/test/mongo/platformIdentity.test.js
+- server/test/mongo/repository.test.js
+- server/test/mongo/support.test.js
+- server/test/scripts/platformIdentityMigrationCli.test.js
+
+Worker:
+
+- worker/Dockerfile
+- worker/docker-compose.yaml
+- worker/index.js
+- worker/test/mirror.test.js
+- worker/test/server.test.js
+
+Documentation:
+
+- docs/.vitepress/config.mjs
+- docs/platform/CHAT_LOCAL_DOCKER_TESTING.md
+- docs/platform/CHAT_REALTIME_PROTOCOL_V1.md
+- docs/platform/CHAT_SPRINT_2_HANDOFF.md
+- docs/platform/CHAT_SUPPORT_API_CONTRACT_V1.md
+- docs/platform/CHAT_WEB_IDENTITY_MIGRATION.md
+- docs/fa/platform/CHAT_LOCAL_DOCKER_TESTING.md
+- docs/fa/platform/CHAT_REALTIME_PROTOCOL_V1.md
+- docs/fa/platform/CHAT_SPRINT_2_HANDOFF.md
+- docs/fa/platform/CHAT_SUPPORT_API_CONTRACT_V1.md
+- docs/fa/platform/CHAT_WEB_IDENTITY_MIGRATION.md
+- chat.md
+
+Dockerfile itself was used to build the Sprint 2 image but was changed in Sprint 1, not Sprint 2.
+
+### 25.15 Remaining contracts and later production work
+
+Before production rollout:
+
+1. Web and Chat must finalize issuer URL, JWKS key rotation/retention, exact v1 fixtures, service-credential rotation, support-cookie placement and status-operation semantics.
+2. Web must implement and test the account-link and guest-conversion proof contracts; Chat must expose an authorized orchestration endpoint only after those exact proofs are agreed.
+3. Actual Web+Chat tests must cover all 24 cases through the shared reverse proxy, especially cookie path/domain/SameSite/Secure behavior, SSE buffering, native WS upgrade and Web availability during Chat restart.
+4. Generate an approved historical Web-to-Chat mapping without usernames/phones/display-name guessing. Take and restore-test a backup, run dry run, resolve uniqueness conflicts, canary additive schema/index creation and keep a link-deactivation rollback.
+5. Apply any mismatched media-processing validator with a separately authenticated database-admin migration; keep the application account at readWrite on ouj_chat.
+6. Configure production-only HTTPS issuer/JWKS/status URLs, allowed origins, secrets, rate limits and status cache. Rotate all synthetic/local credentials rather than reusing them.
+7. Benchmark RSS, CPU, event-loop delay, Mongo p95, pool pressure, replay/message query plans, WS/SSE connection counts and worker lag before enforcing or changing the provisional container limits.
+8. Decide resolved-conversation reopen/new-case behavior, agent membership retention and staff UI/notification behavior.
+9. Close the outbound DNS rebinding window by binding validation to the actual socket address or an equivalently audited transport.
+10. Prove media-job recovery across a real restart, live object-store behavior and callback retry semantics.
+11. Fix or separately baseline the unrelated client lint/browser failures and install the Firefox Playwright binary before claiming the entire repository UI matrix is green.
+12. Install graphify and run graphify update . so the repository knowledge graph reflects Sprint 2.
+
+No production migration or deployment has been performed. No Git status is reported because the repository explicitly forbids automatic Git commands; the exact source-tree footprint above is the available non-Git handoff.

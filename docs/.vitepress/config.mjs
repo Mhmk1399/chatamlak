@@ -13,6 +13,8 @@ const enSidebar = [
     collapsed: true,
     items: [
       {text: 'Sprint 1 Handoff', link: '/platform/CHAT_SPRINT_1_HANDOFF'},
+      {text: 'Sprint 2 Handoff', link: '/platform/CHAT_SPRINT_2_HANDOFF'},
+      {text: 'Local Docker Testing', link: '/platform/CHAT_LOCAL_DOCKER_TESTING'},
       {text: 'Web Identity Migration', link: '/platform/CHAT_WEB_IDENTITY_MIGRATION'},
       {text: 'Support API Contract v1', link: '/platform/CHAT_SUPPORT_API_CONTRACT_V1'},
       {text: 'Realtime Protocol v1', link: '/platform/CHAT_REALTIME_PROTOCOL_V1'},
@@ -70,6 +72,8 @@ const faSidebar = [
     collapsed: true,
     items: [
       {text: 'تحویل اسپرینت ۱', link: '/fa/platform/CHAT_SPRINT_1_HANDOFF'},
+      {text: 'تحویل اسپرینت ۲', link: '/fa/platform/CHAT_SPRINT_2_HANDOFF'},
+      {text: 'آزمایش محلی Docker', link: '/fa/platform/CHAT_LOCAL_DOCKER_TESTING'},
       {text: 'مهاجرت هویت Web', link: '/fa/platform/CHAT_WEB_IDENTITY_MIGRATION'},
       {text: 'قرارداد API پشتیبانی', link: '/fa/platform/CHAT_SUPPORT_API_CONTRACT_V1'},
       {text: 'پروتکل realtime نسخه ۱', link: '/fa/platform/CHAT_REALTIME_PROTOCOL_V1'},

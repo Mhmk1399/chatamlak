@@ -40,7 +40,7 @@ describe("Remote Uploads & File Management Routes", () => {
       deps: {
         storageProvider: mockRemoteProvider,
         storageProcessingMode: "local",
-        webhookSecret: "secret-key-123",
+        webhookSecret: "test-webhook-secret-123",
         MESSAGE_FILE_LIMITS: { maxFileSizeBytes: 50 * 1024 * 1024 },
       },
     });
@@ -590,7 +590,7 @@ describe("Remote Uploads & File Management Routes", () => {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
           mediaWorkerUrl: "https://media-worker.onrender.com",
-          webhookSecret: "secret-token",
+          webhookSecret: "test-webhook-secret-123",
           fetchImpl: mockFetch,
           adminGetRow: (sql) =>
             sql.includes("chat_message_files") ? fileRecord : null,
@@ -632,7 +632,7 @@ describe("Remote Uploads & File Management Routes", () => {
           storageProvider: mockRemoteProvider,
           storageProcessingMode: "remote",
           mediaWorkerUrl: "https://media-worker.onrender.com",
-          webhookSecret: "secret-token",
+          webhookSecret: "test-webhook-secret-123",
           fetchImpl: mockFetch,
           getSetting: (key) => (key === "FILE_UPLOAD_TRANSCODE_VIDEOS" ? false : null),
           adminGetRow: (sql) =>
@@ -686,7 +686,7 @@ describe("Remote Uploads & File Management Routes", () => {
     test("returns 404 when file is not found", async () => {
       const res = await request(appObj.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-ouj-chat-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "test-webhook-secret-123")
         .send({ fileId: 999, status: "ready" });
 
       expect(res.status).toBe(404);
@@ -714,7 +714,7 @@ describe("Remote Uploads & File Management Routes", () => {
             ...mockRemoteProvider,
             getDownloadUrl: vi.fn(async (key) => `https://cdn.example.com/${key}`),
           },
-          webhookSecret: "secret-key-123",
+          webhookSecret: "test-webhook-secret-123",
           findMessageFileById: (id) => (String(id) === fileUuid ? fileRecord : null),
           listMessageFilesByMessageIds: () => [fileRecord],
           adminGetRow: (sql) => {
@@ -732,7 +732,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
       const res = await request(customApp.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-ouj-chat-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "test-webhook-secret-123")
         .send({
           fileId: fileUuid,
           status: "ready",
@@ -784,7 +784,7 @@ describe("Remote Uploads & File Management Routes", () => {
       const customApp = makeApp({
         deps: {
           storageProvider: mockRemoteProvider,
-          webhookSecret: "secret-key-123",
+          webhookSecret: "test-webhook-secret-123",
           findMessageFileById: (id) => (String(id) === fileUuid ? fileRecord : null),
           adminGetRow: (sql) => {
             if (sql.includes("chat_messages")) return { chat_id: chatUuid };
@@ -802,7 +802,7 @@ describe("Remote Uploads & File Management Routes", () => {
 
       const res = await request(customApp.app)
         .post("/api/uploads/webhook/processed")
-        .set("x-ouj-chat-webhook-secret", "secret-key-123")
+        .set("x-ouj-chat-webhook-secret", "test-webhook-secret-123")
         .send({
           fileId: fileUuid,
           status: "ready",

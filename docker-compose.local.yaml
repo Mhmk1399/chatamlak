@@ -1,0 +1,200 @@
+name: ouj-chat-local
+
+services:
+  mongo-keyfile-init:
+    image: alpine:3.22
+    restart: "no"
+    environment:
+      MONGO_REPLICA_SET_KEY: ${MONGO_REPLICA_SET_KEY:?Set a synthetic local replica-set key of at least 32 characters}
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        rm -f /keyfile/keyfile
+        printf '%s' "$${MONGO_REPLICA_SET_KEY}" | base64 | tr -d '\n' > /keyfile/keyfile
+        chmod 400 /keyfile/keyfile
+        chown 999:999 /keyfile/keyfile
+    volumes:
+      - mongo-keyfile:/keyfile
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+
+  mongo:
+    image: ${MONGO_IMAGE:-mongo:8.2.7}
+    restart: unless-stopped
+    command: ["mongod", "--replSet", "ouj-rs", "--bind_ip_all", "--auth", "--keyFile", "/keyfile/keyfile"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?Set a synthetic local root username}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?Set a synthetic local root password}
+    volumes:
+      - mongo-data:/data/db
+      - mongo-keyfile:/keyfile:ro
+    expose:
+      - "27017"
+    depends_on:
+      mongo-keyfile-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --username \"$$MONGO_INITDB_ROOT_USERNAME\" --password \"$$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    mem_limit: 1536m
+    cpus: 1.25
+    pids_limit: 256
+    networks: [ouj-platform-internal]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+
+  mongo-rs-init:
+    image: ${MONGO_IMAGE:-mongo:8.2.7}
+    restart: "no"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?Set a synthetic local root username}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?Set a synthetic local root password}
+      MONGO_CHAT_USER: ${MONGO_CHAT_USER:?Set a synthetic local Chat database username}
+      MONGO_CHAT_PASSWORD: ${MONGO_CHAT_PASSWORD:?Set a synthetic local Chat database password}
+    volumes:
+      - ./scripts/local-mongo-init.sh:/usr/local/bin/local-mongo-init.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/local-mongo-init.sh"]
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks: [ouj-platform-internal]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  volume-init:
+    image: alpine:3.22
+    restart: "no"
+    command: ["/bin/sh", "-ec", "mkdir -p /app/data/uploads /app/data/backups && chown -R 1000:1000 /app/data"]
+    volumes:
+      - chat-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+
+  chat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APP_ENV: development
+      SERVER_PORT: 5174
+      BIND_ADDRESS: 0.0.0.0
+      DB_CLIENT: mongodb
+      MONGODB_DATABASE: ouj_chat
+      MONGODB_URI: mongodb://${MONGO_CHAT_USER:?Set MONGO_CHAT_USER}:${MONGO_CHAT_PASSWORD:?Set MONGO_CHAT_PASSWORD}@mongo:27017/ouj_chat?authSource=ouj_chat&replicaSet=ouj-rs
+      MONGODB_MAX_POOL_SIZE: 10
+      START_LOCAL_WORKER: "false"
+      STORAGE_PROCESSING_MODE: remote
+      WORKER_URL: http://media-worker:8080
+      WEBHOOK_URL: http://chat:5174/api/uploads/webhook/processed
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?Set a synthetic local worker secret}
+      WORKER_REQUIRE_SIGNED_REQUESTS: "true"
+      OWJ_SUPPORT_ENABLED: ${OWJ_SUPPORT_ENABLED:-false}
+      OWJ_WEB_ISSUER: ${OWJ_WEB_ISSUER:-}
+      OWJ_WEB_JWKS_URL: ${OWJ_WEB_JWKS_URL:-}
+      OWJ_WEB_STATUS_URL: ${OWJ_WEB_STATUS_URL:-}
+      OWJ_WEB_TO_CHAT_SERVICE_SECRET: ${OWJ_WEB_TO_CHAT_SERVICE_SECRET:-}
+      OWJ_CHAT_TO_WEB_SERVICE_TOKEN: ${OWJ_CHAT_TO_WEB_SERVICE_TOKEN:-}
+      OWJ_SUPPORT_ALLOWED_ORIGINS: ${OWJ_SUPPORT_ALLOWED_ORIGINS:-}
+      OWJ_WEB_ALLOW_INSECURE_HTTP: ${OWJ_WEB_ALLOW_INSECURE_HTTP:-true}
+      DATA_DIR: /app/data
+    volumes:
+      - chat-data:/app/data
+    expose:
+      - "5174"
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
+      volume-init:
+        condition: service_completed_successfully
+      media-worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5174/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 400m
+    cpus: 0.75
+    pids_limit: 256
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    networks: [ouj-platform-internal]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  media-worker:
+    build:
+      context: .
+      dockerfile: worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      WORKER_PORT: 8080
+      WORKER_CONCURRENCY: 1
+      WORKER_MAX_QUEUE_DEPTH: 16
+      WORKER_REQUIRE_SIGNED_REQUESTS: "true"
+      WORKER_ALLOW_LOOPBACK_URLS: "false"
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?Set a synthetic local worker secret}
+      STORAGE_DRIVER: local
+      DATA_DIR: /app/data
+      WORKER_ALLOWED_URL_ORIGINS: http://chat:5174
+    volumes:
+      - chat-data:/app/data
+    expose:
+      - "8080"
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    mem_limit: 600m
+    cpus: 1.0
+    pids_limit: 256
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    networks: [ouj-platform-internal]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  ouj-platform-internal:
+    name: ouj-platform-internal
+    internal: true
+
+volumes:
+  chat-data:
+  mongo-data:
+  mongo-keyfile:

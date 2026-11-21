@@ -1,140 +1,179 @@
-# پروتکل realtime بومی Owj Chat نسخه ۱
+# پروتکل بلادرنگ Owj Chat نسخه ۱
 
-وضعیت: قرارداد پایه HTTP/WebSocket خام/SSE مالک Chat **IMPLEMENTED TODAY — از قبل پیاده‌سازی‌شده** است و hardening پذیرش/session/media این اسپرینت در این سورس **IMPLEMENTED IN SPRINT — پیاده‌سازی‌شده در اسپرینت** است. این قرارداد هدف integration برای Owj Web است. **Owj Chat از Socket.IO استفاده نمی‌کند.** این سند اثبات deploy شدن سورس ممیزی‌شده نیست.
+وضعیت: Stack بلادرنگ بومی Chat و Stack بلادرنگ پشتیبانی Sprint 2 در این درخت منبع پیاده‌سازی شده‌اند. پشتیبانی تا زمانی که `OWJ_SUPPORT_ENABLED=true` نباشد غیرفعال می‌ماند. این سند قرارداد کد منبع است، نه مدرک یکپارچه‌سازی با Owj Web، اعتبارسنجی Reverse Proxy، اجرای Docker یا Deploy در Production.
 
-## نمای transport
+Owj Chat از WebSocket بومی و Server-Sent Events (SSE) استفاده می‌کند و Socket.IO را پیاده‌سازی **نمی‌کند**.
 
-```text
-Web/browser ── command احراز‌شده HTTP ───────> Chat
-            <─ پاسخ JSON command ─────────────
-            <─ JSON روی WebSocket خام (/ws) ─ live ترجیحی
-            <─ frameهای SSE (/api/events) ─── fallback live
-             ─ cursor replay HTTP ───────────> /api/messaging/sync
-```
+## خانواده‌های پروتکل
 
-HTTP مرجع mutation پیام و acknowledgement است. WebSocket/SSE transport اعلان هستند؛ دریافت event زنده تأیید persistence نیست. replay eventهای پشتیبانی‌شده از‌دست‌رفته را جبران می‌کند، ولی consumer پس از reconnect باید state مرجع chat/message را دوباره بگیرد.
+| مخاطب | WebSocket | SSE | API مربوط به Mutation/Replay | Credential |
+|---|---|---|---|---|
+| Client بومی Chat | `/ws` (نام مستعار `/api/ws`) | `/api/events` | مسیرهای موجود `/api/*` و `/api/messaging/sync` | Cookie نوع `sid` متعلق به Chat |
+| Widget/Staff پشتیبانی Owj Web | `/support/v1/ws` | `/support/v1/events` | مسیرهای `/support/v1/*` و `/internal/v1/support/*` | Cookie نوع `owj_support_sid` |
 
-## احراز هویت
+پاسخ‌های HTTP دستورها را تایید می‌کنند. Event زنده فقط یک اعلان است؛ Clientها باید برای ترمیم State پس از اتصال مجدد از قراردادهای HTTP/Replay استفاده کنند.
 
-- auth فعلی مرورگر cookie same-origin به نام `sid` است: HttpOnly، SameSite=Lax، `Path=/` و Secure روی production HTTPS.
-- upgrade WebSocket خام پیش از پذیرش با همان cookie احراز می‌شود. query parameter با نام `token` یا `sid` برای جلوگیری از نشت URL/log رد می‌شود. query قدیمی `username` ممکن است باشد، ولی مرجع هویت نیست.
-- SSE با `GET /api/events?username=<name>` و credentials فراخوانی می‌شود و username باید با session برابر باشد.
-- HTTP از cookie استفاده می‌کند (`credentials: "include"` در client Chat) و membership/role resource را دوباره بررسی می‌کند.
-- logout یا لغو session دستگاه، WebSocket خام و stream SSE همان session را می‌بندد. ban، reset password یا حذف حساب توسط ادمین همه streamهای WebSocket خام و SSE مربوط به username آسیب‌دیده Chat را می‌بندد.
-- credential مهمان/platform هنوز به این routeها متصل نیست. Web نباید capability آینده را در URL قرار دهد.
+## پذیرش اتصال بلادرنگ پشتیبانی
 
-## WebSocket خام
+هر دو Transport پشتیبانی به تمام موارد زیر نیاز دارند:
 
-endpoint: upgrade روی `/ws` (اصلی) یا `/api/ws` (alias). زیر HTTPS از `wss:` استفاده شود.
+- Cookie معتبر `owj_support_sid` که قرارداد Bootstrap صادر کرده است؛
+- نشستی که Action نوع `events` را دارد؛
+- مقدار `Origin` درخواست که دقیقاً با یکی از Originهای `OWJ_SUPPORT_ALLOWED_ORIGINS` مطابقت دارد (یا وقتی فهرست صریح وجود ندارد، `APP_PUBLIC_URL`)؛
+- ادامه مجوز دسترسی به همان گفتگو.
 
-کنترل admission در سورس اسپرینت: origin مرورگر مجاز/same-host، timeout احراز، حداکثر payload، سقف اتصال هر IP، window نرخ پیام، heartbeat و قطع صریح session. deployment Nginx باید IP client قابل اعتماد را تنظیم کند تا همه کاربران به‌اشتباه IP کانتینر proxy شمرده نشوند.
+نبودن `Origin` رد می‌شود. پارامترهای Query وب‌سوکت با نام `token`، `sid` یا `supportSession` رد می‌شوند. Credential یا Secret مربوط به Replay را در URL نفرستید. تنها مقدار Query پشتیبانی‌شده SSE، `cursor` غیرمحرمانه Replay است.
 
-event server هرکدام یک object JSON در text frame است:
+نشست پشتیبانی به‌صورت دوره‌ای دوباره اعتبارسنجی می‌شود؛ پیش‌فرض هر ۱۵ ثانیه است (`SUPPORT_REALTIME_REVALIDATE_MS`). اتصال در زمان انقضای موثر نشست نیز بسته می‌شود. لغو، Logout، انقضا، شکست بررسی وضعیت حساب، تغییر پیوند هویت، شکست مجوز گفتگو یا Shutdown دسترسی زنده را پایان می‌دهد.
+
+## Envelope رویداد پشتیبانی
+
+رویدادهای پشتیبانی Objectهای JSON هستند. Notification زنده پیام تازه‌منتشرشده شکل نمونه زیر را دارد:
 
 ```json
 {
+  "version": 1,
   "type": "chat_message",
-  "chatId": "uuid",
-  "messageId": "uuid",
-  "userId": "uuid",
-  "username": "name",
-  "body": "message text"
+  "conversationId": "conversation-uuid",
+  "chatId": "conversation-uuid",
+  "messageId": "message-uuid",
+  "userId": "chat-user-uuid",
+  "actorKind": "customer",
+  "cursor": "message-uuid",
+  "eventId": "message:message-uuid",
+  "occurredAt": "2026-11-21T09:00:00.000Z"
 }
 ```
 
-نوع‌های رایج مصرف‌شده در client:
+فیلدهای مشترک:
 
-- `chat_message`، `chat_message_updated`، `chat_message_deleted`؛
-- `chat_read`، `chat_typing`، `chat_list_changed`، `chat_updated`، `chat_deleted`؛
-- `presence_update`، `profile_updated`، `chat_appearance_updated`؛
-- `chat_tools_updated`، `remote_channel_queue`، `video:ready`؛
-- `group_call_updated`، `group_call_signal`، `call:*`؛
-- `session_revoked` و `error` پروتکل.
+| فیلد | قرارداد |
+|---|---|
+| `version` | در Eventهای زنده، Replayشده و تولیدشده توسط پروتکل Sprint 2 برابر `1` است. |
+| `type` | تفکیک‌کننده Event؛ Type ناشناخته را با ایمنی نادیده بگیرید. |
+| `conversationId` | مرز گفتگو برای مجوزدهی و Fan-out. |
+| `cursor` | موقعیت مات Replay با حداکثر ۲۵۶ کاراکتر؛ آن را دقیقاً ذخیره کنید و Parse نکنید. |
+| `eventId` | شناسه پایدار حذف تکرار، هرگاه موجود باشد. |
+| `occurredAt` | Timestamp نوع ISO در Eventهای زنده/Journal؛ Eventهای کنترل پروتکل ممکن است آن را نداشته باشند. |
 
-payload با نوع event فرق دارد؛ consumer فیلد/نوع ناشناخته را نادیده بگیرد و state را refetch کند. handshake اتاق/event مربوط به Socket.IO و acknowledgement ID تحویل WebSocket وجود ندارد.
+انواع Event پیاده‌سازی‌شده شامل موارد زیر هستند:
 
-پیام client به server در WebSocket محدود است. کنترل پروتکل `{ "type": "ping" }` پاسخ `{ "type": "pong", "timestamp": ... }` دارد؛ signaling WebRTC از action احراز‌شده `call_signal` با chat معتبر و membership سمت server استفاده می‌کند. ارسال پیام عادی HTTP است.
+- `chat_message`؛
+- `support_request_created` و `support_queue_updated`؛
+- `support_assigned`، `support_resolved` و `support_closed`؛
+- Eventهای پروتکل `connected`، `replay_complete`، `session_revoked`، `error` و `pong`.
 
-payload بزرگ با code 1009 بسته می‌شود. نقض auth/rate با policy code 1008 بسته یا upgrade HTTP رد می‌شود. JSON نامعتبر `{ "type": "error", "error": "Invalid WebSocket payload." }` می‌گیرد.
+Cursor/شناسه Event پیام پایدارند (`<messageId>` و `message:<messageId>`). Replay پایدار پیام از Journal رویداد Chat در MongoDB می‌آید. نرمال‌سازی Replay به ردیف‌های قدیمی Journal مقادیر `version:1`، `conversationId`، `chatId`، `cursor`/`eventId` پایدار، `occurredAt` و `sequence` عددی را اضافه می‌کند. برای پیامی که هنوز وجود دارد، نویسنده ذخیره‌شده نیز بارگذاری می‌شود و `userId`/`actorKind` با توجه به گفتگوی پشتیبانی به‌دست می‌آید. خواندن پیام از HTTP، به‌ویژه اگر پیام زیرین حذف شده باشد، همچنان مرجع Body، طبقه‌بندی نویسنده، Timestampها و فایل‌ها است.
 
-## fallback با SSE
+سایر Eventهای زنده پشتیبانی از Cursor درون‌پردازه‌ای `sr_*` استفاده می‌کنند، مگر Caller یک Cursor معتبر بدهد. Fan-out صندوق Staff فقط در حافظه است؛ پس از Restart پردازه، Staff باید فهرست مرجع HTTP را دوباره Fetch کند.
 
-endpoint: `GET /api/events?username=<authenticated username>` همراه cookie.
+## SSE پشتیبانی
 
-پاسخ `text/event-stream` با `Cache-Control: no-cache, no-transform` و `X-Accel-Buffering: no` است. frame اول:
+باز کردن اتصال:
 
-```text
-data: {"type":"connected"}
-
+```http
+GET /support/v1/events
+Cookie: owj_support_sid=...
+Origin: https://web.example
+Last-Event-ID: <opaque cursor>   # optional
 ```
 
-هر event برابر `data: <JSON>\n\n` و heartbeat comment حدود هر ۲۵ ثانیه `: ping` است. SSE همان خانواده payload JSON WebSocket را دارد. فقط server-to-client است و commandها HTTP می‌مانند. client پس از قطع با exponential backoff محدود و jitter وصل می‌شود.
+به‌جای آن می‌توان از `?cursor=<opaque cursor>` استفاده کرد. اگر هر دو موجود باشند، `Last-Event-ID` اولویت دارد. پاسخ شامل موارد زیر است:
 
-fan-out Chat اعضای فعلی را resolve می‌کند. event تغییر membership کش کوتاه‌مدت را invalidate می‌کند تا عضو حذف‌شده event محافظت‌شده بعدی را نگیرد.
+```text
+Content-Type: text/event-stream; charset=utf-8
+Cache-Control: private, no-store, no-transform
+X-Accel-Buffering: no
+```
 
-هر پاسخ SSE در حافظه به شناسه مشتق‌شده از digest مربوط به `sid` بازکننده متصل است. logout/لغو device فقط stream همان session را می‌بندد؛ ban/reset-password/delete کل حساب همه streamهای آن username را می‌بندد. token خام به‌عنوان شناسه نگه‌داری نمی‌شود. WebSocket یا SSE از قبل باز صرفاً با رسیدن زمان انقضای idle/absolute هنوز دوره‌ای بازاعتبارسنجی نمی‌شود؛ بنابراین تنظیم timeout تولید و این پیگیری دفاعی بخشی از rollout باقی می‌ماند.
+هر Event فیلدهای `id`، `event` و `data` نوع JSON دارد. Heartbeat از نوع Comment با مقدار `: ping` هر ۲۵ ثانیه ارسال می‌شود. Server پیش از بارگذاری Replay، Subscribe می‌کند؛ Eventهای زنده را هنگام Replay با حد مشخص Buffer می‌کند و شناسه‌های Event/Cursor تکراری را حذف می‌کند. Replay به ۲۰۰ Event محدود است.
 
-## قرارداد اصلی HTTP پیام
+پس از Replay، SSE رویداد `connected` را با `cursor`، `hasMore` و `gap` ارسال می‌کند. اگر `hasMore` مقدار true دارد، با Cursor بازگشتی دوباره متصل شوید (یا به Replay وب‌سوکت بروید) تا Backlog پایدار مصرف شود و هر Redelivery را Deduplicate کنید. اگر `gap` مقدار true دارد، پیش از سالم تلقی‌کردن Stream، State مرجع HTTP را دوباره Fetch کنید.
 
-تمام عملیات خصوصی session و membership فعلی لازم دارند. UI بومی فعلی برای سازگاری قدیمی username نیز می‌فرستد؛ server آن را با session برابر می‌کند و به آن اعتماد مستقل ندارد.
+هنگام لغو، Server تلاش می‌کند `session_revoked` را ارسال کند و سپس Stream را می‌بندد. مرورگر ممکن است خودکار دوباره متصل شود؛ Widget باید در خطاهای نهایی هویت/مجوز، Retry را متوقف کند و Bootstrap تازه‌ای از طریق Web بگیرد.
 
-| کاربرد | endpoint | رفتار اصلی درخواست/پاسخ |
-|---|---|---|
-| فهرست پیام | `GET /api/messages?chatId=&username=&beforeId=&beforeCreatedAt=&afterId=&afterCreatedAt=&limit=` | window/cursor محدود؛ پاسخ `{ chatId, messages, hasMore }`. |
-| ارسال پیام | `POST /api/messages` | route متن JSON؛ شناسه/result پیام persist‌شده را برمی‌گرداند. برای idempotence از `clientRequestId` استفاده شود. |
-| ارسال فایل | `POST /api/messages/upload` | multipart/descriptor امضاشده؛ مالکیت و membership بررسی می‌شود. |
-| edit/delete/forward | `POST /api/messages/edit`، `/delete`، `/forward` | پاسخ HTTP acknowledgement است؛ event realtime viewer را به refresh هدایت می‌کند. |
-| typing | `POST /api/messages/typing` | موقت و خارج replay ماندگار. |
-| خواندن همه قابل مشاهده | `POST /api/messages/read` | body شامل `chatId` و username برابر session؛ `chat_read` منتشر می‌کند. |
-| خواندن یکی | `POST /api/messages/read-one` | تعلق `messageId` به `chatId` را نیز بررسی و `chat_read` منتشر می‌کند. |
-| تعداد خواندن | `POST /api/messages/read-counts` | membership و ID محدود را بررسی می‌کند. |
-| اولین خوانده‌نشده | `GET /api/messages/first-unread` | anchor محدود به membership. |
+## WebSocket پشتیبانی
 
-API ابزار گسترده زیر `/api/messaging` است: preference، search، reaction، pin، scheduled message، poll، topic، policy/role گروه، call state، media list، device، changes و replay. هر route actor را از session می‌گیرد.
+یک Upgrade بومی `wss:` به `/support/v1/ws` باز کنید. درخواست عادی HTTP GET پاسخ `426 SUPPORT_WEBSOCKET_UPGRADE_REQUIRED` می‌گیرد.
 
-## reconnect و replay
+محدودیت‌های پیش‌فرض پذیرش و Lifecycle:
 
-`GET /api/messaging/sync?after=<non-negative integer>` احراز هویت می‌خواهد و حداکثر ۲۰۰ journal entry محدود به membership را به ترتیب sequence می‌دهد:
+| کنترل | پیش‌فرض |
+|---|---:|
+| حداکثر Frame | 16 KiB |
+| اتصال برای هر IP کلاینت | ۲۰ (`SUPPORT_WS_MAX_CONNECTIONS_PER_IP`) |
+| اتصال برای هر نشست پشتیبانی در Subscriptionهای Hub مربوط به SSE/WS | ۴ (`SUPPORT_MAX_CONNECTIONS_PER_SESSION`) |
+| مهلت احراز هویت | ۵ ثانیه |
+| فاصله Ping سرور | ۳۰ ثانیه |
+| مهلت Pong | ۱۰ ثانیه |
+| اعتبارسنجی مجدد نشست | ۱۵ ثانیه |
+| صفحه Replay | ۲۰۰ Event |
+
+پیش از اعتماد به `X-Forwarded-For`، مقدار `WS_TRUST_PROXY` باید با Topology کنترل‌شده Proxy مطابقت داشته باشد. پیکربندی نادرست Proxy می‌تواند همه کاربران را یک IP تلقی کند یا آدرس‌های ارسال‌شده توسط Caller را بپذیرد.
+
+Frame کنترلی Client:
+
+```json
+{ "type": "ping" }
+```
+
+پاسخ `pong` می‌دهد. برای Replay:
+
+```json
+{ "type": "resume", "cursor": "opaque-cursor-or-empty-string" }
+```
+
+Server رویدادهای Replayشده و سپس پاسخ زیر را می‌فرستد:
 
 ```json
 {
-  "events": [
-    { "type": "chat_message_updated", "chatId": "uuid", "messageId": "uuid", "sequence": 42 }
-  ],
-  "cursor": 42,
-  "hasMore": false
+  "version": 1,
+  "type": "replay_complete",
+  "conversationId": "conversation-uuid",
+  "cursor": "latest-opaque-cursor",
+  "hasMore": false,
+  "gap": false
 }
 ```
 
-تا وقتی `hasMore` درست است ادامه و cursor برای هر حساب ذخیره شود. client بومی حدود هر ۱۵ ثانیه و در رخداد online/visibility poll می‌کند. replay hint برای invalidation است؛ برای محتوای مرجع `/api/chats`، `/api/messages` یا `/api/messaging/chats/:chatId/changes?ids=...` فراخوانی شود.
+اگر `hasMore` برابر True بود، `resume` دیگری با Cursor برگشتی ارسال کنید. اگر `gap` برابر True بود، پیش از ادامه State را از HTTP دوباره Fetch کنید. روی هر Socket فقط یک Replay هم‌زمان اجرا می‌شود. کدهای خطا شامل `INVALID_PAYLOAD`، `INVALID_REPLAY_CURSOR`، `REPLAY_IN_PROGRESS`، `REPLAY_UNAVAILABLE` و `UNSUPPORTED_ACTION` هستند.
 
-`chat_typing` و `chat_read` عمداً journal نمی‌شوند. تضمین نشده تمام producerهای تاریخی event رکورد journal متصل به همان transaction داشته باشند؛ پس Web بعد از gap، reset cursor، ارتقای schema یا sequence مشکوک state را refresh کند.
+Frame بیش از حد بزرگ با کد WebSocket شماره 1009 بسته می‌شود. شکست Policy نشست با 1008 بسته می‌شود. شکست سقف اتصال ممکن است با 1013 بسته شود یا Upgrade با HTTP 429 رد گردد. ارسال `session_revoked` پیش از بستن Policy به‌صورت Best-Effort است و نباید تنها سیگنال لغو تلقی شود.
 
-## فایل و رسانه
+## مرز Replay و دوام پشتیبانی
 
-پاسخ پیام URL محافظت‌شده می‌دهد:
+`chat_message` از مسیر موجود تراکنشی/Idempotent پیام در Chat ایجاد می‌شود. Mutation پیام و Hint مربوط به Journal آن با هم نوشته می‌شوند؛ انتشار زنده غنی‌تر عمداً آن را بار دوم در Journal نمی‌نویسد. Replay پشتیبانی Journal را با Filterهای گفتگو و قابلیت مشاهده Viewer می‌خواند و نرمال می‌کند. Read مرجع پیام روی HTTP، Body، طبقه‌بندی Author، Timestampها و Fileها را تامین می‌کند.
 
-- `GET /api/uploads/file/:fileId`: فایل ← پیام ← chat؛ مجوز membership فعلی یا visibility صریح کانال عمومی؛ stream/decrypt یا redirect کوتاه‌عمر object store.
-- `GET /api/uploads/thumbs/:fileId`: همان مجوز برای thumbnail.
-- `GET /api/uploads/messages/:storedName`: همان مجوز، range محلی یا redirect remote پس از احراز.
+Replay هم Sequence عددی Journal و هم شناسه پایدار Message/Event را می‌پذیرد. نتایج صعودی و محدودند و شامل `hasMore` و `gap` هستند. Consumer باید ابتدا با `eventId` و در صورت نبود آن با `cursor` تکرار را حذف کند و Redelivery را تحمل کند.
 
-پاسخ خصوصی `Cache-Control: private, no-store` و رسانه کانال صریحاً عمومی می‌تواند cache عمومی باشد. route avatar دارایی profile عمومی جداست و مجوز attachment پیام نیست.
+همه سیگنال‌های Assignment، Resolution، به‌روزرسانی Queue، اتصال، Presence و Heartbeat رویدادهای پایدار نیستند. ترتیب مرجع بازیابی:
 
-جریان presign:
+1. با آخرین Cursor ذخیره‌شده دوباره متصل شوید؛
+2. همه صفحات Replay را مصرف کنید؛
+3. اگر `gap` برابر True بود یا State مشکوک بود، گفتگو/پیام‌ها/Queue عامل را از HTTP دوباره Fetch کنید؛
+4. Cursor جدید را فقط پس از اعمال State متناظر ذخیره کنید.
 
-1. `POST /api/uploads/presign` با `chatId` متصل به actor، purpose و `messageId` هدف یا `clientRequestId` پیام آینده.
-2. مرورگر byte را به URL provider می‌فرستد.
-3. انتشار پیام descriptor معلق را مصرف می‌کند یا `POST /api/uploads/complete` upload پیام موجود را کامل می‌کند. completion مقدار `upload_completed_at` را ثبت می‌کند، persistence و پذیرش صف را await می‌کند، claim معلق را هنگام overload نگه می‌دارد، در موفقیت مصرف می‌کند و retry با بررسی مالکیت را idempotent می‌داند.
-4. callback پردازش `POST /api/uploads/webhook/processed` داخلی است و بدون secret fail closed می‌شود.
-5. `chat_message_updated`/`video:ready` client را به refetch هدایت می‌کند و URL محافظت‌شده فایل ثابت می‌ماند.
+## بلادرنگ Chat بومی
 
-storage key، user ID یا MIME ارسالی مرورگر هرگز proof مالکیت نیست.
+رابط کاربری اصلی Chat روی پروتکل جداگانه احرازشده با `sid` باقی می‌ماند:
 
-## قواعد integration وب
+- Upgrade خام WebSocket در `/ws` یا `/api/ws`؛
+- SSE در `/api/events?username=<authenticated username>`؛
+- Mutationهای HTTP و `/api/messaging/sync?after=<numeric sequence>` برای Replay محدود.
 
-- widget قدیمی Socket.IO وب با قرارداد HTTP/WebSocket خام/SSE تطبیق داده شود؛ Socket.IO به Chat افزوده نشود.
-- پیش از بازکردن realtime یک session Chat یا exchange غیر-URL تصویب‌شده برقرار شود.
-- `clientRequestId` و idempotency key در retry پس از timeout دوباره استفاده شود.
-- HTTP 401/403 شکست نهایی هویت/مجوز، 409 conflict state و 429/503 retry محدود با backoff است؛ reconnect با jitter باشد.
-- متن پیام خصوصی، cookie، bearer/capability token یا query URL امضاشده در log/telemetry قرار نگیرد.
-- پیش از rollout برای WS بومی و fallback SSE، replay، حذف membership، revocation session، مجوز file/range و سازگاری rolling-version contract test اجرا شود.
+Username موجود در Query داده سازگاری قدیمی است و باید با نشست احرازشده مطابقت داشته باشد؛ مرجع هویت نیست. WebSocket بومی پارامترهای Credential در Query را رد می‌کند. Eventهای فعلی پیام، عضویت، Presence، تماس، Media و Invalidation شکل موجود خود را حفظ می‌کنند و بخشی از قرارداد Envelope پشتیبانی نیستند.
+
+SSE و WebSocket بومی اکنون نشست‌های باز Chat را به‌صورت دوره‌ای دوباره اعتبارسنجی می‌کنند (پیش‌فرض ۶۰ ثانیه از طریق `SSE_SESSION_REVALIDATE_MS` و `WS_SESSION_REVALIDATE_MS`). Logout صریح/لغو Device نشست متناظر را قطع می‌کند؛ Ban سراسری حساب، Reset گذرواژه یا حذف حساب، تمام نشست‌های آن Username را قطع می‌کند.
+
+## رفتار Client و خطاها
+
+- وقتی WebSocket از Proxy مستقر عبور می‌کند آن را ترجیح دهید؛ SSE را به‌عنوان Fallback یک‌طرفه استفاده کنید. همه Writeها همچنان HTTP هستند.
+- با Backoff نمایی محدود و Jitter دوباره متصل شوید. پاسخ نهایی 401/403 را بی‌نهایت Retry نکنید.
+- 409 را تداخل State/Idempotency و 429/503 را Retry محدود با رعایت سلامت سرویس تلقی کنید.
+- هرگز Cookie، Assertion، Credential نوع Bearer/Service، متن پیام خصوصی یا Query مربوط به Presigned URL را Log نکنید.
+- برای سازگاری رو به جلو، Type و فیلدهای ناشناخته Event را نادیده بگیرید.
+- پس از Replay Gap، Restart سرور، Reset شدن Cursor، تغییر Schema/Version یا احتمال از دست رفتن State، دوباره Fetch کنید.
+
+## اعتبارسنجی‌های باقی‌مانده خارج از این Repository
+
+پیش از Rollout، هر دو Transport را از طریق Topology واقعی Web/Nginx تست کنید: Cookie Path و رفتار Secure، Origin سخت‌گیرانه، Upgrade وب‌سوکت، بافرینگ SSE، Timeoutهای Proxy، اعتماد به IP کلاینت، اتصال مجدد/Replay، غیرفعال‌شدن حساب، لغو Link، Logout، تغییر Assignment و سازگاری نسخه‌ها هنگام Rolling Deployment. هیچ‌یک از این بررسی‌های بین‌Repository/Deployment صرفاً با کد منبع Sprint 2 و تست‌های ایزوله اثبات نمی‌شوند.

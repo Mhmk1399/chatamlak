@@ -10,12 +10,18 @@ import { resolveThumbUrl } from "../lib/thumbUrl.js";
 import { readEnvBool } from "../settings/env.js";
 import { safeErrorCode } from "../lib/requestLogging.js";
 import {
+  createServiceReplayGuard,
+  verifyServiceAuth,
+} from "../../shared/serviceAuth.js";
+import {
   authorizeMessageFileAccess,
   getSessionActorId,
   setMessageMediaCacheHeaders,
 } from "../lib/messageMediaAccess.js";
 
 export function registerRemoteUploadRoutes(app, deps) {
+  const workerCallbackReplayGuard = deps.workerCallbackReplayGuard ||
+    createServiceReplayGuard({ maxEntries: 10_000 });
   const {
     storageProvider,
     mediaQueueManager,
@@ -805,19 +811,28 @@ export function registerRemoteUploadRoutes(app, deps) {
         .status(503)
         .json({ error: "Upload processing callback is not configured." });
     }
-    const headerSecret = String(
-      req.headers["x-ouj-chat-webhook-secret"] || "",
-    );
+    const requireSignedWorkerAuth = deps.requireSignedWorkerAuth !== undefined
+      ? deps.requireSignedWorkerAuth === true
+      : String(process.env.WORKER_REQUIRE_SIGNED_REQUESTS || "").toLowerCase() === "true";
+    const signedAuth = verifyServiceAuth({
+      headers: req.headers,
+      secret: expectedSecret,
+      method: req.method,
+      path: req.path,
+      replayGuard: workerCallbackReplayGuard,
+      maxSkewMs: Number(process.env.WORKER_AUTH_MAX_SKEW_MS) || 300_000,
+    });
+    const headerSecret = String(req.headers["x-ouj-chat-webhook-secret"] || "");
     const expectedBuffer = Buffer.from(String(expectedSecret));
     const providedBuffer = Buffer.from(headerSecret);
     const validSecret =
       expectedBuffer.length === providedBuffer.length &&
       crypto.timingSafeEqual(expectedBuffer, providedBuffer);
-    if (!validSecret) {
+    if (!signedAuth.ok && (requireSignedWorkerAuth || !validSecret)) {
       console.warn(JSON.stringify({
         service: "ouj-chat",
         event: "uploads.webhook_rejected",
-        errorCode: "invalid_webhook_secret",
+        errorCode: signedAuth.code || "invalid_webhook_secret",
       }));
       return res.status(401).json({ error: "Unauthorized webhook request." });
     }

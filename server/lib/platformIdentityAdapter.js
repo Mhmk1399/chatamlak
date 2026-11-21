@@ -48,12 +48,10 @@ function normalizeExpiry(value) {
 }
 
 /**
- * Prepare Chat for a future Web-owned identity verifier without defining a JWT,
- * signing-key, token-exchange, or transport protocol in this repository.
- *
- * verifyCredential must be injected by the approved Web identity integration and
- * return normalized, already-verified claims. This adapter then enforces Chat's
- * audience/scope/status/link boundary.
+ * Chat-side claim/link boundary for an injected Web assertion verifier. Sprint
+ * 2 supplies an RS256/JWKS verifier separately; keeping it injected makes key
+ * retrieval and claim verification independently testable. This adapter then
+ * enforces Chat's audience, route policy, current link, and local-account rules.
  */
 export function createPlatformIdentityAdapter({
   enabled = false,
@@ -68,6 +66,8 @@ export function createPlatformIdentityAdapter({
   async function authenticate({
     credential,
     requiredScopes = [],
+    allowedScopes,
+    allowedTokenUses,
     allowGuest = false,
   } = {}) {
     if (!enabled) {
@@ -100,9 +100,19 @@ export function createPlatformIdentityAdapter({
       );
     }
 
+    const tokenUsePolicy = Array.isArray(allowedTokenUses)
+      ? normalizeStringList(allowedTokenUses, {
+        code: "IDENTITY_TOKEN_USE_INVALID",
+        message: "Allowed identity credential types are invalid.",
+      })
+      : ["support_registered", ...(allowGuest ? ["support_guest"] : [])];
     let claims;
     try {
-      claims = await verifyCredential(credential);
+      claims = await verifyCredential(credential, {
+        requiredScopes,
+        allowedScopes,
+        allowedTokenUses: tokenUsePolicy,
+      });
     } catch (error) {
       if (error instanceof PlatformIdentityError) throw error;
       fail(
@@ -176,6 +186,56 @@ export function createPlatformIdentityAdapter({
       );
     }
 
+    const tokenUse = claims.tokenUse || claims.token_use || null;
+    const expectedTokenUse = {
+      guest: "support_guest",
+      registered: "support_registered",
+      agent: "support_agent",
+    }[claims.kind];
+    if (tokenUse && tokenUse !== expectedTokenUse) {
+      fail(
+        "IDENTITY_TOKEN_USE_INVALID",
+        "The platform identity credential type is invalid.",
+        403,
+      );
+    }
+    if (tokenUse && !tokenUsePolicy.includes(tokenUse)) {
+      fail(
+        "IDENTITY_TOKEN_USE_INVALID",
+        "The platform identity credential type is not allowed for this operation.",
+        403,
+      );
+    }
+    let assertionMetadata = {};
+    if (tokenUse) {
+      const jti = requiredString(
+        claims.jti,
+        "IDENTITY_JTI_INVALID",
+        "The platform identity assertion ID is invalid.",
+        128,
+      );
+      const issuedAt = normalizeExpiry(claims.issuedAt);
+      if (!Number.isFinite(issuedAt) || issuedAt > expiresAt) {
+        fail(
+          "IDENTITY_ISSUED_AT_INVALID",
+          "The platform identity issue time is invalid.",
+          401,
+        );
+      }
+      assertionMetadata = {
+        tokenUse,
+        jti,
+        keyId: requiredString(
+          claims.keyId,
+          "IDENTITY_KEY_INVALID",
+          "The platform identity signing key is invalid.",
+          128,
+        ),
+        issuedAt,
+        expiresAt,
+      };
+    }
+
     if (claims.kind === "guest") {
       if (!allowGuest) {
         fail(
@@ -195,10 +255,11 @@ export function createPlatformIdentityAdapter({
         guestSubject: subject,
         scopes,
         conversationIds,
+        ...assertionMetadata,
       };
     }
 
-    if (claims.kind !== "registered") {
+    if (claims.kind !== "registered" && claims.kind !== "agent") {
       fail(
         "IDENTITY_KIND_INVALID",
         "The platform identity kind is invalid.",
@@ -259,12 +320,13 @@ export function createPlatformIdentityAdapter({
       );
     }
     return {
-      kind: "registered",
+      kind: claims.kind,
       provider: identityProvider.trim(),
       webUserId: subject,
       chatUserId,
       scopes,
       chatUser,
+      ...assertionMetadata,
     };
   }
 

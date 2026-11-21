@@ -9,6 +9,8 @@ import { createMessagingRepository } from "./mongoMessaging.js";
 import { createDocumentExecutor } from "./query.js";
 import { createMongoMaintenance } from "./mongoMaintenance.js";
 import { createAppearanceRepository } from "./mongoAppearance.js";
+import { createSupportRepository } from "./mongoSupport.js";
+import { createPlatformIdentityRepository } from "./platformIdentityRepository.js";
 import {
   isStoredSessionToken,
   sessionDeviceId,
@@ -197,9 +199,17 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     async createOrReuseMessage(chatId, userId, body, reply = null, expires = null, requestId = null, options = {}) {
       const key = String(requestId || "").trim() || null;
       const existing = await R.findMessageIdByClientRequestId(chatId, userId, key);
-      if (existing) return { id: existing, deduped: true };
+      const reuse = async (id) => {
+        const stored = await R.findMessageById(id);
+        return {
+          id,
+          deduped: true,
+          conflict: Boolean(stored && String(stored.body) !== String(body)),
+        };
+      };
+      if (existing) return reuse(existing);
       try { return { id: await R.createMessage(chatId, userId, body, reply, expires, key, options), deduped: false }; }
-      catch (error) { if (error.code !== 11000 || !key) throw error; const id = await R.findMessageIdByClientRequestId(chatId, userId, key); if (!id) throw error; return { id, deduped: true }; }
+      catch (error) { if (error.code !== 11000 || !key) throw error; const id = await R.findMessageIdByClientRequestId(chatId, userId, key); if (!id) throw error; return reuse(id); }
     },
     async findMessageById(id) { return decrypt(await s.one("chat_messages", { id })); },
     setMessageExpiresAt: (id, expiresAt = null) => s.update("chat_messages", { id }, { expires_at: time(expiresAt) }),
@@ -441,6 +451,8 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
   Object.assign(R, createRemoteRepository(s, R));
   Object.assign(R, createAdminRepository(s, R));
   R.messagingDb = createMessagingRepository(s, R, encryption, visibleFilter);
+  Object.assign(R, createPlatformIdentityRepository(s));
+  R.supportDb = createSupportRepository(s, R);
   Object.assign(R, createMongoMaintenance(s));
   Object.assign(R, createAppearanceRepository(s));
   return R;

@@ -1,7 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import http from "node:http";
 import request from "supertest";
-import { createWorkerServer, processMirrorJob } from "../index.js";
+import { createWorkerServer as createWorkerServerImpl, processMirrorJob } from "../index.js";
+
+const createWorkerServer = (options = {}) =>
+  createWorkerServerImpl({
+    requireSignedRequests: false,
+    allowLoopbackUrls: true,
+    ...options,
+  });
 
 function startCaptureServer({ bytes, failPut = false }) {
   let uploaded = null;
@@ -108,7 +115,7 @@ describe("mirror-media endpoint", () => {
         probeVideo: false,
         uploadUrl: `http://127.0.0.1:${cap.port}/upload`,
         callbackUrl: `http://127.0.0.1:${cap.port}/callback`,
-        webhookSecret: "test-secret",
+        webhookSecret: "test-worker-secret-123",
       });
       expect(cap.getUploaded()?.equals(bytes)).toBe(true);
       const cb = cap.getCallback();
@@ -135,7 +142,7 @@ describe("mirror-media endpoint", () => {
         probeVideo: false,
         uploadUrl: `http://127.0.0.1:${cap.port}/upload`,
         callbackUrl: `http://127.0.0.1:${cap.port}/callback`,
-        webhookSecret: "test-secret",
+        webhookSecret: "test-worker-secret-123",
       });
       const cb = cap.getCallback();
       expect(cb?.jobId).toBe("job-3");
@@ -159,7 +166,7 @@ describe("mirror-media endpoint", () => {
         probeVideo: false,
         uploadUrl: `http://127.0.0.1:${cap.port}/upload`,
         callbackUrl: `http://127.0.0.1:${cap.port}/callback`,
-        webhookSecret: "test-secret",
+        webhookSecret: "test-worker-secret-123",
       });
       expect(cap.getUploaded()).toBeNull();
       expect(cap.getCallback()?.status).toBe("failed");

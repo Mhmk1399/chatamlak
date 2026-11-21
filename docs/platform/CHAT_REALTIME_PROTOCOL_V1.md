@@ -1,140 +1,179 @@
-# Owj Chat native realtime protocol v1
+# Owj Chat realtime protocol v1
 
-Status: the base Chat-owned HTTP/raw-WebSocket/SSE protocol is **IMPLEMENTED TODAY**; the admission/session/media hardening described as sprint work is **IMPLEMENTED IN SPRINT** in this source tree. It is the integration target for Owj Web. **Owj Chat does not implement Socket.IO.** This is not evidence that the audited source is deployed.
+Status: the native Chat realtime stack and the Sprint 2 support realtime stack are implemented in this source tree. Support remains disabled unless `OWJ_SUPPORT_ENABLED=true`. This document is a source contract, not evidence of an Owj Web integration, reverse-proxy validation, Docker run, or production deployment.
 
-## Transport overview
+Owj Chat uses native WebSocket and Server-Sent Events (SSE). It does **not** implement Socket.IO.
 
-```text
-Web/browser ── authenticated HTTP commands ──> Chat
-            <─ JSON command responses ────────
-            <─ raw WebSocket JSON (/ws) ───── preferred live events
-            <─ SSE data frames (/api/events)  fallback live events
-             ─ HTTP replay cursor ───────────> /api/messaging/sync
-```
+## Protocol families
 
-HTTP is authoritative for message mutations and acknowledgements. WebSocket/SSE are notification transports; receiving a live event is not a persistence acknowledgement. Replay repairs supported missed events, but consumers must refetch authoritative chat/message state after reconnect.
+| Audience | WebSocket | SSE | Mutation/replay API | Credential |
+|---|---|---|---|---|
+| Native Chat client | `/ws` (`/api/ws` alias) | `/api/events` | Existing `/api/*` and `/api/messaging/sync` | Chat `sid` cookie |
+| Owj Web support widget/staff | `/support/v1/ws` | `/support/v1/events` | `/support/v1/*` and `/internal/v1/support/*` | `owj_support_sid` cookie |
 
-## Authentication
+HTTP responses acknowledge commands. A live event is only a notification; clients must use the HTTP/replay contracts to repair state after reconnects.
 
-- Current browser auth is the same-origin `sid` cookie: HttpOnly, SameSite=Lax, `Path=/`, and Secure on production HTTPS.
-- Raw WebSocket upgrades authenticate before acceptance using that cookie. Query parameters named `token` or `sid` are rejected to prevent URL/log leakage. A legacy `username` query may be present, but it is not identity authority.
-- SSE calls `GET /api/events?username=<name>` with credentials; the query username must match the authenticated session.
-- HTTP calls use cookies (`credentials: "include"` in the Chat client) and recheck membership/role for the requested resource.
-- Logout or device-session revocation closes the matching raw WebSocket and SSE stream. Admin ban, password reset, or account deletion closes every raw WebSocket and SSE stream for the affected Chat username.
-- Platform/guest credentials are not yet wired into these routes. Web must not place a future capability in a URL.
+## Support realtime admission
 
-## Raw WebSocket
+Both support transports require all of the following:
 
-Endpoints: `GET` upgrade on `/ws` (primary) or `/api/ws` (alias). Use `wss:` under HTTPS.
+- a valid `owj_support_sid` cookie issued by the bootstrap contract;
+- a session with the `events` action;
+- a request `Origin` that exactly matches an origin in `OWJ_SUPPORT_ALLOWED_ORIGINS` (or `APP_PUBLIC_URL` when the explicit list is absent);
+- continuing authorization to the same conversation.
 
-Admission controls in the sprint source include allowed browser origin/same-host validation, authentication timeout, maximum payload bytes, per-IP connection ceiling, message-rate window, heartbeat, and explicit session disconnect. Nginx deployments must configure trusted client-IP behavior so a per-IP ceiling does not accidentally treat every user as the proxy container.
+Missing `Origin` is denied. WebSocket query parameters named `token`, `sid`, or `supportSession` are rejected. Do not send credentials or replay secrets in URLs. The only supported SSE query value is the non-secret replay `cursor`.
 
-Server events are one JSON object per text frame:
+The support session is periodically revalidated; the default is every 15 seconds (`SUPPORT_REALTIME_REVALIDATE_MS`). It is also closed at the session's effective expiry. Revocation, logout, expiration, account-status failure, identity-link change, conversation-authorization failure, or shutdown terminates live access.
+
+## Support event envelope
+
+Support events are JSON objects. A newly published live message notification has this shape:
 
 ```json
 {
+  "version": 1,
   "type": "chat_message",
-  "chatId": "uuid",
-  "messageId": "uuid",
-  "userId": "uuid",
-  "username": "name",
-  "body": "message text"
+  "conversationId": "conversation-uuid",
+  "chatId": "conversation-uuid",
+  "messageId": "message-uuid",
+  "userId": "chat-user-uuid",
+  "actorKind": "customer",
+  "cursor": "message-uuid",
+  "eventId": "message:message-uuid",
+  "occurredAt": "2026-11-21T09:00:00.000Z"
 }
 ```
 
-Common `type` values consumed by the client include:
+Common fields are:
 
-- `chat_message`, `chat_message_updated`, `chat_message_deleted`;
-- `chat_read`, `chat_typing`, `chat_list_changed`, `chat_updated`, `chat_deleted`;
-- `presence_update`, `profile_updated`, `chat_appearance_updated`;
-- `chat_tools_updated`, `remote_channel_queue`, `video:ready`;
-- `group_call_updated`, `group_call_signal`, `call:*`;
-- `session_revoked` and protocol `error`.
+| Field | Contract |
+|---|---|
+| `version` | `1` on Sprint 2 live, replayed, and protocol-generated events. |
+| `type` | Event discriminator. Ignore unknown types safely. |
+| `conversationId` | Conversation boundary used for authorization and fan-out. |
+| `cursor` | Opaque replay position, at most 256 characters. Store it exactly; do not parse it. |
+| `eventId` | Stable deduplication identity when available. |
+| `occurredAt` | ISO timestamp on live/journal events; protocol-control events may omit it. |
 
-Payloads vary by event; consumers must ignore unknown fields/types and refetch state. There is no Socket.IO event name/room handshake and no WebSocket delivery acknowledgement ID.
+Implemented event types include:
 
-Client-to-server WebSocket messages are limited. Supported protocol control is `{ "type": "ping" }` → `{ "type": "pong", "timestamp": ... }`; WebRTC signaling uses an authenticated `call_signal` action with a valid chat and server-side membership checks. Ordinary message sending remains HTTP.
+- `chat_message`;
+- `support_request_created` and `support_queue_updated`;
+- `support_assigned`, `support_resolved`, and `support_closed`;
+- protocol events `connected`, `replay_complete`, `session_revoked`, `error`, and `pong`.
 
-Oversized payload closes with 1009. Authentication/rate violations close with policy code 1008 or reject the HTTP upgrade. Invalid JSON receives `{ "type": "error", "error": "Invalid WebSocket payload." }`.
+Message cursor/event IDs are stable (`<messageId>` and `message:<messageId>`). Durable message replay comes from the MongoDB chat event journal. Replay normalization adds `version:1`, `conversationId`, `chatId`, stable `cursor`/`eventId`, `occurredAt`, and numeric `sequence` to legacy journal rows. For a message that still exists, it also loads the stored author and derives `userId`/`actorKind` against the support conversation. HTTP message reads remain authoritative for body, author classification, timestamps, and files, especially if the underlying message was removed.
 
-## SSE fallback
+Other live support events use an in-process `sr_*` cursor unless a caller provides a valid cursor. The staff inbox fan-out is in-memory only; after a process restart staff must refetch the authoritative HTTP list.
 
-Endpoint: `GET /api/events?username=<authenticated username>` with cookies.
+## Support SSE
 
-Response is `text/event-stream`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no`. First frame:
+Open:
 
-```text
-data: {"type":"connected"}
-
+```http
+GET /support/v1/events
+Cookie: owj_support_sid=...
+Origin: https://web.example
+Last-Event-ID: <opaque cursor>   # optional
 ```
 
-Each event is `data: <JSON>\n\n`; a comment heartbeat `: ping` is written about every 25 seconds. SSE carries the same JSON payload family as WebSocket. It is server-to-client only, so all commands remain HTTP. On disconnect, the client reconnects with bounded exponential backoff and jitter.
+Alternatively use `?cursor=<opaque cursor>`. If both are present, `Last-Event-ID` wins. The response uses:
 
-Chat event fan-out resolves current members. Membership-changing events invalidate the short member cache so a removed member does not continue receiving later protected conversation events.
+```text
+Content-Type: text/event-stream; charset=utf-8
+Cache-Control: private, no-store, no-transform
+X-Accel-Buffering: no
+```
 
-Each SSE response is associated in memory with a digest-derived identifier for the `sid` that opened it. Explicit logout/device revocation ends only matching streams; account-wide ban/password-reset/delete ends all streams for that username. The raw token is not retained as the identifier. An already-open WebSocket or SSE stream is not yet periodically revalidated solely because its idle/absolute expiry time passes, so production timeout configuration and this defense-in-depth follow-up remain rollout work.
+Each event contains `id`, `event`, and JSON `data` fields. A `: ping` comment heartbeat is sent every 25 seconds. The server subscribes before loading replay, buffers bounded live events during replay, and suppresses duplicate event/cursor identities. Replay is bounded to 200 events.
 
-## Core HTTP message contract
+After replay, SSE emits `connected` with `cursor`, `hasMore`, and `gap`. If `hasMore` is true, reconnect with the returned cursor (or switch to WebSocket replay) until the durable backlog is consumed, deduplicating any redelivery. If `gap` is true, refetch authoritative HTTP state before accepting the stream as repaired.
 
-All private operations require the session and current membership. The current native UI includes a username for legacy compatibility; the server requires it to match the session rather than trusting it.
+On revocation the server attempts to emit `session_revoked` and then ends the stream. Browsers may reconnect automatically; the widget must stop retrying on terminal identity/authorization failures and obtain a fresh bootstrap through Web.
 
-| Purpose | Endpoint | Key request/response behavior |
-|---|---|---|
-| List messages | `GET /api/messages?chatId=&username=&beforeId=&beforeCreatedAt=&afterId=&afterCreatedAt=&limit=` | Bounded/cursor window; returns `{ chatId, messages, hasMore }`. |
-| Send message | `POST /api/messages` | JSON text route; returns persisted message ID/result. Use `clientRequestId` for idempotence. |
-| Send with files | `POST /api/messages/upload` | Multipart/presigned descriptors; ownership and membership are checked. |
-| Edit/delete/forward | `POST /api/messages/edit`, `/delete`, `/forward` | HTTP response is command acknowledgement; realtime event tells viewers to refresh. |
-| Typing | `POST /api/messages/typing` | Ephemeral; not included in durable replay. |
-| Read all visible | `POST /api/messages/read` | Body includes `chatId`, matching username; emits `chat_read`. |
-| Read one | `POST /api/messages/read-one` | Also validates that `messageId` belongs to `chatId`; emits `chat_read`. |
-| Read counts | `POST /api/messages/read-counts` | Validates membership and bounded IDs. |
-| First unread | `GET /api/messages/first-unread` | Membership-scoped anchor. |
+## Support WebSocket
 
-The extended tools API lives below `/api/messaging`: preferences, search, reactions, pins, scheduled messages, polls, topics, group policy/roles, call state, media list, devices, changes, and replay. Each route derives the actor from the session.
+Open a native `wss:` upgrade to `/support/v1/ws`. A normal HTTP GET returns `426 SUPPORT_WEBSOCKET_UPGRADE_REQUIRED`.
 
-## Reconnect and replay
+Default admission and lifecycle limits are:
 
-`GET /api/messaging/sync?after=<non-negative integer>` requires authentication. It returns at most 200 membership-scoped journal entries in ascending sequence:
+| Control | Default |
+|---|---:|
+| Maximum frame | 16 KiB |
+| Connections per client IP | 20 (`SUPPORT_WS_MAX_CONNECTIONS_PER_IP`) |
+| Connections per support session across SSE/WS hub subscriptions | 4 (`SUPPORT_MAX_CONNECTIONS_PER_SESSION`) |
+| Authentication timeout | 5 seconds |
+| Server ping interval | 30 seconds |
+| Pong timeout | 10 seconds |
+| Session revalidation | 15 seconds |
+| Replay page | 200 events |
+
+`WS_TRUST_PROXY` must match the controlled proxy topology before `X-Forwarded-For` is trusted. Incorrect proxy configuration can collapse all users to one IP or allow caller-supplied addresses.
+
+Client control frames:
+
+```json
+{ "type": "ping" }
+```
+
+returns `pong`. To replay:
+
+```json
+{ "type": "resume", "cursor": "opaque-cursor-or-empty-string" }
+```
+
+The server sends replayed events followed by:
 
 ```json
 {
-  "events": [
-    { "type": "chat_message_updated", "chatId": "uuid", "messageId": "uuid", "sequence": 42 }
-  ],
-  "cursor": 42,
-  "hasMore": false
+  "version": 1,
+  "type": "replay_complete",
+  "conversationId": "conversation-uuid",
+  "cursor": "latest-opaque-cursor",
+  "hasMore": false,
+  "gap": false
 }
 ```
 
-Continue while `hasMore` is true, then store the cursor per account. The native client polls about every 15 seconds and on online/visibility transitions. Replay entries are invalidation hints; fetch `/api/chats`, `/api/messages`, or `/api/messaging/chats/:chatId/changes?ids=...` for authoritative content.
+If `hasMore` is true, issue another `resume` with the returned cursor. If `gap` is true, refetch HTTP state before continuing. Only one replay runs per socket. Error codes include `INVALID_PAYLOAD`, `INVALID_REPLAY_CURSOR`, `REPLAY_IN_PROGRESS`, `REPLAY_UNAVAILABLE`, and `UNSUPPORTED_ACTION`.
 
-`chat_typing` and `chat_read` are intentionally not journaled. Not every historical event producer is guaranteed to have a transactionally coupled journal record, so Web must also refresh state after a gap, cursor reset, schema upgrade, or suspicious sequence.
+Oversized frames close with WebSocket code 1009. Session-policy failures close with 1008. Connection-ceiling failures may close with 1013 or reject the upgrade with HTTP 429. `session_revoked` is best-effort before a policy close and must not be treated as the only revocation signal.
 
-## Files and media
+## Support replay and durability boundary
 
-Message responses expose protected URLs such as:
+`chat_message` is created through Chat's existing transactional/idempotent message path. Its message mutation and journal hint are written together; the richer live publication deliberately does not journal it a second time. Support replay reads and normalizes that journal with conversation and viewer visibility filters. The authoritative HTTP message read supplies body, author classification, timestamps, and files.
 
-- `GET /api/uploads/file/:fileId` — resolves file → message → chat; authorizes current membership or explicit public-channel visibility; may stream/decrypt or redirect to a short-lived object-store URL.
-- `GET /api/uploads/thumbs/:fileId` — same authorization for thumbnails.
-- `GET /api/uploads/messages/:storedName` — same authorization, local range support, or authorized remote redirect.
+Replay accepts either a numeric journal sequence or a stable message/event identifier. Results are ascending, bounded, and include `hasMore` and `gap`. Consumers must deduplicate by `eventId`, falling back to `cursor`, and must tolerate redelivery.
 
-Private responses are `Cache-Control: private, no-store`; explicit public-channel media may use public caching. Avatar routes are separate public profile assets and are not message-attachment authorization.
+Assignment, resolution, queue refresh, connection, presence, and heartbeat signals are not all durable events. The authoritative recovery sequence is:
 
-Presigned flow:
+1. reconnect with the last stored cursor;
+2. consume all replay pages;
+3. if `gap` is true or state is suspicious, refetch the conversation/messages/agent queue over HTTP;
+4. persist the new cursor only after applying the corresponding state.
 
-1. `POST /api/uploads/presign` with actor-bound `chatId`, purpose and either target `messageId` or future-message `clientRequestId`.
-2. Browser uploads bytes to the returned provider URL.
-3. Message publication consumes a pending descriptor, or `POST /api/uploads/complete` completes an existing-message upload. Completion records `upload_completed_at`, awaits persistence and queue admission, preserves the pending claim on overload, consumes it on success, and treats an ownership-checked retry as idempotent.
-4. Processing callback `POST /api/uploads/webhook/processed` is internal and fails closed without the shared secret.
-5. `chat_message_updated`/`video:ready` tells clients to refetch; protected file URLs remain stable.
+## Native Chat realtime
 
-The browser must never treat a caller-supplied storage key, user ID, or MIME value as proof of ownership.
+The original Chat UI remains on its separate `sid`-authenticated protocol:
 
-## Web integration rules
+- raw WebSocket upgrades on `/ws` or `/api/ws`;
+- SSE on `/api/events?username=<authenticated username>`;
+- HTTP mutations and `/api/messaging/sync?after=<numeric sequence>` for bounded replay.
 
-- Adapt the old Web Socket.IO widget to these HTTP/raw-WebSocket/SSE contracts; do not add Socket.IO to Chat.
-- Establish a Chat session or another approved non-URL credential exchange before opening realtime transport.
-- Reuse `clientRequestId` and idempotency keys across timeout retries.
-- Treat HTTP 401/403 as terminal identity/authorization failures, 409 as state conflict, 429/503 as bounded retry with backoff, and reconnect only with jitter.
-- Never put private message text, cookies, bearer/capability tokens, or presigned URL query strings in logs/telemetry.
-- Contract-test native WS and SSE fallback, replay, removed membership, session revocation, file/range authorization, and rolling-version compatibility before rollout.
+The query username is legacy compatibility data and must match the authenticated session; it is not identity authority. Native WebSocket rejects credential query parameters. Current message, membership, presence, call, media, and invalidation events keep their existing shapes, which are not the support envelope contract.
+
+Native SSE and WebSocket now revalidate open Chat sessions periodically (60 seconds by default through `SSE_SESSION_REVALIDATE_MS` and `WS_SESSION_REVALIDATE_MS`). Explicit logout/device revocation disconnects the matching session; account-wide ban, password reset, or deletion disconnects all sessions for the username.
+
+## Client behavior and errors
+
+- Prefer WebSocket when it works through the deployed proxy; use SSE as the one-way fallback. All writes remain HTTP.
+- Reconnect with bounded exponential backoff and jitter. Do not retry terminal 401/403 responses indefinitely.
+- Treat 409 as a state/idempotency conflict and 429/503 as a bounded retry case honoring service health.
+- Never log cookies, assertions, bearer/service credentials, private message bodies, or presigned URL query strings.
+- Ignore unknown event types and fields for forward compatibility.
+- Refetch after replay gaps, server restarts, cursor resets, schema/version changes, or suspected missed state.
+
+## Verification still required outside this repository
+
+Before rollout, test both transports through the real Web/Nginx topology: cookie path and Secure behavior, strict Origin handling, WebSocket upgrades, SSE buffering, proxy timeouts, client-IP trust, reconnect/replay, account disablement, link revocation, logout, assignment changes, and rolling-version compatibility. None of those cross-repository/deployment checks is proven merely by the Sprint 2 source and isolated tests.

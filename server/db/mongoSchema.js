@@ -13,20 +13,35 @@ export const COLLECTION_KEYS = {
   chat_topics: ["id"], chat_message_topics: ["message_id"], chat_polls: ["id"], chat_poll_votes: ["poll_id", "user_id"],
   scheduled_messages: ["id"], chat_group_policy: ["chat_id"], chat_event_log: ["id"],
   session_devices: ["token_hash"], group_call_rooms: ["chat_id"], group_call_peers: ["id"],
+  platform_identity_links: ["id"], platform_identity_assertion_jtis: ["id"],
+  support_guest_identity_links: ["id"], support_conversations: ["id"],
+  support_sessions: ["id"], media_processing_jobs: ["id"],
   meta: ["key"], migration_runs: ["id"],
 };
 export const NUMERIC_IDS = new Set(["chat_message_files", "remote_channel_sources", "remote_channel_queue", "admin_audit_logs", "chat_event_log"]);
-export const MONGO_SCHEMA_VERSION = 1;
+export const MONGO_SCHEMA_VERSION = 2;
 const validators = {
   users: { required: ["id", "username", "password_hash"], properties: { id: { bsonType: "string" }, username: { bsonType: "string", minLength: 1 }, password_hash: { bsonType: "string" } } },
   chats: { required: ["id", "type"], properties: { id: { bsonType: "string" }, type: { enum: ["dm", "group", "channel", "saved"] } } },
   chat_messages: { required: ["id", "chat_id", "body", "created_at"], properties: { id: { bsonType: "string" }, chat_id: { bsonType: "string" }, body: { bsonType: "string" }, created_at: { bsonType: "string" } } },
   chat_members: { required: ["chat_id", "user_id", "role"], properties: { chat_id: { bsonType: "string" }, user_id: { bsonType: "string" }, role: { enum: ["owner", "admin", "member"] } } },
   chat_message_files: { required: ["id", "message_id", "mime_type", "stored_name"], properties: { id: { bsonType: ["int", "long", "double"] }, message_id: { bsonType: "string" }, mime_type: { bsonType: "string" }, stored_name: { bsonType: "string" } } },
+  platform_identity_links: { required: ["id", "provider", "web_user_id", "chat_user_id", "status", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, provider: { enum: ["owj-web"] }, web_user_id: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, status: { enum: ["active", "revoked", "deactivated"] } } },
+  platform_identity_assertion_jtis: { required: ["id", "issuer", "jti", "subject", "token_use", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, issuer: { bsonType: "string", minLength: 1 }, jti: { bsonType: "string", minLength: 1 }, subject: { bsonType: "string", minLength: 1 }, token_use: { enum: ["support_registered", "support_guest", "support_agent"] }, expires_at: { bsonType: "date" }, created_at: { bsonType: "date" } } },
+  support_guest_identity_links: { required: ["id", "provider", "guest_subject_digest", "web_user_id", "chat_user_id", "conversation_id", "proof_jti", "converted_at"], properties: { id: { bsonType: "string" }, provider: { enum: ["owj-web"] }, guest_subject_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, web_user_id: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, conversation_id: { bsonType: "string", minLength: 1 }, proof_jti: { bsonType: "string", minLength: 1 }, converted_at: { bsonType: "string", minLength: 1 } } },
+  support_conversations: { required: ["id", "identity_key", "identity_kind", "actor_id", "status", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, identity_key: { bsonType: "string", minLength: 1 }, identity_kind: { enum: ["guest", "registered"] }, actor_id: { bsonType: "string", minLength: 1 }, status: { enum: ["open", "assigned", "resolved", "closed"] } } },
+  support_sessions: { required: ["id", "token_digest", "principal_kind", "actor_id", "status", "expires_at", "idle_expires_at", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, token_digest: { bsonType: "string", minLength: 32 }, principal_kind: { enum: ["guest", "registered", "agent"] }, actor_id: { bsonType: "string", minLength: 1 }, status: { enum: ["active", "revoked", "expired"] }, expires_at: { bsonType: "string" }, idle_expires_at: { bsonType: "string" } } },
 };
 const index = (collection, keys, options = {}) => ({ collection, keys, options });
+const IDENTITY_COLLECTIONS_WITH_NAMED_KEYS = new Set([
+  "platform_identity_links",
+  "platform_identity_assertion_jtis",
+  "support_guest_identity_links",
+]);
 export const MONGO_INDEXES = [
-  ...Object.entries(COLLECTION_KEYS).map(([name, keys]) => index(name, Object.fromEntries(keys.map((key) => [key, 1])), { unique: true })),
+  ...Object.entries(COLLECTION_KEYS)
+    .filter(([name]) => !IDENTITY_COLLECTIONS_WITH_NAMED_KEYS.has(name))
+    .map(([name, keys]) => index(name, Object.fromEntries(keys.map((key) => [key, 1])), { unique: true })),
   index("users", { username: 1 }, { unique: true }),
   index("users", { role: 1 }, { unique: true, partialFilterExpression: { role: "owner" } }),
   index("chats", { group_username: 1 }, { unique: true, partialFilterExpression: { group_username: { $type: "string" } } }),
@@ -56,6 +71,23 @@ export const MONGO_INDEXES = [
   index("chat_topics", { chat_id: 1, created_at: 1 }),
   index("chat_polls", { chat_id: 1, message_id: 1 }),
   index("admin_audit_logs", { created_at: -1, id: -1 }),
+  index("platform_identity_links", { id: 1 }, { unique: true, name: "platform_identity_link_id" }),
+  index("platform_identity_links", { provider: 1, web_user_id: 1 }, { unique: true, name: "platform_identity_link_web_subject" }),
+  index("platform_identity_links", { chat_user_id: 1 }, { unique: true, name: "platform_identity_link_chat_user" }),
+  index("platform_identity_links", { status: 1, updated_at: -1 }, { name: "platform_identity_link_status_updated" }),
+  index("platform_identity_assertion_jtis", { id: 1 }, { unique: true, name: "platform_assertion_jti_id" }),
+  index("platform_identity_assertion_jtis", { issuer: 1, jti: 1 }, { unique: true, name: "platform_assertion_jti_unique" }),
+  index("platform_identity_assertion_jtis", { expires_at: 1 }, { expireAfterSeconds: 0, name: "platform_assertion_jti_expiry" }),
+  index("support_guest_identity_links", { id: 1 }, { unique: true, name: "support_guest_identity_link_id" }),
+  index("support_guest_identity_links", { provider: 1, guest_subject_digest: 1 }, { unique: true, name: "support_guest_identity_subject" }),
+  index("support_guest_identity_links", { provider: 1, web_user_id: 1, converted_at: -1 }, { name: "support_guest_identity_web_user" }),
+  index("support_guest_identity_links", { conversation_id: 1 }, { name: "support_guest_identity_conversation" }),
+  index("support_conversations", { identity_key: 1 }, { unique: true }),
+  index("support_conversations", { status: 1, assigned_chat_user_id: 1, updated_at: -1, id: -1 }),
+  index("support_sessions", { token_digest: 1 }, { unique: true }),
+  index("support_sessions", { conversation_id: 1, status: 1 }),
+  index("support_sessions", { web_user_id: 1, status: 1 }),
+  index("support_sessions", { status: 1, expires_at: 1 }),
 ];
 
 export function documentDefaults(collection, now = new Date().toISOString()) {
@@ -67,6 +99,10 @@ export function documentDefaults(collection, now = new Date().toISOString()) {
     chat_members: { role: "member" }, sessions: { last_seen: now },
     remote_channel_sources: { enabled: 0, paused: 0, source_version: 1, sync_metadata: 0, stream_media: 0, last_error: null, last_remote_message_id: null },
     remote_channel_queue: { status: "pending", attempts: 0, next_attempt_at: now, locked_at: null, lock_owner: null },
+    platform_identity_links: { status: "active", revision: 1, updated_at: now, revoked_at: null, revocation_reason: null },
+    support_conversations: { status: "open", assigned_chat_user_id: null, updated_at: now, resolved_at: null, closed_at: null },
+    support_sessions: { status: "active", updated_at: now, revoked_at: null, revocation_reason: null },
+    media_processing_jobs: { status: "pending", attempts: 0, updated_at: now, locked_at: null, lock_owner: null, last_error_code: null, completed_at: null },
     chat_polls: { closed: 0 }, chat_preferences: { pinned: 0, archived: 0, folder: "" },
   };
   return { created_at: now, ...(defaults[collection] || {}) };

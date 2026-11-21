@@ -1,5 +1,6 @@
 import { readEnvBool } from "../settings/env.js";
 import { safeErrorCode } from "./requestLogging.js";
+import { createServiceAuthHeaders } from "../../shared/serviceAuth.js";
 
 function logDispatchFailure(event, fileId, error, fields = {}) {
   console.warn(JSON.stringify({
@@ -23,10 +24,18 @@ async function sendTranscodeRequest(workerUrl, payload, webhookSecret, fetchImpl
     cleanUrl = cleanUrl.slice(0, -1);
   }
   const endpoint = `${cleanUrl}/transcode`;
+  const signedHeaders = webhookSecret
+    ? createServiceAuthHeaders({
+        secret: webhookSecret,
+        method: "POST",
+        path: "/transcode",
+      })
+    : {};
   const res = await fetchImpl(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...signedHeaders,
       ...(webhookSecret ? { "x-ouj-chat-webhook-secret": webhookSecret } : {}),
     },
     body: JSON.stringify(payload),

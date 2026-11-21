@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { MongoClient } from 'mongodb';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { ensureMongoSchema, COLLECTION_KEYS } from '../../db/mongoSchema.js';
+import { ensureMongoMediaJobSchema } from '../../db/mongoMediaJobs.js';
 import { createMongoRepository } from '../../db/mongoRepository.js';
 
 let replica, client;
@@ -23,11 +24,13 @@ beforeAll(async () => {
   client = await new MongoClient(uri, { serverSelectionTimeoutMS: 10000 }).connect();
   testUri = uri;
   db = client.db(database);
+  await ensureMongoMediaJobSchema(db);
   await ensureMongoSchema(db);
   R = createMongoRepository({ db, client });
 });
 beforeEach(async () => {
   for (const name of [...Object.keys(COLLECTION_KEYS), "counters"]) await db.collection(name).deleteMany({});
+  await ensureMongoMediaJobSchema(db);
   await ensureMongoSchema(db);
   await R.store.insert("users", { id: alice, username: "alice", password_hash: "test-hash", nickname: "Alice" });
   await R.store.insert("users", { id: bob, username: "bob", password_hash: "test-hash", nickname: "Bob" });

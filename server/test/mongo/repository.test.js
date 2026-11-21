@@ -67,6 +67,9 @@ describe("native MongoDB repositories on a real replica set", () => {
     expect(new Set(results.map((row) => row.id)).size).toBe(1);
     expect(await R.store.count("chat_messages")).toBe(1);
     expect(await R.store.count("chat_event_log")).toBe(1);
+    await expect(
+      R.createOrReuseMessage(chat, alice, "different body", null, null, "same-request"),
+    ).resolves.toMatchObject({ id: results[0].id, deduped: true, conflict: true });
   });
   test("paginates on timestamp and UUID without overlap and respects private hides", async () => {
     const chat = await group();

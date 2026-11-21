@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { createSseHub } from "../../lib/sse.js";
 
 function responseStub() {
@@ -9,6 +9,7 @@ function responseStub() {
 }
 
 describe("SSE session revocation", () => {
+  afterEach(() => vi.useRealTimers());
   test("disconnects only streams authenticated by the revoked session", () => {
     const hub = createSseHub({ listChatMembers: () => [] });
     const revoked = responseStub();
@@ -37,6 +38,23 @@ describe("SSE session revocation", () => {
     expect(first.end).toHaveBeenCalledTimes(1);
     expect(second.end).toHaveBeenCalledTimes(1);
     expect(hub.isUserConnected("alice")).toBe(false);
+    hub.close();
+  });
+
+  test("periodically closes an already-open stream after session expiry", async () => {
+    vi.useFakeTimers();
+    const validateSessionToken = vi.fn().mockResolvedValueOnce(null);
+    const hub = createSseHub({
+      listChatMembers: () => [],
+      validateSessionToken,
+      sessionRevalidateIntervalMs: 1_000,
+    });
+    const response = responseStub();
+    hub.addSseClient("alice", response, "expiring-token");
+
+    await vi.advanceTimersByTimeAsync(1_001);
+    expect(validateSessionToken).toHaveBeenCalledWith("expiring-token", { touch: false });
+    expect(response.end).toHaveBeenCalledTimes(1);
     hub.close();
   });
 });

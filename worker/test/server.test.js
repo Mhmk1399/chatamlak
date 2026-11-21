@@ -5,12 +5,21 @@ import path from "node:path";
 import request from "supertest";
 import {
   AsyncQueue,
-  createWorkerServer,
+  createWorkerServer as createWorkerServerImpl,
   isLoopbackUrl,
   hasEncryptedMagic,
   encryptThumbnail,
+  validateResolvedWorkerJobPayload,
 } from "../index.js";
+import { createServiceAuthHeaders } from "../../shared/serviceAuth.js";
 import { isEncryptedFileBuffer } from "../encryption.js";
+
+const createWorkerServer = (options = {}) =>
+  createWorkerServerImpl({
+    requireSignedRequests: false,
+    allowLoopbackUrls: true,
+    ...options,
+  });
 
 describe("Media Worker HTTP Server", () => {
   it("does not log raw worker errors that can contain presigned credentials", async () => {
@@ -50,6 +59,74 @@ describe("Media Worker HTTP Server", () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Unauthorized");
+  });
+
+  it("requires fresh one-time signed service credentials in strict mode", async () => {
+    const secret = "strict-worker-secret-123456789";
+    const headers = createServiceAuthHeaders({
+      secret,
+      method: "POST",
+      path: "/transcode",
+      nonce: "strict-nonce-123456",
+    });
+    const strictServer = createWorkerServerImpl({
+      webhookSecret: secret,
+      requireSignedRequests: true,
+      processTranscodeJob: vi.fn().mockResolvedValue(true),
+    });
+
+    const accepted = await request(strictServer)
+      .post("/transcode")
+      .set(headers)
+      .send({ fileId: "signed-1", storageKey: "uploads/signed.mp4" });
+    const replayed = await request(strictServer)
+      .post("/transcode")
+      .set(headers)
+      .send({ fileId: "signed-1", storageKey: "uploads/signed.mp4" });
+    const legacyOnly = await request(strictServer)
+      .post("/transcode")
+      .set("x-ouj-chat-webhook-secret", secret)
+      .send({ fileId: "signed-2", storageKey: "uploads/signed.mp4" });
+
+    expect(accepted.status).toBe(202);
+    expect(replayed.status).toBe(401);
+    expect(replayed.body.code).toBe("SERVICE_AUTH_REPLAYED");
+    expect(legacyOnly.status).toBe(401);
+  });
+
+  it("rejects hostnames resolving to private addresses", async () => {
+    await expect(validateResolvedWorkerJobPayload(
+      { downloadUrl: "https://rebinding.example/video" },
+      { lookup: async () => [{ address: "127.0.0.1", family: 4 }] },
+    )).resolves.toEqual({
+      status: 400,
+      error: "downloadUrl resolves to a private or reserved address.",
+    });
+  });
+
+  it("rejects loopback job destinations by default even for a signed request", async () => {
+    const secret = "strict-worker-secret-123456789";
+    const headers = createServiceAuthHeaders({
+      secret,
+      method: "POST",
+      path: "/transcode",
+      nonce: "loopback-nonce-12345",
+    });
+    const strictServer = createWorkerServerImpl({
+      webhookSecret: secret,
+      requireSignedRequests: true,
+      processTranscodeJob: vi.fn(),
+    });
+    const response = await request(strictServer)
+      .post("/transcode")
+      .set(headers)
+      .send({
+        fileId: "signed-loopback",
+        downloadUrl: "http://127.0.0.1:5174/private",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toMatch(/loopback/i);
   });
 
   it("POST /transcode fails closed when webhookSecret is not configured", async () => {

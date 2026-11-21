@@ -31,6 +31,8 @@ import { storageEncryption } from "./lib/storageEncryption.js";
 import { createStorageProvider } from "./lib/storage/index.js";
 import { migrateLegacyStorageLayout } from "./lib/storageLayoutMigration.js";
 import { createMediaQueueManager } from "./lib/mediaQueue.js";
+import { createDurableMediaQueueRunner } from "./lib/durableMediaQueue.js";
+import { createSupportRuntime } from "./lib/supportRuntime.js";
 import { createRemoteChannelManager } from "./lib/remoteChannels.js";
 import { initAutoAddWorker } from "./lib/workers/autoAddWorker.js";
 import { ensureLocalWorkerRunning } from "./lib/localWorkerManager.js";
@@ -41,7 +43,7 @@ import { USER_COLORS, setUserColor } from "./settings/colors.js";
 import { readDbConfig, parseEnv } from "./settings/env.js";
 import { createPostgresMaintenance } from "./lib/postgresMaintenance.js";
 import { dbKnex } from "./db/query.js";
-import { messagingDb, mongoRepository } from "./db.js";
+import { mediaJobRepository, messagingDb, mongoRepository } from "./db.js";
 import {
   addAllEligibleChatMembers,
   addChatMember,
@@ -586,7 +588,11 @@ const {
   registerUploadRoutes,
 } = uploadTools;
 
-const sseHub = createSseHub({ listChatMembers, recordEvent: messagingDb.recordEvent });
+const sseHub = createSseHub({
+  listChatMembers,
+  recordEvent: messagingDb.recordEvent,
+  validateSessionToken: (token, options) => getValidatedSessionFromToken(token, options),
+});
 const {
   addSseClient,
   removeSseClient,
@@ -707,7 +713,7 @@ const { buildInspectSnapshot, hasEnoughFreeDiskSpace } = inspector;
 const redisClient = createRedisClient();
 const redisSessionStore = createRedisSessionStore({ redisClient, dbGetSession: getSession });
 
-const mediaQueueManager = createMediaQueueManager({
+const fallbackMediaQueueManager = createMediaQueueManager({
   redisClient,
   storageProvider,
   s3ProcessingMode: process.env.STORAGE_PROCESSING_MODE || "auto",
@@ -719,6 +725,36 @@ const mediaQueueManager = createMediaQueueManager({
   transcodeVideosToH264: TRANSCODE_VIDEOS_TO_H264,
   getSetting,
 });
+const durableMediaQueue = createDurableMediaQueueRunner({
+  jobRepository: mediaJobRepository,
+  processJob: fallbackMediaQueueManager.processMediaJob,
+  concurrency: Number(process.env.MEDIA_QUEUE_CONCURRENCY) || 1,
+});
+const useMongoMediaQueue = fallbackMediaQueueManager.getStats().backend === "memory";
+if (useMongoMediaQueue) durableMediaQueue.start();
+const mediaQueueManager = useMongoMediaQueue
+  ? {
+      enqueueJob: (data, delayMs = 0) => durableMediaQueue.enqueueJob(data, delayMs),
+      scheduleFallbackCheck({ fileId, storageKey }) {
+        if ((process.env.STORAGE_PROCESSING_MODE || "auto").toLowerCase() === "remote") {
+          return { accepted: false, reason: "remote_mode" };
+        }
+        const liveTimeout = Number(getSetting("STORAGE_PROCESSING_TIMEOUT_MS"));
+        const delayMs = Number.isFinite(liveTimeout) && liveTimeout > 0 ? liveTimeout : 120000;
+        return durableMediaQueue.enqueueJob({ fileId, storageKey, reason: "fallback_timer" }, delayMs);
+      },
+      cancelFallbackCheck: (fileId) => durableMediaQueue.cancelByFileId(fileId),
+      processMediaJob: fallbackMediaQueueManager.processMediaJob,
+      getStats: () => ({
+        ...durableMediaQueue.getStats(),
+        durable: true,
+      }),
+      async close() {
+        await durableMediaQueue.close();
+        await fallbackMediaQueueManager.close();
+      },
+    }
+  : fallbackMediaQueueManager;
 
 async function createSessionCombined(userId, token) {
   await createSession(userId, token);
@@ -756,6 +792,17 @@ const {
   requireSession,
   requireSessionUsernameMatch,
 } = sessionHelpers;
+
+const supportRuntime = createSupportRuntime({
+  env: process.env,
+  appEnv,
+  supportDb: mongoRepository.supportDb,
+  identityRepository: mongoRepository,
+  findChatUserById: findUserById,
+  isMember,
+  createOrReuseMessage,
+  emitChatEvent,
+});
 
 async function backfillStorageEncryption() {
   if (!storageEncryption.isEnabled()) return;
@@ -877,6 +924,7 @@ registerUploadRoutes(app, {
 });
 
 const apiDeps = {
+  ...supportRuntime.apiDeps,
   cleanupDeletedFiles: messageFileJobs.cleanupDeletedFiles,
   mongoRepository,
   messagingDb,
@@ -1458,27 +1506,37 @@ const wsGateway = createWebSocketGateway({
   heartbeatIntervalMs: wsHeartbeatIntervalMs,
   heartbeatTimeoutMs: wsHeartbeatTimeoutMs,
 });
+supportRuntime.attachWebSocket(server);
 wsPresenceBroadcaster = (username, payload) => wsGateway.sendEvent(username, payload);
 wsGlobalBroadcaster = (payload) => wsGateway.broadcastAll(payload);
 
-// Graceful shutdown for container orchestrators
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received, shutting down gracefully...");
-  server.close(() => {
-    console.log("Server closed");
-    process.exit(0);
-  });
-  // Force exit after 10 seconds if still running
-  setTimeout(() => {
+// Graceful shutdown for container orchestrators. Close long-lived streams and
+// bounded workers before waiting for the HTTP listener, otherwise SSE/WS can
+// keep server.close() open until the forced timeout.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down gracefully...`);
+  const forcedExit = setTimeout(() => {
     console.error("Forced shutdown after timeout");
     process.exit(1);
   }, 10000);
-});
+  forcedExit.unref?.();
 
-process.on("SIGINT", () => {
-  console.log("SIGINT received, shutting down gracefully...");
+  remoteChannelManager.stop();
+  await Promise.allSettled([
+    supportRuntime.close(),
+    Promise.resolve().then(() => mediaQueueManager.close?.()),
+    Promise.resolve().then(() => wsGateway.close()),
+    Promise.resolve().then(() => sseHub.close()),
+  ]);
   server.close(() => {
+    clearTimeout(forcedExit);
     console.log("Server closed");
     process.exit(0);
   });
-});
+}
+
+process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+process.on("SIGINT", () => { void shutdown("SIGINT"); });
