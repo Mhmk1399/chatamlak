@@ -1,0 +1,19 @@
+{
+  "contract": "ouj-platform-support-v1",
+  "fixtureVersion": 1,
+  "generatedFor": "CHAT-S2.5",
+  "files": [
+    "assertion-policies.json",
+    "bootstrap-hmac.json",
+    "bootstrap-recovery.json",
+    "cookie.json",
+    "identity-status.json",
+    "messages.json",
+    "realtime.json"
+  ],
+  "security": {
+    "containsProductionSecrets": false,
+    "containsPrivateSigningKeys": false,
+    "jwtSignaturesMustBeGeneratedByWeb": true
+  }
+}

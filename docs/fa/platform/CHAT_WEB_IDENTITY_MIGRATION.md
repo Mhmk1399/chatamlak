@@ -1,6 +1,6 @@
 # مهاجرت هویت بین Chat و Web
 
-وضعیت: **در کد منبع پیاده‌سازی شده، به‌صورت پیش‌فرض با Feature Flag خاموش است و Deploy نشده است** (Sprint 2، تاریخ 2026-11-20).
+وضعیت: **سورس Chat پیاده‌سازی شده، Feature Flag خاموش است و integration مصنوعی و محلی Web پذیرفته شده است** (تصویر Sprint 2.5 در ۲۰۲۶-۱۱-۲۱). هیچ migration تولید، deployment یا acceptance ظرفیت ادعا نمی‌شود.
 
 Owj Web مرجع اصلی هویت انسانی است. Chat همچنان مالک شناسه‌های پایدار کاربران، گفتگوها، پیام‌ها، عضویت‌ها، نشست‌های پشتیبانی و مجوزدهی بلادرنگ خود باقی می‌ماند. این پیاده‌سازی هیچ‌گاه Collectionهای پایگاه‌داده Web را نمی‌خواند یا در آن‌ها نمی‌نویسد.
 
@@ -83,52 +83,59 @@ Indexهای یکتا روی `id`، ترکیب `(provider, web_user_id)` و `chat
 
 Subjectهای مهمان حساب دارای گذرواژه نیستند. Chat یک Digest نام‌گذاری‌شده SHA-256 و Actor مستعار `support-guest:<hex>` ذخیره می‌کند. `support_guest_identity_links` تبدیل مهمان مبتنی بر Proof را با Subject مهمان Digestشده ثبت می‌کند. سرویس Proof و Repositoryهای Idempotent پیاده‌سازی شده‌اند، اما Endpoint سرتاسری تبدیل در Web هنوز Compose نشده است؛ Production نباید Repository سطح پایین را مستقیماً فراخوانی کند.
 
-## وضعیت جاری حساب Web
+## قرارداد frozen وضعیت جاری Web
 
-برای مشتریان ثبت‌شده و Agentها، Chat این مسیر را فراخوانی می‌کند:
-
-`POST /api/internal/v1/identity/status`
-
-با Credential اختصاصی سرویس خروجی:
+برای مشتری ثبت‌شده و agent، Chat مسیر `POST /api/internal/v1/identity/status` را با credential جهت‌دار و اختصاصی `OWJ_CHAT_TO_WEB_SERVICE_TOKEN` فراخوانی می‌کند. این credential خروجی و `OWJ_WEB_TO_CHAT_SERVICE_SECRET` ورودی هر دو حداقل ۳۲ کاراکتر و مستقل از هم هستند.
 
 ```http
 Authorization: Bearer <OWJ_CHAT_TO_WEB_SERVICE_TOKEN>
 X-Owj-Service: ouj-chat
-X-Request-Id: <uuid>
+X-Correlation-Id: <request-id>
 Content-Type: application/json
 ```
 
-```json
-{
-  "version": 1,
-  "subject": { "provider": "owj-web", "webUserId": "stable-web-subject" },
-  "operation": "support:session"
-}
-```
-
-پاسخ مورد انتظار:
+درخواست frozen در Sprint 2.5:
 
 ```json
 {
-  "version": 1,
-  "subject": { "webUserId": "stable-web-subject", "status": "active" },
-  "authorized": true,
-  "revision": 7
+  "subject": "stable-web-subject",
+  "tokenIssuedAt": 1795161600,
+  "jti": "verified-assertion-jti"
 }
 ```
 
-Chat مقدارهای دقیق زیر را برای `operation` می‌فرستد:
+پاسخ موفق frozen:
 
-| Context | `operation` |
-|---|---|
-| Bootstrap مشتری ثبت‌شده | `support:bootstrap` |
-| Bootstrap عامل پشتیبانی | `support:agent:bootstrap` |
-| اعتبارسنجی دوباره نشست/Realtime مشتری ثبت‌شده | `support:session` |
-| اعتبارسنجی دوباره نشست/Realtime عامل | `support:agent` |
+```json
+{
+  "version": 1,
+  "subject": "stable-web-subject",
+  "status": "active",
+  "role": "user",
+  "support": { "allowed": true, "staff": false },
+  "authorizationCacheMaxAgeSeconds": 60,
+  "checkedAt": "2026-11-20T08:00:00.000Z",
+  "requestId": "fixture-chat-correlation-1"
+}
+```
 
-وضعیت‌های مجاز `active`، `disabled`، `revoked` و `deleted` هستند. نتیجه بر اساس Subject و Operation حداکثر ۶۰ ثانیه Cache می‌شود (`OWJ_IDENTITY_STATUS_CACHE_MS`) و Cache پیش‌فرض حداکثر ۵٬۰۰۰ Entry دارد. Timeout پیش‌فرض Request سه ثانیه است، Redirect رد می‌شود و پاسخ بزرگ‌تر از 32 KiB پذیرفته نمی‌شود. هر پاسخ `authorized:false` یا Status غیر `active` عملیات را رد می‌کند و تمام نشست‌های فعال پشتیبانی محلی آن Subject وب را لغو می‌کند. خطاهای Upstream، پاسخ غیر 2xx، Payload بدساخت و عدم تطابق Subject، پس از انقضای هر Cache هنوز معتبر، Fail Closed می‌شوند. مهمان‌ها هرگز به Endpoint کاربران ثبت‌شده ارسال نمی‌شوند.
+`tokenIssuedAt` و `jti` فقط از assertion تأییدشده با امضا کپی می‌شوند تا Web صدور را با `authRevokedBefore` مقایسه کند؛ Chat به مقدار مرورگر اعتماد نمی‌کند. statusهای مجاز `active`، `disabled`، `revoked` و `deleted` هستند. پاسخ باید subject دقیق، role محدود، هر دو boolean پشتیبانی، timestamp معتبر و cache instruction صحیح بین ۰ تا ۶۰ داشته باشد.
 
-این Client پیاده‌سازی شده و با Mock سخت‌گیرانه تست شده است؛ Endpoint و Credential واقعی Web هنوز همراه Chat تست نشده‌اند.
+عمر cache معمول کمترین مقدار بین دستور Web، `OWJ_IDENTITY_STATUS_CACHE_MS` و ۶۰ ثانیه است. concurrency پیش‌فرض status برابر ۱۶ و سقف runtime برابر ۶۴ است. بررسی‌های همسان درحال‌اجرا coalesce می‌شوند. bootstrap و reply/assign/resolve کارشناس refresh اجباری دارند؛ read/session/realtime passive می‌توانند cache معتبر را مصرف کنند. رد role staff فقط sessionهای `agent` همان subject را revoke می‌کند؛ disabled/revoked/deleted یا رد کلی support گسترده‌تر است. outage، timeout، پاسخ نامعتبر یا cache منقضی fail closed هستند. guest هرگز از status registered استفاده نمی‌کند.
+
+### متادیتای افزایشی assertion در session پشتیبانی
+
+session جدید registered و agent فیلدهای اختیاری `identity_issued_at` و `bootstrap_jti` را ذخیره می‌کند. اولی `iat` تأییدشده به Unix seconds و دومی `jti` یک‌بارمصرف تأییدشده است. validator مونگو این دو را مجاز می‌کند ولی در required قرار نمی‌دهد؛ در نتیجه سند موجود به migration مخرب یا بازنویسی نیاز ندارد.
+
+session مهمان قدیمی این فیلدها را لازم ندارد. session غیرمهمان قدیمی که یکی از آن‌ها را ندارد نمی‌تواند در برابر revocation جاری Web بررسی شود؛ fail closed می‌شود و باید با assertion/session تازه re-bootstrap شود. rollback نباید برای رکورد قدیمی متادیتا جعل کند.
+
+### پذیرش واقعی Web در محیط محلی
+
+درخواست اول به Image قدیمی Web، mismatch قبلی را با `400 IDENTITY_REFERENCE_INVALID` آشکار کرد؛ Chat client خود را ضعیف نکرد. بعد از rebuild وب از سورس هم‌راستا، container واقعی Chat بدنه `{subject,tokenIssuedAt,jti}` را فرستاد و پاسخ تخت HTTP 200 شامل role حروف‌کوچک Web، policy پشتیبانی، سقف cache برابر ۶۰ ثانیه، timestamp و correlation ID بازتاب‌شده گرفت.
+
+پذیرش مصنوعی محلی سپس bootstrap/resume/history کاربر registered، bootstrap/queue/assignment/reply کارشناس و revocation وضعیت جاری را پاس کرد. تغییر موقت و Web-owned فیلد `authRevokedBefore` باعث شد session موجود registered پاسخ `401 SUPPORT_SESSION_REVOKED` بگیرد؛ سپس fixture اختصاصی restore و active/non-revoked بودن آن تأیید شد. این نتیجه request/response دقیق را برای revision محلی تست‌شده ثابت می‌کند، نه migration تولید، همه transitionهای disabled/deleted/role یا window واقعی rotation با کلید قبلی.
+
+fixture مرجع از `docs/platform/fixtures/support-v1/manifest.json` شروع می‌شود و `identity-status.json` این مرز request/response را freeze می‌کند.
 
 ## ابزار مهاجرت ایمن
 
@@ -179,7 +186,9 @@ Rollback، `OWJ_SUPPORT_ENABLED` را غیرفعال می‌کند، ایجاد 
 
 - Issuer نوع RS256 و JWKS در URL توافق‌شده، با هم‌پوشانی برای Rotation کلید.
 - قرارداد دقیق Assertion claim/token-use/scope مطابق بالا.
-- مسیر `POST /api/internal/v1/identity/status` و Credential خروجی Chat.
+- مسیر `POST /api/internal/v1/identity/status` مطابق درخواست frozen `{subject,tokenIssuedAt,jti}` و پاسخ role/support/cache، همراه credential خروجی ۳۲ کاراکتری Chat.
 - قرارداد بازبینی‌شده Proof برای پیوند حساب با شناسه‌های دقیق.
 - قرارداد بازبینی‌شده Proof برای تبدیل مهمان به کاربر ثبت‌شده.
 - یکپارچه‌سازی Same-Origin مربوط به Reverse Proxy/Cookie و Contract Test واقعی بین Web و Chat.
+
+endpoint واقعی محلی Web اکنون مرز status مشترک و flowهای مصنوعی registered/staff/revocation را پاس کرده است. cohort تولید را تا عبور browser automation، rotation با کلید قبلی، TLS/proxy شبیه تولید، restore/rollback، اندازه‌گیری منابع و gate مهاجرت identity-link بازبینی‌شده فعال نکنید.

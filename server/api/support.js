@@ -331,7 +331,7 @@ export function registerSupportRoutes(app, deps = {}) {
         conversationId,
         messageId,
         userId: session.chatUserId,
-        actorKind: staff ? "agent" : session.actorKind,
+        actorKind: staff ? "agent" : "customer",
       };
       // createOrReuseMessage writes the durable Mongo event in the same
       // transaction as the message. Broadcast without journaling it twice.

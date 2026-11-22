@@ -1,0 +1,96 @@
+{
+  "contract": "ouj-web-rs256-support-assertion-v1",
+  "algorithm": "RS256",
+  "audience": "owj-chat",
+  "requiredHeaderFields": ["alg", "kid"],
+  "requiredClaims": [
+    "iss",
+    "sub",
+    "aud",
+    "iat",
+    "exp",
+    "jti",
+    "token_use",
+    "scope"
+  ],
+  "examplesAreDecodedClaimsOnly": true,
+  "policies": {
+    "registered": {
+      "tokenUse": "support_registered",
+      "kind": "registered",
+      "maximumLifetimeSeconds": 300,
+      "exactScopes": ["support:conversation:create"]
+    },
+    "guest": {
+      "tokenUse": "support_guest",
+      "kind": "guest",
+      "maximumLifetimeSeconds": 600,
+      "exactScopes": ["support:conversation:create"]
+    },
+    "agent": {
+      "tokenUse": "support_agent",
+      "kind": "agent",
+      "maximumLifetimeSeconds": 300,
+      "exactScopes": ["support:agent", "support:conversation:create"]
+    }
+  },
+  "decodedExamples": {
+    "registered": {
+      "header": {
+        "alg": "RS256",
+        "typ": "JWT",
+        "kid": "fixture-web-key-2026-11"
+      },
+      "payload": {
+        "iss": "https://web.example.test/",
+        "sub": "507f1f77bcf86cd799439011",
+        "aud": "owj-chat",
+        "iat": 1795161600,
+        "exp": 1795161900,
+        "jti": "fixture-registered-jti-1",
+        "token_use": "support_registered",
+        "scope": "support:conversation:create",
+        "account_status": "active",
+        "ver": 1
+      }
+    },
+    "guest": {
+      "header": {
+        "alg": "RS256",
+        "typ": "JWT",
+        "kid": "fixture-web-key-2026-11"
+      },
+      "payload": {
+        "iss": "https://web.example.test/",
+        "sub": "fixture-guest-subject-1",
+        "aud": "owj-chat",
+        "iat": 1795161600,
+        "exp": 1795162200,
+        "jti": "fixture-guest-jti-1",
+        "token_use": "support_guest",
+        "scope": "support:conversation:create",
+        "account_status": "active",
+        "ver": 1
+      }
+    },
+    "agent": {
+      "header": {
+        "alg": "RS256",
+        "typ": "JWT",
+        "kid": "fixture-web-key-2026-11"
+      },
+      "payload": {
+        "iss": "https://web.example.test/",
+        "sub": "507f191e810c19729de860ea",
+        "aud": "owj-chat",
+        "iat": 1795161600,
+        "exp": 1795161900,
+        "jti": "fixture-agent-jti-1",
+        "token_use": "support_agent",
+        "scope": "support:agent support:conversation:create",
+        "account_status": "active",
+        "ver": 1
+      }
+    }
+  }
+}

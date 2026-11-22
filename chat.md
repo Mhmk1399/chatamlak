@@ -2159,3 +2159,295 @@ Before production rollout:
 12. Install graphify and run graphify update . so the repository knowledge graph reflects Sprint 2.
 
 No production migration or deployment has been performed. No Git status is reported because the repository explicitly forbids automatic Git commands; the exact source-tree footprint above is the available non-Git handoff.
+
+## 26. Sprint 2.5 contract alignment and real local integration log
+
+### 26.1 Final verdict and evidence boundary
+
+This section is the exact engineering handoff for the Sprint 2.5 work performed on 2026-11-21.
+
+**Local Web+Chat acceptance passed with synthetic data. Production rollout remains closed.** The most important required flow ran successfully through the shared local Docker proxy:
+
+1. Web issued an anonymous guest identity.
+2. Chat verified the Web RS256 assertion through Web's real JWKS endpoint.
+3. Web authenticated its internal bootstrap with Chat's timestamp/nonce HMAC protocol.
+4. Chat created a support conversation and issued an opaque cookie-bound support session.
+5. The guest sent a message through `/support/v1/messages`.
+6. A Web-authorized staff identity saw and claimed the conversation.
+7. The staff identity replied through Chat's existing message store.
+8. The original guest retrieved the reply and received its native SSE replay notification.
+
+Registered-user bootstrap, same-conversation recovery, message persistence, current Web status, authorization revocation, guest isolation, native WebSocket replay, logout and an independent Chat stop/start also passed.
+
+The active repository remained `/home/mhmk/Documents/git/chatamlak`. Chat continues to own conversations, messages, memberships, support sessions, assignment and realtime delivery. Web continues to own canonical human identity, login, account status, global role policy, RS256 issuance, JWKS and guest issuance. No Chat code reads or writes Web collections.
+
+No production VPS, production database, production conversation, production secret, external DNS, external Nginx, image registry, migration, deployment, commit or push was touched. No Git command was run. The sibling Web source was inspected read-only; this task did not edit it. A local Web image was rebuilt from changes made concurrently by the Web owner. One dedicated synthetic Web user's `authRevokedBefore` field was temporarily changed by the local acceptance harness, immediately restored, and verified absent afterward.
+
+### 26.2 Work sequence
+
+1. Read the Sprint 1 and Sprint 2 handoffs, support/API/realtime/migration/Docker contracts, Chat runtime and database code, and the available Web contracts and implementation.
+2. Compared the real Web issuer, claims, bootstrap client, browser client, status route, cookie names and environment variables with Chat's implemented contract. Chat's approved route namespace, HMAC bootstrap, `{body,clientRequestId}` message command and native WS/SSE envelopes were preserved.
+3. Hardened the Chat-to-Web status client around one frozen secure request:
+
+   ```json
+   { "subject": "web-object-id", "tokenIssuedAt": 1795161600, "jti": "verified-jti" }
+   ```
+
+   The client now requires the exact response fields, dedicated Bearer credential, `X-Owj-Service: ouj-chat`, correlation-ID echo, bounded caching and fail-closed error handling.
+4. Persisted verified assertion `iat` and `jti` references on new registered/agent support sessions. Guests remain exempt. Historical non-guest sessions without that metadata fail closed and must re-bootstrap.
+5. Added force-fresh status checks for bootstrap and security-sensitive staff mutations, agent-only revocation on staff-role loss, all-session revocation for global account/support denial, request coalescing and global status concurrency bounds.
+6. Published exact machine-readable assertion, HMAC, recovery, cookie, status, message and realtime fixtures for Web.
+7. Added real-Mongo media restart/reclaim coverage and completed focused, aggregate, client, worker, browser, Docker and documentation verification.
+8. Ran the shared Web-owned Compose harness. The first running Web image still had the old status schema; Chat correctly failed closed. Web's concurrent source was then aligned, only the Web image was rebuilt, and the actual flows passed.
+9. Performed a final fixture/runtime audit. It found and corrected exact-role/header/correlation/cache fixture drift, transport-specific revocation-envelope drift and one real live-event bug where customer events used `guest`/`registered` rather than `customer`.
+10. Updated the five English/Farsi document pairs, built the docs, appended this log and left the local integration containers down while retaining the named synthetic volumes.
+
+### 26.3 Exact Chat implementation changes
+
+| Path | Exact Sprint 2.5 change |
+|---|---|
+| `.env.example` | Documented independent directional credentials of at least 32 characters and added `OWJ_IDENTITY_STATUS_MAX_CONCURRENCY=16`. |
+| `server/lib/webIdentityStatusClient.js` | Frozen the real Web request/response schema; added exact headers, assertion-bound cache keys, ≤60-second cache, force refresh, definitive error mapping, 32-KiB streamed-body limit, declared-length cancellation, whole-body deadline, identical-request coalescing, finite-clock checks and global request concurrency. |
+| `server/lib/supportRuntime.js` | Required ≥32-character outbound credentials; composed status concurrency at default 16/cap 64; forced current-state checks for bootstrap/staff-sensitive actions; failed closed for old non-guest sessions; distinguished agent-role revocation from global account revocation. No insecure environment aliases or legacy schema fallback remain. |
+| `server/lib/supportSessions.js` | Required and propagated verified assertion `iat`/`jti` metadata for registered/agent sessions; kept it optional for guests; passed required action context to runtime authorization. |
+| `server/lib/supportSessionStore.js` | Mapped `identity_issued_at` and `bootstrap_jti` to the runtime session object. |
+| `server/db/mongoSupport.js` | Persisted assertion issuance time and added principal-kind filtering for agent-only session revocation. |
+| `server/db/mongoSchema.js` | Allowed the two additive optional support-session fields without making old documents invalid or requiring a destructive rewrite/collMod. Schema version intentionally remained unchanged because the existing validator permits these optional fields. |
+| `server/api/support.js` | Normalized non-staff live `chat_message.actorKind` to `customer`, matching durable replay, fixtures and Web. Agent replies remain `agent`. |
+
+No new runtime dependency, broker, Socket.IO layer, user directory, MongoDB process or cross-repository model import was introduced.
+
+### 26.4 Exact tests and fixtures changed
+
+Server tests:
+
+- `server/test/api/support.test.js`
+- `server/test/contracts/supportFixtures.test.js`
+- `server/test/db/mongoSupport.test.js`
+- `server/test/lib/supportRuntime.test.js`
+- `server/test/lib/supportSessionStore.test.js`
+- `server/test/lib/supportSessions.test.js`
+- `server/test/lib/webIdentityStatusClient.test.js`
+- `server/test/mongo/mediaJobs.test.js`
+- `server/test/mongo/support.test.js`
+
+Machine-readable fixtures:
+
+- `docs/platform/fixtures/support-v1/manifest.json`
+- `docs/platform/fixtures/support-v1/assertion-policies.json`
+- `docs/platform/fixtures/support-v1/bootstrap-hmac.json`
+- `docs/platform/fixtures/support-v1/bootstrap-recovery.json`
+- `docs/platform/fixtures/support-v1/cookie.json`
+- `docs/platform/fixtures/support-v1/identity-status.json`
+- `docs/platform/fixtures/support-v1/messages.json`
+- `docs/platform/fixtures/support-v1/realtime.json`
+
+The status-client suite covers exact schema parsing, expiry and force refresh, staff denial, definitive errors, invalid metadata, streamed-size limits, declared oversize cancellation, stalled-body timeout, identical-request coalescing, global concurrency and invalid clocks. Mongo/media tests cover enqueue/dedupe, a new database client/repository/runner after acceptance, exact-once completion, stale lease recovery, old-owner denial, retry, terminal failure and lock cleanup.
+
+### 26.5 Test-first corrections made during final audit
+
+The final audit did not silently edit fixtures to match assumptions. Each correction was first expressed as a failing test:
+
+1. **Status role/header fixture mismatch**
+   - Added assertions for lowercase `user`/`admin` and exact `X-Owj-Service`.
+   - Red result: contract fixture file **1 failed / 7**, exposing `X-Ouj-Service`.
+   - Fixed the header and roles in `identity-status.json`.
+   - Green result: **7/7**.
+2. **Status correlation/cache and realtime-envelope mismatch**
+   - Added assertions that Web echoes `X-Correlation-Id`, all alternative status outcomes retain the request subject, current Web success output uses 60 seconds, replay does not invent `requiredClientAction`, and SSE/WS revocation fixtures are transport-specific.
+   - Red result: contract fixture file **2 failed / 7**.
+   - Corrected request IDs, subject/cache examples, replay gap and separate `sseSessionRevoked`/`websocketSessionRevoked` fixtures.
+   - Green result: **7/7**.
+3. **Live customer actor kind**
+   - Added guest and registered live-notification cases.
+   - Red result: support API **2 failed / 18**; actual values were `guest` and `registered`.
+   - Changed only the live event mapping to `customer`.
+   - Green result: support API **18/18**.
+
+The final full server aggregate after all three corrections passed **141 files / 1,215 tests**.
+
+### 26.6 Frozen integration contract
+
+Identity assertions:
+
+- RS256 only.
+- Exact issuer and `aud` containing `owj-chat`.
+- Required `iss`, `sub`, `aud`, `iat`, `exp`, `jti`, `kid`, `token_use` and `scope`.
+- Token uses remain `support_guest`, `support_registered` and `support_agent`.
+- Guest assertions do not invoke the registered-user status endpoint.
+- One-time JTI consumption remains durable; recovery requires a fresh assertion/JTI.
+
+Web-to-Chat bootstrap:
+
+- `POST /internal/v1/support/bootstrap`.
+- Existing `X-Ouj-Service-Auth-Version/Timestamp/Nonce/Signature` HMAC-SHA256 protocol.
+- `Idempotency-Key` selects the same logical conversation.
+- An ambiguous retry uses a fresh service nonce/signature and fresh assertion/JTI.
+- The retry may return a new opaque support credential because Chat stores only its digest.
+
+Chat-to-Web status:
+
+- `POST /api/internal/v1/identity/status`.
+- Dedicated Chat-to-Web Bearer credential.
+- `X-Owj-Service: ouj-chat` and `X-Correlation-Id`.
+- Request `{subject,tokenIssuedAt,jti}`.
+- Response `{version,subject,status,role,support,authorizationCacheMaxAgeSeconds,checkedAt,requestId}`.
+- Lowercase Web roles are preserved as policy data; Chat authorizes from `support.allowed` and `support.staff`.
+
+Browser:
+
+- `/support/v1/*`.
+- Cookie `owj_support_sid`, HttpOnly, SameSite=Lax, Path=/support/v1, Secure under HTTPS.
+- No browser Bearer or query-string support credential.
+- Message command `{body,clientRequestId}`.
+- Native WebSocket `/support/v1/ws`; SSE `/support/v1/events`; no Socket.IO.
+
+### 26.7 Actual local Docker chronology and evidence
+
+The Web-owned harness was `/home/mhmk/Documents/git/owjamlak/integration/compose.yaml`. It contained Web, Chat, one authenticated MongoDB replica set, one-shot Mongo initialization and Nginx. Web and Chat used separate logical databases and credentials.
+
+Initial state and safe recovery:
+
+- `docker compose ... config --quiet` passed.
+- Web and Chat images built.
+- The project name changed from an earlier `owj-local-integration` run to `owj-sprint2-integration` while the named volumes were retained. Compose warned about the earlier volume owner.
+- A duplicate Mongo startup initially encountered the retained-volume/project collision. No volume was deleted and no global Docker cleanup was used.
+- The final `owj-sprint2-integration` Mongo became healthy. Web, Chat and proxy were started with `--no-build`.
+- Nginx initially restart-looped because its `web:3000` name was unresolved while Web had been concurrently recreated. Starting Web and restarting only `proxy` fixed it.
+- Proxy health, Web health and the real JWKS endpoint returned HTTP 200. Public requests to internal bootstrap/status paths returned 404.
+
+Identity/JWKS:
+
+- Public JWKS metadata returned two RSA/RS256 signing entries: `local-active-v1` and `local-previous-v1`.
+- Active Web-issued guest, registered and staff assertions were accepted without exposing any private key to Chat.
+- The first running Web image returned old-schema `400 IDENTITY_REFERENCE_INVALID`; Chat did not add a fallback.
+- After rebuilding only Web from aligned source, a direct Chat-to-Web status request returned HTTP 200 with the exact flat subject, lowercase `admin`, `support.allowed:true`, `support.staff:true`, cache 60 and the supplied correlation ID.
+- Negative real status calls returned 404 `IDENTITY_NOT_FOUND` for an unknown subject and 401 `SERVICE_UNAUTHENTICATED` for missing/wrong service credentials.
+- A normal `user` requesting staff bootstrap returned 403 `SUPPORT_AGENT_REQUIRED`.
+
+Guest and message flow:
+
+- Guest A conversation: `11a70796-3105-4d53-bd65-249f6e1b85ad`.
+- Session and empty history returned 200.
+- Message `dd2319c7-45e0-46eb-a5ca-d5afc1977904` returned 201 with `deduped:false`.
+- Exact retry returned 200 with the same ID and `deduped:true`.
+- Same key with a changed body returned 409 `SUPPORT_IDEMPOTENCY_CONFLICT`.
+- History contained one copy.
+- Repeating the same Web bootstrap request returned the same conversation with `created:false` and a fresh opaque session.
+- Guest B received conversation `f9b837a1-b45c-4cf0-85ea-228c1f320744`. Supplying Guest A's conversation ID as an extra history query still returned Guest B's own empty conversation.
+
+Realtime:
+
+- SSE without Origin returned `SUPPORT_ORIGIN_DENIED`.
+- Allowed Origin `http://localhost:18088` returned native `chat_message` replay plus `connected`, `hasMore:false`, `gap:false`.
+- Native WebSocket opened using only the support cookie, accepted `{type:"resume",cursor:""}`, replayed the message and returned `replay_complete` with `gap:false`.
+- The Web verifier bootstrapped staff, found Guest A in the queue, assigned it and wrote reply `553117ff-eb2d-4a34-bb4d-8ff3c62e62a8`.
+- Guest A history showed both customer and agent records. SSE resumed from the customer cursor and delivered the agent reply.
+
+Registered/status/revocation:
+
+- Web's mounted verifier passed staff bootstrap 200, queue visibility, assignment, reply, registered bootstrap, same-conversation recovery and registered message/history persistence.
+- A dedicated synthetic registered user's existing support session was retained only inside the Web container's `/tmp`.
+- The local test harness set that synthetic user's Web-owned `authRevokedBefore`.
+- After the one-second configured cache window, Chat denied the existing session with HTTP 401 `SUPPORT_SESSION_REVOKED`; the rejected message was not accepted.
+- The fixture's `authRevokedBefore` was immediately unset. A follow-up check showed `isActive:true` and no revocation timestamp.
+
+Restart and logout:
+
+- The Web container ID/start time was recorded.
+- Only Chat was stopped.
+- Web remained the same healthy container and `/api/health` returned 200 while Chat was down.
+- Chat was started again and became healthy.
+- Guest A's two persisted messages survived.
+- Guest B logout returned 200; its old cookie then returned 401 `SUPPORT_SESSION_REVOKED`.
+
+Cleanup:
+
+- A concurrent Web-owned cleanup removed the integration containers/network after the acceptance flow.
+- `owj_sprint2_mongo_data` and `owj_sprint2_chat_data` remained present; no `down --volumes` or global prune was run.
+- The two exact `/tmp` guest cookie jars created by this task were deleted.
+- No production or user data was present in the synthetic harness.
+
+### 26.8 Verification commands and actual results
+
+| Command/check | Actual result |
+|---|---|
+| `npm --prefix server exec vitest run test/lib/webIdentityStatusClient.test.js test/lib/supportRuntime.test.js test/lib/supportSessions.test.js test/lib/supportSessionStore.test.js test/db/mongoSupport.test.js test/api/support.test.js test/contracts/supportFixtures.test.js` | Intermediate focused pass: **55/55**. |
+| `npm --prefix server exec vitest run test/lib/webIdentityStatusClient.test.js` | Final focused status pass: **13/13**. |
+| `npm --prefix server exec vitest run test/api/support.test.js` | Red **2/18**, then green **18/18** after live customer normalization. |
+| `npm --prefix server exec vitest run test/contracts/supportFixtures.test.js` | Red **1/7**, green; later red **2/7**, then final green **7/7** after exact fixture audit. |
+| `npm --prefix server test` | Final pass outside the listener-restricted sandbox: **141 files / 1,215 tests**. |
+| `npm --prefix server run test:mongo` | Pass: **9 files / 58 tests**, including media jobs 2/2 and support metadata 4/4. |
+| `npm --prefix worker test` | Restricted sandbox produced false `listen EPERM`; rerun with local listener access passed **6 files / 46 tests**. |
+| `npm --prefix client run test:unit` | Pass: **48 files / 457 tests**. |
+| `npm --prefix client run build` | Pass: **3,509 modules**, 3.14 seconds; two non-fatal ineffective dynamic-import warnings. |
+| `npm run docs:build` | Final bilingual VitePress build passed in **8.89 seconds**; paired heading counts match. |
+| `docker compose --env-file integration/.env -f integration/compose.yaml config --quiet` | Pass. |
+| `docker compose --env-file integration/.env -f integration/compose.yaml build web chat` | Both local images built; Web was later rebuilt alone after its aligned source landed. |
+| Shared proxy/JWKS/status/bootstrap/message/realtime/staff/restart requests | Passed as itemized in Section 26.7. |
+| `graphify update .` | Could not run: exit 127, `graphify` command not installed. No graph files were rewritten. |
+
+Non-green checks were not hidden:
+
+- `npm --prefix client run lint` reported **one error and five warnings**. The error is the inherited duplicate `Ouj Chat` key in `client/src/i18n/fa-ui.js:301`; warnings cover one unused `t`, three unnecessary `locale` dependencies and one missing `context` dependency.
+- `npm --prefix client run test:browser` could not bind in the restricted sandbox. With listener/browser permission, Chromium ran 815 tests: **805 passed and 10 failed; 63 files passed and 8 failed**. Failures remain in existing header/filter/sidebar/context-menu/composer/user-menu business-action UI cases. Firefox did not run because its Playwright executable is absent.
+- Those UI files were not changed merely to make Sprint 2.5 appear green.
+
+### 26.9 Security, privacy and resource impact
+
+- Web status requests default to a three-second deadline that covers both fetch and full body consumption.
+- Response bodies are limited to 32 KiB; declared-oversize bodies are cancelled.
+- Ordinary authorization cache age is at most 60 seconds and entries are bounded.
+- Identical in-flight status checks are coalesced.
+- Status concurrency defaults to 16 and is capped at 64 by runtime composition.
+- Security-sensitive bootstrap, agent reply, assignment and resolution force current-state checks.
+- Guests never invoke registered identity status.
+- Raw Web assertions, support credentials, service secrets and private message bodies are not logged or placed in the fixtures. Support sessions persist only credential digests.
+- The status request contains only the verified subject, assertion issuance time and JTI. It does not request a User/CRM document.
+- Two small optional session fields add negligible document/index cost and require no collection rewrite.
+- Realtime event notifications omit the private message body; HTTP history remains authoritative.
+- No Redis, Kafka, Elasticsearch, Socket.IO, Kubernetes or second MongoDB process was added.
+- The real shared VPS still needs measured RSS, CPU, event-loop delay, Mongo/API p95, pool use, realtime connection count, media lag, disk and backup/restore evidence before resource ceilings or production enablement change.
+
+### 26.10 Documentation footprint
+
+English:
+
+- `docs/platform/CHAT_SUPPORT_API_CONTRACT_V1.md`
+- `docs/platform/CHAT_REALTIME_PROTOCOL_V1.md`
+- `docs/platform/CHAT_WEB_IDENTITY_MIGRATION.md`
+- `docs/platform/CHAT_LOCAL_DOCKER_TESTING.md`
+- `docs/platform/CHAT_SPRINT_2_5_HANDOFF.md` (new)
+
+Persian:
+
+- `docs/fa/platform/CHAT_SUPPORT_API_CONTRACT_V1.md`
+- `docs/fa/platform/CHAT_REALTIME_PROTOCOL_V1.md`
+- `docs/fa/platform/CHAT_WEB_IDENTITY_MIGRATION.md`
+- `docs/fa/platform/CHAT_LOCAL_DOCKER_TESTING.md`
+- `docs/fa/platform/CHAT_SPRINT_2_5_HANDOFF.md` (new)
+
+The sibling Web runtime is aligned, but its own prose still contains three Web-owned drift items that this Chat task did not edit: `X-Ouj-Service` instead of runtime `X-Owj-Service`, omission of actual `SERVICE_AUTH_INVALID`, and wording that makes bootstrap `X-Request-Id` mandatory although Chat treats it as optional correlation and actual Web sends it.
+
+### 26.11 Remaining gates and rollback
+
+The following are still open and must not be reported as completed:
+
+1. Exercise a real assertion issued before/after a signing-key rotation. The current JWKS advertises active and previous public keys, but no actual previous-key-signed token was available.
+2. Run actual Web widget browser automation in Chromium and Firefox, long reconnect/gap behavior and production-like HTTPS/Secure-cookie behavior. Native proxy WS/SSE passed, but that is not a full browser UI claim.
+3. Run a full Docker worker/FFmpeg interruption with synthetic bytes. Real Mongo proves durable job reclaim/retry, not the whole media process.
+4. Re-run a current shared-harness Chat-credential cross-database denial if that exact Sprint 2.5 evidence is required. The extra probe was attempted only after a concurrent task had already removed the containers; separate credentials and prior Sprint 2 evidence remain, but this log does not invent a fresh pass.
+5. Exercise actual disabled-account and second-agent-private-case variants in the shared Docker harness. Revocation, ordinary-user staff denial, unknown identity and atomic competing assignment are proven; these remaining variants have automated contract/real-Mongo coverage.
+6. Complete backup/restore rehearsal, identity-link migration review, production-like resource/load testing, TLS/proxy review, incident ownership and canary/rollback approval.
+7. Reconcile the Web-owned documentation drift listed above.
+8. Fix or separately baseline the inherited client lint/browser failures and install Firefox's Playwright binary.
+
+The safe feature rollback is to keep or set `OWJ_SUPPORT_ENABLED=false`, remove/disable the support proxy route and revoke affected support sessions. Rollback must not delete conversations, messages, memberships or attachments. Existing Chat IDs and history remain authoritative.
+
+Suggested human commit message after review:
+
+```text
+feat(platform): align support identity contracts and prove local integration
+```
+
+No commit, push, deployment or production migration was performed.

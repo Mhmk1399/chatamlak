@@ -13,6 +13,7 @@ const ACTIONS = new Set([
   "staff:resolve",
 ]);
 const SUPPORT_SCOPES = new Set(["support:conversation:create", "support:agent"]);
+const ASSERTION_JTI_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 
 export class SupportSessionError extends Error {
   constructor(code, message, status = 401) {
@@ -76,6 +77,36 @@ function normalizeScopes(value) {
     fail("SUPPORT_SESSION_INVALID", "Support session scopes are invalid.", 400);
   }
   return scopes;
+}
+
+function normalizeAssertionReference(principal, suppliedJti) {
+  const rawIssuedAt = Number(principal?.issuedAt);
+  const principalJti = typeof principal?.jti === "string" ? principal.jti.trim() : "";
+  const explicitJti = typeof suppliedJti === "string" ? suppliedJti.trim() : "";
+  const jti = principalJti || explicitJti;
+  const referenceRequired = principal?.kind === "registered" || principal?.kind === "agent";
+  const hasReference = Number.isFinite(rawIssuedAt) || Boolean(jti);
+
+  if (!referenceRequired && !hasReference) {
+    return { identityIssuedAt: null, bootstrapJti: null };
+  }
+  if (
+    !Number.isInteger(rawIssuedAt) ||
+    rawIssuedAt < 1_000 ||
+    rawIssuedAt % 1_000 !== 0 ||
+    !ASSERTION_JTI_PATTERN.test(jti) ||
+    (principalJti && explicitJti && principalJti !== explicitJti)
+  ) {
+    fail(
+      "SUPPORT_IDENTITY_REFERENCE_INVALID",
+      "The verified support identity reference is invalid.",
+      400,
+    );
+  }
+  return {
+    identityIssuedAt: rawIssuedAt / 1_000,
+    bootstrapJti: jti,
+  };
 }
 
 function normalizePrincipal(principal, chatUserId) {
@@ -169,6 +200,7 @@ export function createSupportSessionService({
       128,
     );
     const actor = normalizePrincipal(principal, chatUserId);
+    const identityReference = normalizeAssertionReference(principal, bootstrapJti);
     const actions = normalizeActions(allowedActions);
     const scopes = normalizeScopes(principal.scopes);
     const issuedAt = Number(now());
@@ -194,9 +226,8 @@ export function createSupportSessionService({
       allowedActions: actions,
       scopes,
       status: "active",
-      bootstrapJti: typeof bootstrapJti === "string" && bootstrapJti.trim()
-        ? bootstrapJti.trim().slice(0, 200)
-        : null,
+      bootstrapJti: identityReference.bootstrapJti,
+      identityIssuedAt: identityReference.identityIssuedAt,
       createdAt: new Date(issuedAt).toISOString(),
       lastSeenAt: new Date(issuedAt).toISOString(),
       idleExpiresAt: new Date(idleExpiry).toISOString(),
@@ -262,7 +293,7 @@ export function createSupportSessionService({
     if (revalidate && typeof validateAuthorization === "function") {
       let active = false;
       try {
-        const result = await validateAuthorization(session);
+        const result = await validateAuthorization(session, { requiredAction });
         active = result === true || result?.active === true;
       } catch (_) {
         fail(

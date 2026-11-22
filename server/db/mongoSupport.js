@@ -166,6 +166,7 @@ export function createSupportRepository(
     allowedActions = [],
     scopes = [],
     bootstrapJti = null,
+    identityIssuedAt = null,
     expiresAt,
     idleExpiresAt,
     identityCheckedAt = null,
@@ -186,6 +187,7 @@ export function createSupportRepository(
       )].slice(0, 16),
       scopes: [...new Set(Array.isArray(scopes) ? scopes.map(String) : [])].slice(0, 16),
       bootstrap_jti: bootstrapJti || null,
+      identity_issued_at: Number.isInteger(identityIssuedAt) ? identityIssuedAt : null,
       status: "active",
       expires_at: required(expiresAt, "Session expiry", 40),
       idle_expires_at: required(idleExpiresAt, "Session idle expiry", 40),
@@ -236,10 +238,18 @@ export function createSupportRepository(
       },
     );
 
-  const revokeSupportSessionsByWebUserId = (webUserId, reason = "identity_revoked") =>
+  const revokeSupportSessionsByWebUserId = (
+    webUserId,
+    reason = "identity_revoked",
+    principalKind = null,
+  ) =>
     store.update(
       "support_sessions",
-      { web_user_id: String(webUserId), status: "active" },
+      {
+        web_user_id: String(webUserId),
+        status: "active",
+        ...(principalKind ? { principal_kind: String(principalKind) } : {}),
+      },
       {
         status: "revoked",
         revoked_at: now(),

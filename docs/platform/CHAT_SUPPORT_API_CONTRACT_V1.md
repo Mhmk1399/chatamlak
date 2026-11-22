@@ -1,61 +1,55 @@
 # Chat support API contract v1
 
-Status: **IMPLEMENTED IN SOURCE, DISABLED BY DEFAULT, NOT DEPLOYED** (Sprint 2, 2026-11-20). The contract has local mock/real-Mongo coverage, but the actual Owj Web service has not been tested with Chat.
+Status: **IMPLEMENTED AND ACCEPTED IN THE SYNTHETIC LOCAL WEB+CHAT STACK; DISABLED BY DEFAULT** (Sprint 2.5 snapshot: 2026-11-21). This is local contract evidence, not a production migration, deployment, capacity result, or browser-automation result.
 
-## Trust and routing model
+## Ownership and routing
 
-Web is the public identity authority and browser-facing BFF. Chat owns support conversations, messages, assignment, support sessions, and realtime authorization. Chat never reads Web collections.
+Web owns canonical people, login, account state, global roles, RS256 assertion issuance, JWKS, and browser bootstrap. Chat owns support conversations, support sessions, messages, assignment, and native realtime. Neither service writes the other service's database.
 
-The reverse proxy should expose only these integration paths to the website:
+The intended routes are:
 
-- `POST /internal/v1/support/bootstrap` — backend-to-backend only; never browser-accessible.
-- `/support/v1/*` — same-origin browser support surface.
+- `POST /internal/v1/support/bootstrap`: internal Web-to-Chat command; never expose it to browsers.
+- `/support/v1/*`: same-origin browser support surface proxied to Chat.
 
-Do not proxy legacy `/api/login`, `/api/register`, global Chat directory, admin, calls, channels, or CRM routes into the website widget.
+Chat support is inert unless `OWJ_SUPPORT_ENABLED=true`. Do not proxy Chat's legacy login/register, global directory, admin, channels, calls, or CRM routes into the website support widget.
 
-Successful support JSON responses use `version: 1`. Wrapped HTTP errors use the stable unversioned envelope below:
+## Required runtime configuration
 
-```json
-{
-  "error": {
-    "code": "SUPPORT_REQUEST_INVALID",
-    "message": "The support request is invalid.",
-    "requestId": "request-or-generated-uuid"
-  }
-}
-```
-
-The server accepts a bounded `X-Request-Id` and echoes it; otherwise it generates one. The direct normal-HTTP response on `/support/v1/ws` is a documented exception: its 426 error object contains `code` and `message` but no `requestId`; native upgrade rejection is plain HTTP text. Credentials, assertion bodies, message text, and presigned queries must not be logged.
-
-## Enablement and environment
-
-Support is inert unless `OWJ_SUPPORT_ENABLED=true`. When enabled, startup fails closed unless the following are valid:
+When support is enabled, Chat fails startup closed unless these values are valid:
 
 | Variable | Contract |
 |---|---|
 | `OWJ_WEB_ISSUER` | Exact absolute Web issuer; HTTPS in production |
-| `OWJ_WEB_JWKS_URL` | Absolute JWKS URL; HTTPS in production |
-| `OWJ_WEB_STATUS_URL` | Absolute identity-status URL; HTTPS in production |
-| `OWJ_WEB_TO_CHAT_SERVICE_SECRET` | Directional inbound HMAC secret, at least 32 characters |
-| `OWJ_CHAT_TO_WEB_SERVICE_TOKEN` | Directional outbound bearer credential, at least 16 characters |
-| `OWJ_SUPPORT_ALLOWED_ORIGINS` | Comma-separated exact browser origins; falls back to `APP_PUBLIC_URL`, but one of them is required |
+| `OWJ_WEB_JWKS_URL` | Absolute Web JWKS URL; HTTPS in production |
+| `OWJ_WEB_STATUS_URL` | Absolute Web identity-status URL; HTTPS in production |
+| `OWJ_WEB_TO_CHAT_SERVICE_SECRET` | Dedicated directional bootstrap HMAC secret, at least **32 characters** |
+| `OWJ_CHAT_TO_WEB_SERVICE_TOKEN` | Dedicated directional status Bearer credential, at least **32 characters** |
+| `OWJ_SUPPORT_ALLOWED_ORIGINS` | Exact comma-separated browser origins; otherwise `APP_PUBLIC_URL` must be present |
 
-`OWJ_WEB_ALLOW_INSECURE_HTTP=true` permits HTTP issuer endpoints/origins only outside production for local development. Never enable it in production.
+The two directional credentials are different credentials and must not reuse Web signing keys, `JWT_SECRET`, MongoDB credentials, or browser tokens. `OWJ_WEB_ALLOW_INSECURE_HTTP=true` is accepted only outside production for local development.
 
-Operational bounds are configurable through `OWJ_IDENTITY_STATUS_CACHE_MS` (hard maximum 60 seconds), `SUPPORT_SESSION_IDLE_TIMEOUT_MS`, `SUPPORT_SESSION_ABSOLUTE_TIMEOUT_MS`, `SUPPORT_REALTIME_REVALIDATE_MS`, `SUPPORT_REALTIME_MAX_REPLAY`, `SUPPORT_MAX_CONNECTIONS_PER_SESSION`, `SUPPORT_WS_MAX_CONNECTIONS_PER_IP`, and `SUPPORT_BOOTSTRAP_RATE_LIMIT`. `WS_TRUST_PROXY` affects trusted client-IP extraction and must match the controlled proxy topology.
+Current-state bounds:
 
-## Web → Chat service authentication
+- ordinary status cache: at most 60 seconds;
+- default status concurrency: 16; runtime configuration is capped at 64;
+- equal in-flight status checks are coalesced;
+- support sessions: 30-minute idle and 12-hour absolute defaults;
+- message pages: at most 100; replay pages: at most 200;
+- message text: at most 4,000 characters and 16 KiB.
 
-Bootstrap uses the dedicated `OWJ_WEB_TO_CHAT_SERVICE_SECRET` (minimum 32 characters at runtime), not Web's JWT signing key. Web sends four headers:
+## Web-to-Chat bootstrap authentication
+
+`POST /internal/v1/support/bootstrap` uses timestamp/nonce HMAC-SHA256, not Bearer auth:
 
 ```http
 X-Ouj-Service-Auth-Version: 1
 X-Ouj-Service-Auth-Timestamp: <13-digit Unix milliseconds>
 X-Ouj-Service-Auth-Nonce: <16-128 base64url characters>
 X-Ouj-Service-Auth-Signature: <lowercase hex HMAC-SHA256>
+Idempotency-Key: <1-180 characters>
 ```
 
-The HMAC input is exact, newline-separated text:
+The signing input is exactly:
 
 ```text
 ouj-service-auth-v1
@@ -65,19 +59,13 @@ POST
 /internal/v1/support/bootstrap
 ```
 
-Timestamp skew is bounded (five minutes by default). Nonces are held in a bounded 10-minute in-process replay cache. A Chat restart clears this service-nonce cache, but the signed assertion's durable unique `jti` still prevents bootstrap replay across restarts. Missing/invalid service auth returns `SUPPORT_SERVICE_UNAUTHORIZED`.
+Timestamp skew is five minutes by default. Nonces use a bounded ten-minute in-process replay guard. The verified assertion's unique `jti` is durably consumed in MongoDB, so replay remains denied across Chat restarts.
 
-## Bootstrap
-
-`POST /internal/v1/support/bootstrap`
-
-Required headers: service-auth headers, `Content-Type: application/json`, and `Idempotency-Key` (1–180 characters). The implementation also accepts `body.idempotencyKey` as a compatibility fallback, but Web must use the header. The assertion is capped at 16 KiB. The Web assertion itself is one-time; retry after an ambiguous result should obtain a new assertion with the same Web subject. Conversation identity uniqueness makes that retry resume the same conversation; the current implementation does not replay the prior opaque session credential by idempotency key.
-
-Customer request:
+Customer bootstrap body:
 
 ```json
 {
-  "assertion": "<one-time RS256 JWT>",
+  "assertion": "<one-time Web-issued RS256 assertion>",
   "bootstrapType": "customer",
   "locale": "fa-IR",
   "context": {
@@ -87,16 +75,14 @@ Customer request:
 }
 ```
 
-`bootstrapType` defaults to `customer`. Customer assertions may be only `support_registered` or `support_guest` and require `support:conversation:create`. Context is allowlisted (`page`, `locale`, `publicListingId`), capped at 2 KiB as JSON, and effectively limited to 300 characters for `page` and 120 for the other context fields. The top-level `locale` is accepted up to 35 characters but persistence currently retains at most 24; Web should therefore send no more than 24. Do not send CRM/customer/contact data.
+Customer assertions are `support_registered` or `support_guest`; staff bootstrap uses `bootstrapType:"staff"`, `support_agent`, and both `support:agent` and `support:conversation:create`. Context is allowlisted to `page`, `locale`, and `publicListingId`, bounded to 2 KiB, and must not contain CRM/contact/private listing data.
 
-Staff request uses `"bootstrapType":"staff"`, `token_use:"support_agent"`, and both `support:agent` and `support:conversation:create`. Staff must also have an active explicit Web↔Chat link and pass Web's current-status check.
-
-Response (`201` created, `200` resumed):
+Bootstrap performs a forced, uncached Web status check for registered customers and agents. A successful response is `201` for a new logical conversation or `200` when resumed:
 
 ```json
 {
   "version": 1,
-  "conversationId": "chat-conversation-uuid",
+  "conversationId": "11111111-1111-4111-8111-111111111111",
   "supportSessionCredential": "ocs_<opaque-random-value>",
   "expiresAt": "2026-11-21T12:00:00.000Z",
   "created": true,
@@ -105,39 +91,85 @@ Response (`201` created, `200` resumed):
 }
 ```
 
-The bootstrap response is `Cache-Control: private, no-store`. Only the authenticated Web backend receives the opaque credential. The current issuer uses 32 random bytes (`ocs_` plus 43 base64url characters). Chat stores only a namespace-bound SHA-256 digest, never the raw value. Web must place it into a same-origin cookie:
+Chat stores only a namespaced SHA-256 digest of the opaque credential. Web must write the credential to:
 
 ```http
 Set-Cookie: owj_support_sid=<credential>; Path=/support/v1; HttpOnly; SameSite=Lax; Secure
 ```
 
-Use `Secure` on HTTPS and a cookie expiry no later than `expiresAt`. Browser API and realtime requests accept this cookie only; bearer/query credentials are not supported.
+`Secure` is required under HTTPS. Browser support endpoints accept only this cookie—never a Bearer header or query-string credential.
 
-Default support-session limits are 30 minutes idle and 12 hours absolute (`SUPPORT_SESSION_IDLE_TIMEOUT_MS`, `SUPPORT_SESSION_ABSOLUTE_TIMEOUT_MS`). A session carries only explicit customer actions (`read`, `send`, `events`, `logout`) or staff actions (plus `staff:list`, `staff:assign`, `staff:resolve`). It is not a legacy Chat session.
+### Ambiguous bootstrap recovery
+
+Web may retry one ambiguous timeout/unavailability result with:
+
+- the same logical `Idempotency-Key` and identity;
+- a fresh service-auth timestamp, nonce, and signature;
+- a fresh Web assertion with a new `jti`.
+
+The retry resumes the same logical conversation but may return a new plaintext support-session credential. Chat never persists or replays the old plaintext credential. Reusing the original assertion must fail as replay.
+
+## Frozen Chat-to-Web status contract
+
+Registered and agent authorization uses a dedicated Bearer service credential:
+
+```http
+POST /api/internal/v1/identity/status
+Authorization: Bearer <OWJ_CHAT_TO_WEB_SERVICE_TOKEN>
+Content-Type: application/json
+X-Owj-Service: ouj-chat
+X-Correlation-Id: <request-id>
+```
+
+The Sprint 2.5 request body is frozen as:
+
+```json
+{
+  "subject": "507f1f77bcf86cd799439011",
+  "tokenIssuedAt": 1795161600,
+  "jti": "fixture-registered-jti-1"
+}
+```
+
+`tokenIssuedAt` and `jti` come only from the verified RS256 assertion. They let Web compare assertion issuance to its revocation boundary.
+
+Success must be:
+
+```json
+{
+  "version": 1,
+  "subject": "507f1f77bcf86cd799439011",
+  "status": "active",
+  "role": "user",
+  "support": { "allowed": true, "staff": false },
+  "authorizationCacheMaxAgeSeconds": 60,
+  "checkedAt": "2026-11-20T08:00:00.000Z",
+  "requestId": "fixture-chat-correlation-1"
+}
+```
+
+Chat accepts status values `active`, `disabled`, `revoked`, and `deleted`; validates the exact subject; requires role and support booleans; and clamps Web's cache instruction to 0–60 seconds and Chat's own ceiling. Guests are never sent to this endpoint. Missing configuration, timeout, non-definitive upstream errors, malformed payloads, and expired cache fail closed.
+
+Passive session/read/realtime checks may use the bounded cache. Bootstrap, staff reply, assignment, and resolution force a refresh. A current staff-role denial revokes only that subject's `agent` support sessions; it does not end a separate registered-customer session for the same Web subject. Account disabled/revoked/deleted and general support denial revoke the affected active support authorization as appropriate.
+
+### Persisted assertion reference
+
+New registered/agent support sessions persist two additive optional fields:
+
+- `identity_issued_at`: verified assertion `iat` in Unix seconds;
+- `bootstrap_jti`: verified assertion `jti`.
+
+The Mongo validator permits these fields but does not require them, so no destructive migration or historical rewrite is required. Existing guest sessions remain valid without them. An existing non-guest session missing either field fails closed on current-state authorization and must re-bootstrap with a fresh assertion/session.
 
 ## Browser customer API
 
 ### `GET /support/v1/session`
 
-Returns only widget state:
-
-```json
-{
-  "version": 1,
-  "conversationId": "uuid",
-  "status": "active",
-  "identityKind": "guest",
-  "allowedActions": ["read", "send", "events", "logout"],
-  "expiresAt": "ISO-8601",
-  "supportAvailable": true
-}
-```
-
-It never returns the Chat actor UUID, Web subject, token digest, role, or admin fields.
+Returns only widget state: `version`, `conversationId`, `status`, `identityKind`, `allowedActions`, `expiresAt`, and `supportAvailable`. It never returns the Web subject, Chat actor ID, role, token digest, or admin fields.
 
 ### `GET /support/v1/messages?cursor=<base64url>&limit=50`
 
-The conversation comes from the support session; a caller cannot select one. `limit` defaults to 50 and is capped at 100. The opaque cursor is base64url JSON containing the oldest returned `{ "id", "createdAt" }`. Messages are chronological within the page:
+The conversation comes from the support session. The cursor is opaque base64url JSON over the oldest returned `{id,createdAt}`. Response:
 
 ```json
 {
@@ -158,17 +190,19 @@ The conversation comes from the support session; a caller cannot select one. `li
 }
 ```
 
-File entries expose only bounded public fields and protected Chat URLs. Version 1 has no support-widget upload mutation; message creation is text-only even though historical/native Chat attachments can be represented on reads.
-
 ### `POST /support/v1/messages`
 
+The request schema is exact:
+
 ```json
-{ "body": "bounded text", "clientRequestId": "widget-request-uuid" }
+{ "body": "Hello", "clientRequestId": "unique-request-id" }
 ```
 
-Text is required, capped at 4,000 characters/16 KiB. `clientRequestId` is 1–120 characters from `[A-Za-z0-9._:-]`. Chat checks the session-bound conversation and open/assigned lifecycle, then calls the existing transactional/idempotent message repository. Retry the identical request with the same identifier.
+Conversation identity is never accepted from the body. `clientRequestId` is 1–120 characters from `[A-Za-z0-9._:-]`. The existing Chat repository binds idempotency to `(conversation, actor, clientRequestId)`:
 
-Message idempotency is bound to `(conversation, actor, clientRequestId)`. An exact retry returns the originally persisted message with HTTP 200 and `deduped:true`. Reusing that key with a different body returns `409 SUPPORT_IDEMPOTENCY_CONFLICT`; it never replaces the first message. Clients must generate a new key for every intentional message.
+- new persistence: HTTP `201`, `deduped:false`;
+- exact retry: HTTP `200`, same `messageId`, `deduped:true`;
+- same key with a different body: HTTP `409 SUPPORT_IDEMPOTENCY_CONFLICT`.
 
 ```json
 {
@@ -179,70 +213,62 @@ Message idempotency is bound to `(conversation, actor, clientRequestId)`. An exa
 }
 ```
 
-New persistence returns `201`; a deduplicated retry returns `200`. The message and durable journal record share the Mongo transaction; live broadcasting does not write a second journal entry.
+Message and durable event-journal hint share the MongoDB transaction. HTTP history is authoritative for message bodies/files; the realtime notification deliberately omits the body.
 
-### `GET /support/v1/events` and `GET /support/v1/ws`
+### Realtime and logout
 
-SSE and native WebSocket contracts are defined in [Realtime protocol v1](./CHAT_REALTIME_PROTOCOL_V1.md). A normal HTTP GET to the WS path returns `426 SUPPORT_WEBSOCKET_UPGRADE_REQUIRED`.
+- Native WebSocket: `/support/v1/ws`.
+- SSE: `/support/v1/events`.
+- Logout: `POST /support/v1/logout` revokes locally, disconnects known streams, clears only `owj_support_sid`, and works even when Web is unavailable.
 
-### `POST /support/v1/logout`
-
-Revokes the local support session, disconnects known streams, clears only `owj_support_sid`, and returns `{ "version":1, "ok":true }`. Logout remains locally available if Web status is unavailable or the session has already expired.
+See [CHAT_REALTIME_PROTOCOL_V1.md](./CHAT_REALTIME_PROTOCOL_V1.md).
 
 ## Staff API
 
-All staff routes require `actorKind:"agent"`, scope `support:agent`, an active Web↔Chat link/current Web status, and the relevant support-session action.
+Every staff route requires `actorKind:"agent"`, `support:agent`, an active link, current Web staff authorization, and the relevant session action.
 
-| Method/path | Behavior |
+| Method/path | Contract |
 |---|---|
-| `GET /support/v1/staff/conversations?status=available|assigned|open|resolved|closed&limit=` | Available/open are unassigned; assigned/resolved/closed are restricted to the current agent. Page size ≤100. |
-| `GET /support/v1/staff/conversations/:conversationId?cursor=&limit=` | Only the assigned agent with Chat membership can read; messages use the safe customer/agent schema. |
-| `POST /support/v1/staff/conversations/:conversationId/assign` | Requires `Idempotency-Key`; one Mongo transaction couples the atomic assignment claim with Chat membership. One agent wins and resolved/closed work never reopens. |
-| `POST /support/v1/staff/conversations/:conversationId/reply` | Same text/idempotency schema; allowed only while status is `assigned`. |
-| `POST /support/v1/staff/conversations/:conversationId/resolve` | Requires `Idempotency-Key`; body `{ "resolution":"resolved" }` or `closed`; only the assigned agent. Allowed transitions are assigned→resolved/closed and resolved→closed. |
+| `GET /support/v1/staff/conversations?status=...` | Bounded available/assigned/open/resolved/closed list |
+| `GET /support/v1/staff/conversations/:conversationId` | Assigned agent plus Chat membership only |
+| `POST .../:conversationId/assign` | `Idempotency-Key`; forced status refresh; one transactional winner |
+| `POST .../:conversationId/reply` | Exact message schema; forced status refresh; assigned state only |
+| `POST .../:conversationId/resolve` | `Idempotency-Key`; forced status refresh; `resolved` or `closed` transition |
 
-Staff command keys are stored only as digests. A repeated assignment/state transition returns the authoritative current state and suppresses another realtime event. Reusing a resolution key for a different outcome returns `409 SUPPORT_IDEMPOTENCY_CONFLICT`; invalid or concurrent lifecycle transitions return a stable 409 conflict.
+Chat implements backend routes only; it does not grant agents the Chat admin panel or add a staff UI.
 
-The implementation supplies backend routes only; it does not add a new staff frontend or grant the Chat admin panel to agents.
+## Errors and machine-readable fixtures
 
-## Authorization and current-state rules
+Wrapped HTTP errors are:
 
-- Registered sessions require exact conversation identity, active link, current membership, active Chat account, and Web status.
-- Guest sessions compare a digested Web guest subject to exactly one support conversation. Guests are not inserted into `users` and cannot access legacy/global APIs.
-- Agent assignment and membership are transactionally coupled. Reading/replying additionally requires the current assignment and Chat membership.
-- Web status is cached per operation for at most 60 seconds. Once stale, Web outage fails registered/agent operations closed; guest operation remains local.
-- Resolved/closed conversations remain readable by their assigned agent but customer/staff sends stop. A later bootstrap resumes that same closed conversation with `supportAvailable:false`; creating a second case/reopening is not yet implemented.
-- Expired/revoked support sessions are rejected and cleaned periodically; open realtime connections revalidate independently.
+```json
+{
+  "error": {
+    "code": "SUPPORT_REQUEST_INVALID",
+    "message": "Safe text",
+    "requestId": "request-or-generated-id"
+  }
+}
+```
 
-## Stable error families
+Representative statuses are 400 for invalid input, 401 for missing/expired session or internal service auth, 403 for scope/conversation/staff denial, 409 for idempotency/assignment/lifecycle conflict, 426 for normal HTTP on the WS path, 429 for limits, and 503 for unavailable required providers. Credentials and private message text must not appear in logs/errors.
 
-| HTTP | Representative code | Meaning |
-|---:|---|---|
-| 400 | `SUPPORT_REQUEST_INVALID` | Invalid/capped field, cursor, context, or conversation UUID |
-| 401 | `SUPPORT_SERVICE_UNAUTHORIZED` | Invalid Web→Chat service authentication |
-| 401 | `SUPPORT_SESSION_REQUIRED` | Missing/malformed/unknown support cookie |
-| 401 | `SUPPORT_SESSION_EXPIRED` / `SUPPORT_SESSION_REVOKED` | Local support session no longer active |
-| 401/403 | `IDENTITY_*` | Signature/claim/replay/link/current-state rejection |
-| 403 | `SUPPORT_ACTION_DENIED` | Session class lacks the required action |
-| 403 | `SUPPORT_CONVERSATION_DENIED` | Conversation, lifecycle, membership, or assignment denied |
-| 403 | `SUPPORT_AGENT_REQUIRED` | Customer attempted a staff route |
-| 403 | `SUPPORT_SCOPE_DENIED` / `SUPPORT_ORIGIN_DENIED` | Assertion class/scope or realtime Origin denied |
-| 409 | `SUPPORT_IDEMPOTENCY_CONFLICT` / `SUPPORT_ASSIGNMENT_CONFLICT` / `SUPPORT_ASSIGNMENT_CLOSED` / `SUPPORT_RESOLUTION_CONFLICT` | Retry input, assignment, or lifecycle conflict |
-| 426 | `SUPPORT_WEBSOCKET_UPGRADE_REQUIRED` | Normal HTTP request used instead of a native WS upgrade |
-| 429 | `SUPPORT_RATE_LIMITED` / `SUPPORT_CONNECTION_LIMIT` | Bounded abuse/connection ceiling |
-| 500 | `SUPPORT_INTERNAL_ERROR` | Redacted fallback for an unexpected server error |
-| 503 | `SUPPORT_PROVIDER_UNAVAILABLE` | Required Web/store/provider unavailable; fail closed |
+The Chat-authoritative fixture manifest is:
 
-Default HTTP limits are 3,000 bootstrap requests per 15 minutes per resolved client IP (configurable) and 60 message writes per minute. `trust proxy` must match the controlled reverse proxy topology; otherwise IP-based limits can be misleading.
+`docs/platform/fixtures/support-v1/manifest.json`
 
-## Known cross-repository dependencies
+It covers assertion policies, HMAC, recovery, cookie, status, messages, and realtime. Fixtures are synthetic and contain no production secrets or private signing key.
 
-- Actual RS256 issuer/JWKS and assertion fixtures from Web.
-- Actual identity-status endpoint and directional Chat→Web credential.
-- Web BFF signing of inbound service-auth headers and setting the exact cookie.
-- Reverse-proxy tests for cookie path, Origin, SSE buffering, and WS upgrade.
-- Verified account-link and guest-conversion proof endpoints.
-- A product decision and implementation for reopening/creating a new case after resolution.
+## Local cross-repository acceptance — 2026-11-21
 
-Do not describe the integration as production-complete until actual Web+Chat tests pass.
+The first request against a stale Web image returned the old `400 IDENTITY_REFERENCE_INVALID` shape. Web was rebuilt from its aligned source; Chat then sent the frozen `{subject,tokenIssuedAt,jti}` body with its dedicated Bearer credential and received HTTP 200 with the exact flat subject, active role/support policy, 60-second cache instruction, timestamp, and echoed correlation ID. Chat did not add a legacy fallback.
 
+The isolated shared Docker stack then passed these synthetic flows:
+
+- real Web guest assertion and HMAC bootstrap, scoped `owj_support_sid`, conversation/message/history, same-conversation retry with `created:false`, exact retry dedupe, and different-body `409` conflict;
+- separate Guest B isolation even when Guest A's conversation ID was supplied as an extra query value;
+- staff bootstrap, queue visibility, assignment and reply; registered bootstrap, same-conversation recovery and persisted history;
+- a temporary Web-owned `authRevokedBefore` update caused an existing registered Chat session to receive `401 SUPPORT_SESSION_REVOKED`; the synthetic fixture was restored immediately;
+- logout returned 200 and the old guest cookie subsequently received 401.
+
+This closes the Sprint 2.5 status-contract blocker in the tested local revision. It does not prove production readiness, a production key-rotation event, actual browser automation, deployment, migration, or measured capacity.

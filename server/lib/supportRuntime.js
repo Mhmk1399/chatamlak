@@ -139,7 +139,7 @@ export function createSupportRuntime({
   const outboundServiceToken = required(
     env.OWJ_CHAT_TO_WEB_SERVICE_TOKEN,
     "OWJ_CHAT_TO_WEB_SERVICE_TOKEN",
-    16,
+    32,
   );
   const allowedOrigins = configuredOrigins(
     env.OWJ_SUPPORT_ALLOWED_ORIGINS || env.APP_PUBLIC_URL,
@@ -172,10 +172,15 @@ export function createSupportRuntime({
     fetchImpl,
     now,
     cacheTtlMs: Math.min(60_000, Math.max(0, Number(env.OWJ_IDENTITY_STATUS_CACHE_MS) || 60_000)),
-    onIdentityRevoked: async ({ webUserId, status }) => {
+    maxConcurrentRequests: Math.min(
+      64,
+      Math.max(1, Number(env.OWJ_IDENTITY_STATUS_MAX_CONCURRENCY) || 16),
+    ),
+    onIdentityRevoked: async ({ webUserId, status, kind }) => {
       await supportDb.revokeSupportSessionsByWebUserId(
         webUserId,
         `web_identity_${status || "revoked"}`,
+        status === "role_denied" && kind === "agent" ? "agent" : null,
       );
     },
   });
@@ -197,28 +202,48 @@ export function createSupportRuntime({
     return result.ok ? { service: "owj-web", scope: "chat:support:bootstrap" } : null;
   }
 
-  async function checkCurrentWebIdentity(session, operation) {
+  async function checkCurrentWebIdentity(session, operation, {
+    forceRefresh = false,
+    requireStaff = session?.actorKind === "agent",
+  } = {}) {
     if (session.actorKind === "guest") return true;
+    if (
+      !Number.isInteger(session.identityIssuedAt) ||
+      session.identityIssuedAt < 1 ||
+      typeof session.bootstrapJti !== "string" ||
+      !session.bootstrapJti
+    ) return false;
     try {
       await identityStatus.authorize({
-        kind: "registered",
+        kind: session.actorKind,
         webUserId: session.webUserId,
         operation,
+        tokenIssuedAt: session.identityIssuedAt,
+        jti: session.bootstrapJti,
+        forceRefresh,
+        requireStaff,
       });
       return true;
     } catch (error) {
-      if (["IDENTITY_SUBJECT_DISABLED", "IDENTITY_LINK_REVOKED"].includes(error?.code)) return false;
+      if ([
+        "IDENTITY_SUBJECT_DISABLED",
+        "IDENTITY_SUPPORT_DENIED",
+        "IDENTITY_LINK_REVOKED",
+      ].includes(error?.code)) return false;
       throw error;
     }
   }
 
-  async function validateAuthorization(session) {
+  async function validateAuthorization(session, { requiredAction } = {}) {
     if (!session?.id || !session?.chatUserId) return false;
     if (session.actorKind === "agent") {
       if (!session.scopes?.includes("support:agent")) return false;
       const link = await identityRepository.findPlatformIdentityLinkByWebUserId("owj-web", session.webUserId);
       if (!link || link.status !== "active" || link.chat_user_id !== session.chatUserId) return false;
-      return checkCurrentWebIdentity(session, "support:agent");
+      return checkCurrentWebIdentity(session, "support:agent", {
+        requireStaff: true,
+        forceRefresh: ["send", "staff:assign", "staff:resolve"].includes(requiredAction),
+      });
     }
     const conversation = await supportDb.getSupportConversation(session.conversationId);
     if (!conversation || conversation.actor_id !== session.chatUserId) return false;
@@ -233,7 +258,7 @@ export function createSupportRuntime({
     ) return false;
     const link = await identityRepository.findPlatformIdentityLinkByWebUserId("owj-web", session.webUserId);
     if (!link || link.status !== "active" || link.chat_user_id !== session.chatUserId) return false;
-    return checkCurrentWebIdentity(session, "support:session");
+    return checkCurrentWebIdentity(session, "support:session", { requireStaff: false });
   }
 
   const supportSessionService = createSupportSessionService({
@@ -290,7 +315,14 @@ export function createSupportRuntime({
       const active = await checkCurrentWebIdentity({
         actorKind: principal.kind,
         webUserId: principal.webUserId,
-      }, principal.kind === "agent" ? "support:agent:bootstrap" : "support:bootstrap");
+        identityIssuedAt: Number.isInteger(principal.issuedAt)
+          ? principal.issuedAt / 1_000
+          : null,
+        bootstrapJti: principal.jti,
+      }, principal.kind === "agent" ? "support:agent:bootstrap" : "support:bootstrap", {
+        forceRefresh: true,
+        requireStaff: principal.kind === "agent",
+      });
       if (!active) throw Object.assign(new Error("The Web identity is disabled."), {
         code: "IDENTITY_SUBJECT_DISABLED",
         status: 403,

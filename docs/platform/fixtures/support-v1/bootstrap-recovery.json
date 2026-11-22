@@ -1,0 +1,54 @@
+{
+  "contract": "ouj-chat-support-bootstrap-v1",
+  "request": {
+    "headers": {
+      "Idempotency-Key": "fixture-bootstrap-operation-1"
+    },
+    "body": {
+      "assertion": "${FRESH_WEB_ISSUED_RS256_ASSERTION}",
+      "bootstrapType": "customer",
+      "locale": "fa-IR",
+      "context": {
+        "page": "/listing/fixture-public-listing",
+        "locale": "fa-IR",
+        "publicListingId": "fixture-public-listing"
+      }
+    }
+  },
+  "firstAttempt": {
+    "assertionJti": "fixture-registered-jti-1",
+    "responseStatus": 201,
+    "response": {
+      "version": 1,
+      "conversationId": "11111111-1111-4111-8111-111111111111",
+      "supportSessionCredential": "ocs_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "expiresAt": "2026-11-21T20:00:00.000Z",
+      "created": true,
+      "assigned": false,
+      "supportAvailable": true
+    }
+  },
+  "ambiguousRetry": {
+    "sameIdempotencyKey": true,
+    "sameIdentity": true,
+    "freshAssertionRequired": true,
+    "assertionJti": "fixture-registered-jti-2",
+    "sameAssertionMustFailAsReplay": true,
+    "responseStatus": 200,
+    "response": {
+      "version": 1,
+      "conversationId": "11111111-1111-4111-8111-111111111111",
+      "supportSessionCredential": "ocs_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "expiresAt": "2026-11-21T20:05:00.000Z",
+      "created": false,
+      "assigned": false,
+      "supportAvailable": true
+    }
+  },
+  "invariants": {
+    "sameLogicalConversation": true,
+    "plaintextSessionCredentialMayChange": true,
+    "plaintextSessionCredentialIsNeverPersisted": true,
+    "consumedAssertionJtiRemainsRejectedAfterRestart": true
+  }
+}

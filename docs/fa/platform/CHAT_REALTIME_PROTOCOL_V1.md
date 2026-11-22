@@ -1,6 +1,6 @@
 # پروتکل بلادرنگ Owj Chat نسخه ۱
 
-وضعیت: Stack بلادرنگ بومی Chat و Stack بلادرنگ پشتیبانی Sprint 2 در این درخت منبع پیاده‌سازی شده‌اند. پشتیبانی تا زمانی که `OWJ_SUPPORT_ENABLED=true` نباشد غیرفعال می‌ماند. این سند قرارداد کد منبع است، نه مدرک یکپارچه‌سازی با Owj Web، اعتبارسنجی Reverse Proxy، اجرای Docker یا Deploy در Production.
+وضعیت: stack realtime بومی Chat و پشتیبانی در این سورس پیاده شده و در تصویر Sprint 2.5 پذیرش مصنوعی و محلی Web+Chat/proxy را پاس کرده است. پشتیبانی تا `OWJ_SUPPORT_ENABLED=true` غیرفعال می‌ماند. این مدرک Docker/protocol است، نه browser automation، deployment تولید یا capacity.
 
 Owj Chat از WebSocket بومی و Server-Sent Events (SSE) استفاده می‌کند و Socket.IO را پیاده‌سازی **نمی‌کند**.
 
@@ -22,9 +22,13 @@ Owj Chat از WebSocket بومی و Server-Sent Events (SSE) استفاده می
 - مقدار `Origin` درخواست که دقیقاً با یکی از Originهای `OWJ_SUPPORT_ALLOWED_ORIGINS` مطابقت دارد (یا وقتی فهرست صریح وجود ندارد، `APP_PUBLIC_URL`)؛
 - ادامه مجوز دسترسی به همان گفتگو.
 
+قرارداد cookie دقیقاً `owj_support_sid` با `HttpOnly`، `SameSite=Lax`، `Path=/support/v1` و روی HTTPS با `Secure` است. realtime مرورگر فقط همین cookie را می‌پذیرد؛ Bearer یا session پشتیبانی در query پذیرفته نمی‌شود.
+
 نبودن `Origin` رد می‌شود. پارامترهای Query وب‌سوکت با نام `token`، `sid` یا `supportSession` رد می‌شوند. Credential یا Secret مربوط به Replay را در URL نفرستید. تنها مقدار Query پشتیبانی‌شده SSE، `cursor` غیرمحرمانه Replay است.
 
 نشست پشتیبانی به‌صورت دوره‌ای دوباره اعتبارسنجی می‌شود؛ پیش‌فرض هر ۱۵ ثانیه است (`SUPPORT_REALTIME_REVALIDATE_MS`). اتصال در زمان انقضای موثر نشست نیز بسته می‌شود. لغو، Logout، انقضا، شکست بررسی وضعیت حساب، تغییر پیوند هویت، شکست مجوز گفتگو یا Shutdown دسترسی زنده را پایان می‌دهد.
+
+revalidation نوع registered/agent از `iat`/`jti` assertion که به‌صورت metadata اختیاری افزایشی session ذخیره شده استفاده می‌کند. session غیرمهمان قدیمی که یکی را ندارد fail closed است و باید re-bootstrap شود؛ guest این metadata را لازم ندارد. realtime passive می‌تواند cache مجاز Web با عمر حداکثر ۶۰ ثانیه را مصرف کند. bootstrap، reply کارشناس، assign و resolve status تازه می‌خواهند. concurrency پیش‌فرض ۱۶ و سقف runtime برابر ۶۴ است و بررسی‌های همسان درحال‌اجرا coalesce می‌شوند.
 
 ## Envelope رویداد پشتیبانی
 
@@ -65,6 +69,8 @@ Owj Chat از WebSocket بومی و Server-Sent Events (SSE) استفاده می
 
 Cursor/شناسه Event پیام پایدارند (`<messageId>` و `message:<messageId>`). Replay پایدار پیام از Journal رویداد Chat در MongoDB می‌آید. نرمال‌سازی Replay به ردیف‌های قدیمی Journal مقادیر `version:1`، `conversationId`، `chatId`، `cursor`/`eventId` پایدار، `occurredAt` و `sequence` عددی را اضافه می‌کند. برای پیامی که هنوز وجود دارد، نویسنده ذخیره‌شده نیز بارگذاری می‌شود و `userId`/`actorKind` با توجه به گفتگوی پشتیبانی به‌دست می‌آید. خواندن پیام از HTTP، به‌ویژه اگر پیام زیرین حذف شده باشد، همچنان مرجع Body، طبقه‌بندی نویسنده، Timestampها و فایل‌ها است.
 
+notification نوع `chat_message` عمداً متن خصوصی پیام را ندارد. مرورگر `messageId`/cursor را hint برای invalidation می‌داند و محتوای مرجع را از history HTTP احرازشده با cookie می‌گیرد. audit نهایی integration نشان داد مسیر live فوری sender غیرstaff را `guest`/`registered` می‌نامید، درحالی‌که replay و fixture به‌درستی `customer` بودند؛ publisher زنده برای هر دو identity به `actorKind:"customer"` اصلاح شد. تست regression پیش از fix در هر دو case قرمز بود و سپس فایل متمرکز API پشتیبانی ۱۸/۱۸ پاس شد.
+
 سایر Eventهای زنده پشتیبانی از Cursor درون‌پردازه‌ای `sr_*` استفاده می‌کنند، مگر Caller یک Cursor معتبر بدهد. Fan-out صندوق Staff فقط در حافظه است؛ پس از Restart پردازه، Staff باید فهرست مرجع HTTP را دوباره Fetch کند.
 
 ## SSE پشتیبانی
@@ -90,7 +96,7 @@ X-Accel-Buffering: no
 
 پس از Replay، SSE رویداد `connected` را با `cursor`، `hasMore` و `gap` ارسال می‌کند. اگر `hasMore` مقدار true دارد، با Cursor بازگشتی دوباره متصل شوید (یا به Replay وب‌سوکت بروید) تا Backlog پایدار مصرف شود و هر Redelivery را Deduplicate کنید. اگر `gap` مقدار true دارد، پیش از سالم تلقی‌کردن Stream، State مرجع HTTP را دوباره Fetch کنید.
 
-هنگام لغو، Server تلاش می‌کند `session_revoked` را ارسال کند و سپس Stream را می‌بندد. مرورگر ممکن است خودکار دوباره متصل شود؛ Widget باید در خطاهای نهایی هویت/مجوز، Retry را متوقف کند و Bootstrap تازه‌ای از طریق Web بگیرد.
+هنگام لغو، Server تلاش می‌کند `session_revoked` را ارسال کند و سپس Stream را می‌بندد. envelope نوع SSE شامل `conversationId` و `reason` است؛ envelope best-effort وب‌سوکت شامل `version`، `type` و `reason` است ولی `conversationId` ندارد. هیچ transport فیلد `requiredClientAction` منتشر نمی‌کند. مرورگر ممکن است خودکار دوباره متصل شود؛ Widget باید در خطاهای نهایی هویت/مجوز، Retry را متوقف کند و Bootstrap تازه‌ای از طریق Web بگیرد.
 
 ## WebSocket پشتیبانی
 
@@ -174,6 +180,10 @@ SSE و WebSocket بومی اکنون نشست‌های باز Chat را به‌�
 - برای سازگاری رو به جلو، Type و فیلدهای ناشناخته Event را نادیده بگیرید.
 - پس از Replay Gap، Restart سرور، Reset شدن Cursor، تغییر Schema/Version یا احتمال از دست رفتن State، دوباره Fetch کنید.
 
-## اعتبارسنجی‌های باقی‌مانده خارج از این Repository
+## پذیرش محلی و اعتبارسنجی باقی‌مانده
 
-پیش از Rollout، هر دو Transport را از طریق Topology واقعی Web/Nginx تست کنید: Cookie Path و رفتار Secure، Origin سخت‌گیرانه، Upgrade وب‌سوکت، بافرینگ SSE، Timeoutهای Proxy، اعتماد به IP کلاینت، اتصال مجدد/Replay، غیرفعال‌شدن حساب، لغو Link، Logout، تغییر Assignment و سازگاری نسخه‌ها هنگام Rolling Deployment. هیچ‌یک از این بررسی‌های بین‌Repository/Deployment صرفاً با کد منبع Sprint 2 و تست‌های ایزوله اثبات نمی‌شوند.
+نمونه‌های machine-readable زیر `docs/platform/fixtures/support-v1/manifest.json` freeze شده‌اند؛ `realtime.json`، `messages.json` و `cookie.json` fixture مستقیم browser client هستند.
+
+stack محلی ۲۰۲۶-۱۱-۲۱ رد Origin غایب، replay نوع SSE با Origin مجاز، upgrade/resume وب‌سوکت بومی و eventهای `chat_message` و `replay_complete` با `hasMore:false` و `gap:false` را پاس کرد. پس از reply واقعی کارشناس، SSE مهمان از cursor پیام مشتری resume شد و event کارشناس را گرفت. توقف و restart فقط Chat، history HTTP را نگه داشت و همان container وب سالم ماند.
+
+automation واقعی widget در browser اجرا نشد و HTTP محلی رفتار cookie نوع `Secure` در تولید را ثابت نمی‌کند. پیش از rollout هنوز Chromium/Firefox واقعی، timeout و buffering proxy، استخراج IP مورداعتماد، reconnect طولانی، revocation لینک، rolling compatibility و window واقعی rotation با کلید قبلی را تست کنید. Owj Chat برای دورزدن هیچ موردی Socket.IO اضافه نمی‌کند.

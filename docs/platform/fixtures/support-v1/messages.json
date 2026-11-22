@@ -1,0 +1,58 @@
+{
+  "contract": "ouj-chat-support-messages-v1",
+  "sendRequest": {
+    "method": "POST",
+    "path": "/support/v1/messages",
+    "body": {
+      "body": "Hello from the support fixture",
+      "clientRequestId": "fixture-client-request-1"
+    }
+  },
+  "sendAcknowledgement": {
+    "statusCode": 201,
+    "body": {
+      "version": 1,
+      "conversationId": "11111111-1111-4111-8111-111111111111",
+      "messageId": "22222222-2222-4222-8222-222222222222",
+      "deduped": false
+    }
+  },
+  "duplicateAcknowledgement": {
+    "statusCode": 200,
+    "body": {
+      "version": 1,
+      "conversationId": "11111111-1111-4111-8111-111111111111",
+      "messageId": "22222222-2222-4222-8222-222222222222",
+      "deduped": true
+    }
+  },
+  "historyResponse": {
+    "version": 1,
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "messages": [
+      {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "body": "Hello from the support fixture",
+        "authorKind": "customer",
+        "createdAt": "2026-11-21T09:00:00.000Z",
+        "editedAt": null,
+        "files": []
+      },
+      {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "body": "A fixture staff reply",
+        "authorKind": "agent",
+        "createdAt": "2026-11-21T09:01:00.000Z",
+        "editedAt": null,
+        "files": []
+      }
+    ],
+    "nextCursor": null,
+    "hasMore": false
+  },
+  "invariants": {
+    "conversationComesFromSessionNotRequest": true,
+    "idempotencyKeyField": "clientRequestId",
+    "httpHistoryIsAuthoritativeForMessageBodies": true
+  }
+}

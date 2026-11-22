@@ -1,0 +1,66 @@
+{
+  "contract": "ouj-chat-support-realtime-v1",
+  "transports": {
+    "websocket": "/support/v1/ws",
+    "sse": "/support/v1/events"
+  },
+  "messageNotification": {
+    "version": 1,
+    "type": "chat_message",
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "chatId": "11111111-1111-4111-8111-111111111111",
+    "messageId": "22222222-2222-4222-8222-222222222222",
+    "userId": "44444444-4444-4444-8444-444444444444",
+    "actorKind": "customer",
+    "cursor": "22222222-2222-4222-8222-222222222222",
+    "eventId": "message:22222222-2222-4222-8222-222222222222",
+    "occurredAt": "2026-11-21T09:00:00.000Z"
+  },
+  "sseConnected": {
+    "version": 1,
+    "type": "connected",
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "cursor": "22222222-2222-4222-8222-222222222222",
+    "hasMore": false,
+    "gap": false
+  },
+  "websocketResumeRequest": {
+    "type": "resume",
+    "cursor": "22222222-2222-4222-8222-222222222222"
+  },
+  "replayComplete": {
+    "version": 1,
+    "type": "replay_complete",
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "cursor": "33333333-3333-4333-8333-333333333333",
+    "hasMore": false,
+    "gap": false
+  },
+  "replayGap": {
+    "version": 1,
+    "type": "replay_complete",
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "cursor": "33333333-3333-4333-8333-333333333333",
+    "hasMore": false,
+    "gap": true
+  },
+  "sseSessionRevoked": {
+    "version": 1,
+    "type": "session_revoked",
+    "conversationId": "11111111-1111-4111-8111-111111111111",
+    "reason": "authorization_removed"
+  },
+  "websocketSessionRevoked": {
+    "version": 1,
+    "type": "session_revoked",
+    "reason": "authorization_removed"
+  },
+  "invariants": {
+    "nativeWebSocketNotSocketIo": true,
+    "sseUsesNamedEvents": true,
+    "messageNotificationDoesNotContainBody": true,
+    "clientDeduplicatesByEventIdThenCursor": true,
+    "gapRequiresHttpRefetch": true,
+    "credentialsNeverAppearInUrl": true
+  }
+}

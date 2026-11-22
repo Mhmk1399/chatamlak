@@ -1,6 +1,26 @@
 # Owj Chat local Docker testing
 
-Status: `docker-compose.local.yaml` is the Chat-owned local topology intended for disposable Ubuntu development. Its bounded local build/start/isolation/message-restart checks passed on 2026-11-20 as recorded below. It does not connect to production and it does not include or validate Owj Web or a public reverse proxy.
+Status: `docker-compose.local.yaml` remains the Chat-owned disposable topology. On 2026-11-21 the separately Web-owned shared Compose harness passed synthetic Web+Chat/proxy acceptance after Web was rebuilt from its aligned source. Browser automation, production deployment, capacity, and a real previous-key rotation remain unproven.
+
+## Sprint 2.5 evidence boundary — 2026-11-21
+
+| Check | Current evidence |
+|---|---|
+| Focused status/session/API/fixture checkpoint | Passed 55/55; the fixture file contributed 7 tests already included in 55 |
+| Full server suite | Passed 141 files / 1,215 tests after fixture exactness and two guest/registered live-`actorKind` regression cases were added |
+| Real MongoDB suite | Passed 9 files / 58 tests, including media-job 2/2 and support assertion-metadata round trip 4/4 |
+| Shared Web+Chat Compose | Web, Chat, MongoDB replica set and Nginx reached healthy state; named volumes retained |
+| Actual registered/staff/revocation flows | Synthetic flows passed, including `401 SUPPORT_SESSION_REVOKED` after a temporary Web-owned revocation marker |
+| Reverse proxy, browser WS/SSE, cookie forwarding | HTTP cookie, strict Origin, SSE and native WS passed through Nginx; browser automation remains pending |
+| Production deployment/capacity | Not run and not authorized |
+
+The Sprint 2 server/Mongo/worker/client/browser numbers in older handoffs remain useful history but are not Sprint 2.5 proof.
+
+### Shared-harness acceptance — 2026-11-21
+
+The Web-owned harness used one MongoDB replica set, separate `owj_web`/`owj_chat` credentials and logical databases, one Web container, one Chat container and one Nginx proxy. A stale Web image first returned the legacy status error; rebuilding only Web and recreating it resolved the mismatch. Nginx initially started before the recreated Web DNS name existed, then passed after a targeted proxy restart. No volume was deleted and `down --volumes` was never used.
+
+Observed synthetic checks: guest HMAC/RS256 bootstrap and scoped cookie; message `201`, exact retry `200`/deduped, different-body `409`; Guest B isolation; WS resume and SSE replay with strict Origin; staff queue/assign/reply; registered resume/history; status response exactness; current-state revocation; logout invalidation; and independent Chat stop/start with Web remaining HTTP 200 and history surviving. This is local functional evidence, not production capacity or browser-run evidence.
 
 ## Recorded local validation — 2026-11-20
 
@@ -205,7 +225,7 @@ OWJ_WEB_ISSUER=http://<web-service>:<port>
 OWJ_WEB_JWKS_URL=http://<web-service>:<port>/.well-known/jwks.json
 OWJ_WEB_STATUS_URL=http://<web-service>:<port>/api/internal/v1/identity/status
 OWJ_WEB_TO_CHAT_SERVICE_SECRET=<matching-inbound-hmac-secret-at-least-32-characters>
-OWJ_CHAT_TO_WEB_SERVICE_TOKEN=<matching-directional-token-at-least-16-characters>
+OWJ_CHAT_TO_WEB_SERVICE_TOKEN=<matching-directional-token-at-least-32-characters>
 OWJ_SUPPORT_ALLOWED_ORIGINS=http://<browser-visible-web-origin>
 OWJ_WEB_ALLOW_INSECURE_HTTP=true
 ```
@@ -215,6 +235,10 @@ Plain HTTP is local development only. Production startup must require HTTPS URLs
 The Web BFF—not browser JavaScript—must sign bootstrap requests and receive the opaque credential. It must set `owj_support_sid` with `Path=/support/v1`, `HttpOnly`, `SameSite=Lax`, and `Secure` under HTTPS. Test strict Origin behavior, cookie forwarding, logout clearing, SSE no-buffering, and native WebSocket upgrade through the real local proxy.
 
 Do not call this “actual Web integration” when the issuer/status service is only a strict mock.
+
+The machine-readable Chat contract is `docs/platform/fixtures/support-v1/manifest.json`. The Web container must match the frozen status request `{subject,tokenIssuedAt,jti}` and the success response containing flat `subject`, `status`, `role`, `support.allowed`, `support.staff`, `authorizationCacheMaxAgeSeconds`, and `checkedAt`.
+
+The first request to the stale Web image still returned the former legacy-schema error. Chat was not weakened. After Web was rebuilt, the live route accepted `{subject,tokenIssuedAt,jti}`, returned lowercase Web roles and the exact flat status/support/cache response, and enforced `authRevokedBefore` in the synthetic revocation flow.
 
 ## Restart and persistence acceptance
 
@@ -279,4 +303,4 @@ Record exact command, time, source revision (by the human operator), and output 
 | Durable media | pending job recovers without duplicate/ loss |
 | Resources | RSS/CPU/p95/connection/queue/disk observations recorded |
 
-For a new source revision, do not carry these results forward: rerun the checklist. The 2026-11-20 run completed the Chat-owned local Docker gate, but the Web/proxy, media-job persistence, and production-capacity gates remain open.
+For a new source revision, do not carry these results forward: rerun the checklist. The shared Web/proxy functional gate passed on 2026-11-21; browser automation, full Docker worker/FFmpeg interruption, real previous-key rotation, resource observations, and production-capacity gates remain open.

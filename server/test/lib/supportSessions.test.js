@@ -87,6 +87,8 @@ describe("support sessions", () => {
         provider: "owj-web",
         webUserId: "web-1",
         chatUserId: "chat-1",
+        issuedAt: 1_699_999_995_000,
+        jti: "registered-bootstrap-1",
       },
       conversationId: "conversation-1",
       chatUserId: "chat-1",
@@ -101,6 +103,13 @@ describe("support sessions", () => {
       conversationId: "conversation-1",
     });
     expect(validateAuthorization).toHaveBeenCalledTimes(1);
+    expect(validateAuthorization).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identityIssuedAt: 1_699_999_995,
+        bootstrapJti: "registered-bootstrap-1",
+      }),
+      { requiredAction: "send" },
+    );
     await expectCode(
       service.authenticate(credential, { requiredAction: "admin" }),
       "SUPPORT_ACTION_DENIED",
@@ -192,6 +201,8 @@ describe("support sessions", () => {
         webUserId: "web-agent",
         chatUserId: "chat-agent",
         scopes: ["support:agent", "support:conversation:create"],
+        issuedAt: 1_699_999_995_000,
+        jti: "agent-bootstrap-1",
       },
       conversationId: "support-staff-inbox",
       chatUserId: "chat-agent",
@@ -200,5 +211,44 @@ describe("support sessions", () => {
 
     await expect(service.authenticate(credential, { requiredAction: "staff:list", revalidate: false }))
       .resolves.toMatchObject({ scopes: ["support:agent", "support:conversation:create"] });
+  });
+
+  test("requires and persists assertion revocation metadata for registered and agent sessions", async () => {
+    const store = memoryStore();
+    const service = createSupportSessionService({
+      store,
+      randomBytes: () => Buffer.alloc(32, 12),
+      now: () => 1_700_000_000_000,
+    });
+
+    await expectCode(service.issue({
+      principal: {
+        kind: "registered",
+        provider: "owj-web",
+        webUserId: "web-1",
+        chatUserId: "chat-1",
+      },
+      conversationId: "conversation-1",
+      chatUserId: "chat-1",
+    }), "SUPPORT_IDENTITY_REFERENCE_INVALID");
+
+    await service.issue({
+      principal: {
+        kind: "registered",
+        provider: "owj-web",
+        webUserId: "web-1",
+        chatUserId: "chat-1",
+        issuedAt: 1_699_999_999_000,
+        jti: "registered-jti-1",
+      },
+      conversationId: "conversation-1",
+      chatUserId: "chat-1",
+      allowedActions: ["read"],
+    });
+
+    expect(store.insert).toHaveBeenLastCalledWith(expect.objectContaining({
+      identityIssuedAt: 1_699_999_999,
+      bootstrapJti: "registered-jti-1",
+    }));
   });
 });

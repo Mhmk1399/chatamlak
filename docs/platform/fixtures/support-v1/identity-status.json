@@ -1,0 +1,83 @@
+{
+  "contract": "ouj-web-current-identity-status-v1",
+  "method": "POST",
+  "path": "/api/internal/v1/identity/status",
+  "authentication": {
+    "scheme": "Bearer",
+    "dedicatedCredential": "Chat-to-Web",
+    "minimumCredentialCharacters": 32
+  },
+  "request": {
+    "headers": {
+      "Authorization": "Bearer ${OWJ_CHAT_TO_WEB_SERVICE_TOKEN}",
+      "Content-Type": "application/json",
+      "X-Owj-Service": "ouj-chat",
+      "X-Correlation-Id": "fixture-chat-correlation-1"
+    },
+    "body": {
+      "subject": "507f1f77bcf86cd799439011",
+      "tokenIssuedAt": 1795161600,
+      "jti": "fixture-registered-jti-1"
+    }
+  },
+  "responses": {
+    "activeCustomer": {
+      "statusCode": 200,
+      "body": {
+        "version": 1,
+        "subject": "507f1f77bcf86cd799439011",
+        "status": "active",
+        "role": "user",
+        "support": { "allowed": true, "staff": false },
+        "authorizationCacheMaxAgeSeconds": 60,
+        "checkedAt": "2026-11-20T08:00:00.000Z",
+        "requestId": "fixture-chat-correlation-1"
+      }
+    },
+    "activeStaff": {
+      "statusCode": 200,
+      "body": {
+        "version": 1,
+        "subject": "507f1f77bcf86cd799439011",
+        "status": "active",
+        "role": "admin",
+        "support": { "allowed": true, "staff": true },
+        "authorizationCacheMaxAgeSeconds": 60,
+        "checkedAt": "2026-11-20T08:00:00.000Z",
+        "requestId": "fixture-chat-correlation-1"
+      }
+    },
+    "staffRoleDenied": {
+      "statusCode": 200,
+      "body": {
+        "version": 1,
+        "subject": "507f1f77bcf86cd799439011",
+        "status": "active",
+        "role": "user",
+        "support": { "allowed": true, "staff": false },
+        "authorizationCacheMaxAgeSeconds": 60,
+        "checkedAt": "2026-11-20T08:00:00.000Z",
+        "requestId": "fixture-chat-correlation-1"
+      }
+    },
+    "disabled": {
+      "statusCode": 403,
+      "body": { "error": { "code": "ACCOUNT_DISABLED", "requestId": "fixture-chat-correlation-1" } }
+    },
+    "revoked": {
+      "statusCode": 401,
+      "body": { "error": { "code": "TOKEN_REVOKED", "requestId": "fixture-chat-correlation-1" } }
+    },
+    "unknown": {
+      "statusCode": 404,
+      "body": { "error": { "code": "IDENTITY_NOT_FOUND", "requestId": "fixture-chat-correlation-1" } }
+    }
+  },
+  "invariants": {
+    "guestRequestsForbidden": true,
+    "tokenIssuedAtComesFromVerifiedAssertion": true,
+    "jtiComesFromVerifiedAssertion": true,
+    "ordinaryCacheMaximumSeconds": 60,
+    "sensitiveBootstrapAndStaffMutationsBypassCache": true
+  }
+}

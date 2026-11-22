@@ -1,6 +1,26 @@
 # تست Docker محلی Owj Chat
 
-وضعیت: `docker-compose.local.yaml` Topology محلی متعلق به Chat برای توسعه Disposable روی Ubuntu است. بررسی‌های محدود محلی Build/Start/Isolation/Restart پیام در تاریخ 2026-11-20 طبق رکورد زیر موفق شدند. این فایل به Production متصل نمی‌شود و Owj Web یا Reverse Proxy عمومی را شامل یا اعتبارسنجی نمی‌کند.
+وضعیت: `docker-compose.local.yaml` توپولوژی یک‌بارمصرف متعلق به Chat باقی می‌ماند. در ۲۰۲۶-۱۱-۲۱ harness مشترک و Web-owned پس از rebuild وب از سورس هم‌راستا، پذیرش مصنوعی Web+Chat/proxy را پاس کرد. browser automation، deployment تولید، capacity و rotation واقعی با کلید قبلی هنوز اثبات نشده‌اند.
+
+## مرز شواهد Sprint 2.5 — ۲۰۲۶-۱۱-۲۱
+
+| بررسی | شاهد فعلی |
+|---|---|
+| checkpoint متمرکز status/session/API/fixture | ۵۵/۵۵ قبول؛ ۷ تست fixture داخل همان ۵۵ محاسبه شده است |
+| suite کامل server | پس از fixture exactness و دو case regression مربوط به live `actorKind` مهمان/registered، ۱۴۱ فایل و ۱٬۲۱۵ تست قبول شد |
+| suite واقعی MongoDB | ۹ فایل و ۵۸ تست قبول؛ شامل media-job با ۲/۲ و round trip متادیتای assertion پشتیبانی با ۴/۴ |
+| Compose مشترک Web+Chat | Web، Chat، replica set مونگو و Nginx سالم شدند؛ named volumeها نگه داشته شدند |
+| جریان واقعی registered/staff/revocation | flow مصنوعی پاس شد، شامل `401 SUPPORT_SESSION_REVOKED` پس از marker موقت و Web-owned revocation |
+| reverse proxy، WS/SSE و forwarding cookie | cookie HTTP، Origin سخت‌گیرانه، SSE و WS بومی از Nginx پاس شدند؛ browser automation pending است |
+| deployment/capacity تولید | اجرا نشده و مجاز نبوده است |
+
+آمار server/Mongo/worker/client/browser در handoffهای Sprint 2 فقط سابقه مفید است و مدرک Sprint 2.5 نیست.
+
+### پذیرش harness مشترک — ۲۰۲۶-۱۱-۲۱
+
+harness متعلق به Web از یک replica set مونگو، credential و database منطقی جدا برای `owj_web`/`owj_chat`، یک container وب، یک container Chat و یک Nginx استفاده کرد. Image قدیمی Web ابتدا خطای قرارداد قدیمی status داد؛ rebuild فقط Web و recreate آن mismatch را رفع کرد. Nginx ابتدا پیش از قابل‌حل‌شدن DNS وب recreateشده بالا آمد و سپس با restart هدفمند proxy پاس شد. هیچ volume حذف نشد و `down --volumes` اجرا نشد.
+
+بررسی‌های مصنوعی مشاهده‌شده: bootstrap مهمان با HMAC/RS256 و cookie محدود؛ پیام `201`، retry دقیق `200`/deduped، body متفاوت `409`؛ جداسازی Guest B؛ resume نوع WS و replay نوع SSE با Origin سخت‌گیرانه؛ queue/assign/reply کارشناس؛ resume/history کاربر registered؛ پاسخ دقیق status؛ revocation current-state؛ invalidation logout؛ و stop/start مستقل Chat درحالی‌که Web پاسخ HTTP 200 ماند و history حفظ شد. این مدرک عملکرد محلی است، نه capacity تولید یا تست اجراشده در browser.
 
 ## اعتبارسنجی محلی ثبت‌شده — 2026-11-20
 
@@ -205,7 +225,7 @@ OWJ_WEB_ISSUER=http://<web-service>:<port>
 OWJ_WEB_JWKS_URL=http://<web-service>:<port>/.well-known/jwks.json
 OWJ_WEB_STATUS_URL=http://<web-service>:<port>/api/internal/v1/identity/status
 OWJ_WEB_TO_CHAT_SERVICE_SECRET=<matching-inbound-hmac-secret-at-least-32-characters>
-OWJ_CHAT_TO_WEB_SERVICE_TOKEN=<matching-directional-token-at-least-16-characters>
+OWJ_CHAT_TO_WEB_SERVICE_TOKEN=<matching-directional-token-at-least-32-characters>
 OWJ_SUPPORT_ALLOWED_ORIGINS=http://<browser-visible-web-origin>
 OWJ_WEB_ALLOW_INSECURE_HTTP=true
 ```
@@ -215,6 +235,10 @@ HTTP ساده فقط برای توسعه محلی است. Startup در Productio
 Web BFF، نه JavaScript مرورگر، باید درخواست Bootstrap را امضا و Credential مات را دریافت کند. باید `owj_support_sid` را با `Path=/support/v1`، `HttpOnly`، `SameSite=Lax` و روی HTTPS با `Secure` تنظیم کند. رفتار سخت‌گیرانه Origin، Forward شدن Cookie، پاک‌شدن هنگام Logout، عدم Buffering در SSE و Upgrade بومی WebSocket را از طریق Proxy واقعی محلی تست کنید.
 
 وقتی سرویس Issuer/Status فقط Strict Mock است، این را «یکپارچه‌سازی واقعی Web» ننامید.
+
+قرارداد machine-readable Chat در `docs/platform/fixtures/support-v1/manifest.json` است. کانتینر Web باید درخواست frozen یعنی `{subject,tokenIssuedAt,jti}` و پاسخ موفق شامل subject تخت، `status`، `role`، `support.allowed`، `support.staff`، `authorizationCacheMaxAgeSeconds` و `checkedAt` را تطبیق دهد.
+
+درخواست اول به Image قدیمی Web هنوز خطای schema قدیمی را برگرداند. Chat ضعیف نشد. بعد از rebuild وب، route زنده `{subject,tokenIssuedAt,jti}` را پذیرفت، role حروف‌کوچک Web و پاسخ تخت دقیق status/support/cache را برگرداند و `authRevokedBefore` را در flow مصنوعی revocation enforce کرد.
 
 ## پذیرش Restart و ماندگاری
 
@@ -279,4 +303,4 @@ docker compose --env-file "$CHAT_LOCAL_ENV" -f docker-compose.local.yaml down --
 | Media پایدار | Job در انتظار بدون تکرار/از‌دست‌رفتن بازیابی شود |
 | منابع | مشاهده‌های RSS/CPU/p95/Connection/Queue/Disk ثبت شوند |
 
-برای Revision جدید کد منبع، این نتیجه‌ها را به جلو منتقل نکنید و Checklist را دوباره اجرا کنید. اجرای 2026-11-20 Gate محلی Docker متعلق به Chat را کامل کرد، اما Gateهای Web/Proxy، ماندگاری Media Job و Capacity در Production همچنان باز هستند.
+برای Revision جدید کد منبع، این نتیجه‌ها را به جلو منتقل نکنید و Checklist را دوباره اجرا کنید. gate عملکردی Web/proxy مشترک در ۲۰۲۶-۱۱-۲۱ پاس شد؛ browser automation، interruption کامل Docker worker/FFmpeg، rotation واقعی کلید قبلی، observation منابع و gate ظرفیت تولید باز هستند.

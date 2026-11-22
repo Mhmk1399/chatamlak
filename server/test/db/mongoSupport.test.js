@@ -109,14 +109,50 @@ describe("Mongo support repository", () => {
       conversationId: "conversation-1",
       principalKind: "guest",
       actorId: "support-guest:abc",
+      bootstrapJti: "guest-bootstrap-1",
+      identityIssuedAt: 1_700_000_000,
       expiresAt: "2026-11-20T10:10:00.000Z",
       idleExpiresAt: "2026-11-20T10:05:00.000Z",
     });
 
-    expect(rows.get("support_sessions")[0]).toMatchObject({ token_digest: "sha256:abc", status: "active" });
+    expect(rows.get("support_sessions")[0]).toMatchObject({
+      token_digest: "sha256:abc",
+      status: "active",
+      bootstrap_jti: "guest-bootstrap-1",
+      identity_issued_at: 1_700_000_000,
+    });
     expect(JSON.stringify(rows.get("support_sessions")[0])).not.toContain("raw-support-token");
     expect(await repository.revokeSupportSessionByDigest("sha256:abc", "logout")).toBe(1);
     expect((await repository.findSupportSessionByDigest("sha256:abc")).status).toBe("revoked");
+  });
+
+  test("can revoke only agent sessions after staff-role removal without ending customer support", async () => {
+    const { repository, rows } = makeHarness();
+    for (const principalKind of ["registered", "agent"]) {
+      await repository.createSupportSession({
+        id: `session-${principalKind}`,
+        tokenDigest: `sha256:${principalKind}`,
+        conversationId: `conversation-${principalKind}`,
+        principalKind,
+        actorId: `chat-${principalKind}`,
+        webUserId: "web-user-1",
+        chatUserId: `chat-${principalKind}`,
+        bootstrapJti: `${principalKind}-jti-1`,
+        identityIssuedAt: 1_700_000_000,
+        expiresAt: "2026-11-20T10:10:00.000Z",
+        idleExpiresAt: "2026-11-20T10:05:00.000Z",
+      });
+    }
+
+    await expect(repository.revokeSupportSessionsByWebUserId(
+      "web-user-1",
+      "web_identity_role_denied",
+      "agent",
+    )).resolves.toBe(1);
+    expect(rows.get("support_sessions")).toEqual(expect.arrayContaining([
+      expect.objectContaining({ principal_kind: "registered", status: "active" }),
+      expect.objectContaining({ principal_kind: "agent", status: "revoked" }),
+    ]));
   });
 
   test("delegates idempotent support messages to the existing Chat persistence path", async () => {

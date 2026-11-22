@@ -11,6 +11,8 @@ describe("support session Mongo adapter", () => {
         principal_kind: record.principalKind,
         actor_id: record.actorId,
         subject: record.subject,
+        bootstrap_jti: record.bootstrapJti,
+        identity_issued_at: record.identityIssuedAt,
         allowed_actions: record.allowedActions,
         status: "active",
         created_at: "2026-11-20T10:00:00.000Z",
@@ -28,6 +30,8 @@ describe("support session Mongo adapter", () => {
       subject: "guest-1",
       chatUserId: "support-guest:1",
       allowedActions: ["read"],
+      bootstrapJti: "guest-bootstrap-1",
+      identityIssuedAt: 1_700_000_000,
       idleExpiresAt: "2026-11-20T10:05:00.000Z",
       expiresAt: "2026-11-20T11:00:00.000Z",
     });
@@ -38,9 +42,16 @@ describe("support session Mongo adapter", () => {
       allowedActions: ["read"],
       subject: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       guestSubjectDigest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+      bootstrapJti: "guest-bootstrap-1",
+      identityIssuedAt: 1_700_000_000,
     }));
     expect(JSON.stringify(supportDb.createSupportSession.mock.calls[0][0])).not.toContain("credential");
     expect(JSON.stringify(supportDb.createSupportSession.mock.calls[0][0])).not.toContain("guest-1");
-    expect(result).toMatchObject({ actorKind: "guest", chatUserId: "support-guest:1" });
+    expect(result).toMatchObject({
+      actorKind: "guest",
+      chatUserId: "support-guest:1",
+      bootstrapJti: "guest-bootstrap-1",
+      identityIssuedAt: 1_700_000_000,
+    });
   });
 });

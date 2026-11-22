@@ -1,0 +1,24 @@
+{
+  "contract": "ouj-web-to-chat-bootstrap-hmac-v1",
+  "method": "POST",
+  "path": "/internal/v1/support/bootstrap",
+  "syntheticSecret": "fixture-only-web-to-chat-secret-0123456789",
+  "timestamp": "1795161600000",
+  "nonce": "fixture_nonce_1234567890",
+  "signingInput": "ouj-service-auth-v1\n1795161600000\nfixture_nonce_1234567890\nPOST\n/internal/v1/support/bootstrap",
+  "signature": "ffa20c4fe28b6e978b0fd372bf484b13c965c58664e91abdb9c71183c3c05159",
+  "headers": {
+    "X-Ouj-Service-Auth-Version": "1",
+    "X-Ouj-Service-Auth-Timestamp": "1795161600000",
+    "X-Ouj-Service-Auth-Nonce": "fixture_nonce_1234567890",
+    "X-Ouj-Service-Auth-Signature": "ffa20c4fe28b6e978b0fd372bf484b13c965c58664e91abdb9c71183c3c05159",
+    "Idempotency-Key": "fixture-bootstrap-operation-1",
+    "Content-Type": "application/json"
+  },
+  "notes": {
+    "secretIsFixtureOnly": true,
+    "requestBodyIsNotSigned": true,
+    "timestampUnit": "milliseconds",
+    "nonceIsSingleUse": true
+  }
+}

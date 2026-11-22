@@ -35,6 +35,8 @@ function fixture(overrides = {}) {
         provider: "owj-web",
         guestSubject: "guest-1",
         scopes: ["support:conversation:create"],
+        issuedAt: 1_795_171_195_000,
+        jti: "guest-bootstrap-jti-1",
       })),
     },
     createOrResumeSupportConversation: vi.fn(async () => ({
@@ -60,6 +62,7 @@ function fixture(overrides = {}) {
     createOrReuseMessage: vi.fn(async () => ({ id: MESSAGE_ID, deduped: false })),
     authorizeSupportConversation: vi.fn(async () => true),
     emitChatEvent: vi.fn(),
+    supportRealtime: { publish: vi.fn() },
     ...overrides,
   };
   const app = express();
@@ -96,6 +99,73 @@ describe("support API v1", () => {
     expect(deps.createOrResumeSupportConversation).toHaveBeenCalledWith(
       expect.objectContaining({ idempotencyKey: "web-bootstrap-1" }),
     );
+    expect(deps.supportSessionService.issue).toHaveBeenCalledWith(expect.objectContaining({
+      bootstrapJti: "guest-bootstrap-jti-1",
+      principal: expect.objectContaining({
+        issuedAt: 1_795_171_195_000,
+        jti: "guest-bootstrap-jti-1",
+      }),
+    }));
+  });
+
+  test("recovers an ambiguous bootstrap with a fresh assertion and credential for the same conversation", async () => {
+    const principals = ["fresh-jti-1", "fresh-jti-2"].map((jti) => ({
+      kind: "guest",
+      provider: "owj-web",
+      guestSubject: "guest-recovery",
+      scopes: ["support:conversation:create"],
+      issuedAt: 1_795_171_195_000,
+      jti,
+    }));
+    const platformIdentityAdapter = {
+      authenticate: vi.fn()
+        .mockResolvedValueOnce(principals[0])
+        .mockResolvedValueOnce(principals[1]),
+    };
+    const createOrResumeSupportConversation = vi.fn()
+      .mockResolvedValueOnce({
+        conversationId: CONVERSATION_ID,
+        chatUserId: CHAT_USER_ID,
+        created: true,
+        assigned: false,
+        supportAvailable: true,
+      })
+      .mockResolvedValueOnce({
+        conversationId: CONVERSATION_ID,
+        chatUserId: CHAT_USER_ID,
+        created: false,
+        assigned: false,
+        supportAvailable: true,
+      });
+    const setup = fixture({ platformIdentityAdapter, createOrResumeSupportConversation });
+    setup.deps.supportSessionService.issue
+      .mockResolvedValueOnce({
+        credential: `ocs_${"C".repeat(43)}`,
+        expiresAt: "2026-11-21T10:00:00.000Z",
+      })
+      .mockResolvedValueOnce({
+        credential: `ocs_${"D".repeat(43)}`,
+        expiresAt: "2026-11-21T10:00:00.000Z",
+      });
+
+    const first = await request(setup.app)
+      .post("/internal/v1/support/bootstrap")
+      .set("Idempotency-Key", "logical-bootstrap-1")
+      .send({ assertion: "fresh-assertion-1" });
+    const recovered = await request(setup.app)
+      .post("/internal/v1/support/bootstrap")
+      .set("Idempotency-Key", "logical-bootstrap-1")
+      .send({ assertion: "fresh-assertion-2" });
+
+    expect(first.status).toBe(201);
+    expect(recovered.status).toBe(200);
+    expect(recovered.body.conversationId).toBe(first.body.conversationId);
+    expect(recovered.body.supportSessionCredential)
+      .not.toBe(first.body.supportSessionCredential);
+    expect(platformIdentityAdapter.authenticate.mock.calls.map(([input]) => input.credential))
+      .toEqual(["fresh-assertion-1", "fresh-assertion-2"]);
+    expect(setup.deps.supportSessionService.issue.mock.calls.map(([input]) => input.bootstrapJti))
+      .toEqual(["fresh-jti-1", "fresh-jti-2"]);
   });
 
   test("fails closed when the internal service credential verifier is absent or denies", async () => {
@@ -183,6 +253,30 @@ describe("support API v1", () => {
     );
   });
 
+  test.each(["guest", "registered"])(
+    "normalizes a %s live message notification to the customer actor kind",
+    async (actorKind) => {
+      const setup = fixture();
+      setup.session.actorKind = actorKind;
+
+      const response = await request(setup.app)
+        .post("/support/v1/messages")
+        .set("Cookie", `owj_support_sid=ocs_${"B".repeat(43)}`)
+        .send({ body: "Need help", clientRequestId: `widget-${actorKind}-1` });
+
+      expect(response.status).toBe(201);
+      expect(setup.deps.emitChatEvent).toHaveBeenCalledWith(
+        CONVERSATION_ID,
+        expect.objectContaining({ actorKind: "customer" }),
+        { record: false },
+      );
+      expect(setup.deps.supportRealtime.publish).toHaveBeenCalledWith(
+        CONVERSATION_ID,
+        expect.objectContaining({ actorKind: "customer" }),
+      );
+    },
+  );
+
   test("rejects reuse of a message idempotency key with a different body", async () => {
     const { app } = fixture({
       createOrReuseMessage: vi.fn(async () => ({
@@ -198,6 +292,20 @@ describe("support API v1", () => {
 
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe("SUPPORT_IDEMPOTENCY_CONFLICT");
+  });
+
+  test("returns the existing acknowledgement without rebroadcasting an exact message retry", async () => {
+    const setup = fixture({
+      createOrReuseMessage: vi.fn(async () => ({ id: MESSAGE_ID, deduped: true })),
+    });
+    const response = await request(setup.app)
+      .post("/support/v1/messages")
+      .set("Cookie", `owj_support_sid=ocs_${"B".repeat(43)}`)
+      .send({ body: "Need help", clientRequestId: "widget-request-1" });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ messageId: MESSAGE_ID, deduped: true });
+    expect(setup.deps.emitChatEvent).not.toHaveBeenCalled();
   });
 
   test("advances older-message pagination from the oldest row in the returned page", async () => {

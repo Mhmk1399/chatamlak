@@ -22,6 +22,7 @@ function mapRow(row) {
     scopes: Array.isArray(row.scopes) ? row.scopes : [],
     status: row.status,
     bootstrapJti: row.bootstrap_jti,
+    identityIssuedAt: row.identity_issued_at,
     createdAt: row.created_at,
     lastSeenAt: row.last_seen_at,
     idleExpiresAt: row.idle_expires_at,
@@ -55,6 +56,7 @@ export function createSupportSessionStore(supportDb) {
         allowedActions: record.allowedActions,
         scopes: record.scopes,
         bootstrapJti: record.bootstrapJti,
+        identityIssuedAt: record.identityIssuedAt,
         expiresAt: record.expiresAt,
         idleExpiresAt: record.idleExpiresAt,
       }));

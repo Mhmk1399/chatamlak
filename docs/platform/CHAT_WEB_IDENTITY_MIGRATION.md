@@ -1,6 +1,6 @@
 # Chat ↔ Web identity migration
 
-Status: **IMPLEMENTED IN SOURCE, FEATURE-FLAGGED OFF BY DEFAULT, NOT DEPLOYED** (Sprint 2, 2026-11-20).
+Status: **CHAT SOURCE IMPLEMENTED, FEATURE-FLAGGED OFF, SYNTHETIC LOCAL WEB INTEGRATION ACCEPTED** (Sprint 2.5 snapshot: 2026-11-21). No production migration, deployment, or capacity acceptance is claimed.
 
 Owj Web is the canonical human identity authority. Chat continues to own its stable user IDs, conversations, messages, memberships, support sessions, and realtime authorization. The implementation never reads or writes Web database collections.
 
@@ -83,52 +83,59 @@ Unique indexes cover `id`, `(provider, web_user_id)`, and `chat_user_id`. Concur
 
 Guest subjects are not password accounts. Chat stores a namespaced SHA-256 digest and a pseudonymous `support-guest:<hex>` actor. `support_guest_identity_links` records proof-gated guest conversion using a digested guest subject. The proof service and idempotent repositories are implemented, but the end-to-end Web conversion endpoint is not yet composed; production must not call the low-level repository directly.
 
-## Current Web account status
+## Frozen current Web account-status contract
 
-For registered customers and agents, Chat calls:
-
-`POST /api/internal/v1/identity/status`
-
-with a dedicated outbound service credential:
+For registered customers and agents, Chat calls `POST /api/internal/v1/identity/status` with the dedicated, directional `OWJ_CHAT_TO_WEB_SERVICE_TOKEN`. Both this outbound credential and the inbound `OWJ_WEB_TO_CHAT_SERVICE_SECRET` must contain at least 32 characters and must be independent.
 
 ```http
 Authorization: Bearer <OWJ_CHAT_TO_WEB_SERVICE_TOKEN>
 X-Owj-Service: ouj-chat
-X-Request-Id: <uuid>
+X-Correlation-Id: <request-id>
 Content-Type: application/json
 ```
 
-```json
-{
-  "version": 1,
-  "subject": { "provider": "owj-web", "webUserId": "stable-web-subject" },
-  "operation": "support:session"
-}
-```
-
-Expected response:
+Frozen Sprint 2.5 request:
 
 ```json
 {
-  "version": 1,
-  "subject": { "webUserId": "stable-web-subject", "status": "active" },
-  "authorized": true,
-  "revision": 7
+  "subject": "stable-web-subject",
+  "tokenIssuedAt": 1795161600,
+  "jti": "verified-assertion-jti"
 }
 ```
 
-Chat sends these exact `operation` values:
+Frozen success response:
 
-| Context | `operation` |
-|---|---|
-| Registered customer bootstrap | `support:bootstrap` |
-| Agent bootstrap | `support:agent:bootstrap` |
-| Registered customer session/realtime revalidation | `support:session` |
-| Agent session/realtime revalidation | `support:agent` |
+```json
+{
+  "version": 1,
+  "subject": "stable-web-subject",
+  "status": "active",
+  "role": "user",
+  "support": { "allowed": true, "staff": false },
+  "authorizationCacheMaxAgeSeconds": 60,
+  "checkedAt": "2026-11-20T08:00:00.000Z",
+  "requestId": "fixture-chat-correlation-1"
+}
+```
 
-Allowed statuses are `active`, `disabled`, `revoked`, and `deleted`. Results are cached by subject and operation for at most 60 seconds (`OWJ_IDENTITY_STATUS_CACHE_MS`) in a bounded 5,000-entry default cache. The request timeout defaults to three seconds, redirects are rejected, and responses over 32 KiB are rejected. Any `authorized:false` or non-`active` response denies the operation and revokes every active local support session for that Web subject. Upstream errors, non-2xx responses, malformed payloads, and subject mismatches fail closed after any still-valid cache entry expires. Guests are never sent to this registered-user endpoint.
+`tokenIssuedAt` and `jti` are copied only from the signature-verified assertion. They allow Web to compare issuance to `authRevokedBefore`; Chat does not trust browser-supplied values. Allowed statuses are `active`, `disabled`, `revoked`, and `deleted`. The response must contain the exact subject, a bounded role, both support booleans, a valid check timestamp, and an integer cache instruction from 0 through 60.
 
-This client is implemented and tested against a strict mock; the actual Web endpoint and credential have not been tested together with Chat.
+Ordinary authorization cache age is the lower of Web's instruction, `OWJ_IDENTITY_STATUS_CACHE_MS`, and 60 seconds. The default status-call concurrency is 16 and runtime configuration is capped at 64. Identical in-flight checks are coalesced. Bootstrap and staff reply/assign/resolve force refresh; passive reads/session/realtime may use a valid cache entry. A staff-role denial revokes only `agent` sessions for the subject; disabled/revoked/deleted or general support denial is broader. Upstream outage, timeout, malformed response, or expired cache fails closed. Guests never use the registered identity-status route.
+
+### Additive support-session assertion metadata
+
+New registered and agent support sessions store optional `identity_issued_at` and `bootstrap_jti` fields. The first is the verified assertion `iat` converted to Unix seconds; the second is its verified one-time `jti`. The Mongo validator permits these fields without adding them to the required set, so existing documents need no destructive migration or rewrite.
+
+Existing guest sessions do not require the fields. An old non-guest session missing either field cannot be checked against Web's current revocation boundary; it fails closed and must re-bootstrap to receive a fresh authorized support session. Rollback never fabricates metadata for an old record.
+
+### Actual local Web acceptance
+
+An initial request against the stale Web image exposed the former legacy mismatch as `400 IDENTITY_REFERENCE_INVALID`; Chat did not weaken its client. After rebuilding Web from the aligned source, the real Chat container sent `{subject,tokenIssuedAt,jti}` and received the exact flat HTTP 200 response with the lowercase Web role, support policy, a 60-second cache bound, timestamp, and echoed correlation ID.
+
+The synthetic local acceptance then passed registered bootstrap/resume/history, staff bootstrap/queue/assignment/reply, and current-state revocation. A temporary Web-owned `authRevokedBefore` update made an existing registered support session fail with `401 SUPPORT_SESSION_REVOKED`, after which the dedicated fixture was restored and confirmed active/non-revoked. This proves the exact request/response contract for the tested local revision; it does not prove a production migration, every disabled/deleted/role transition, or a real previous-key rotation window.
+
+The authoritative synthetic fixtures start at `docs/platform/fixtures/support-v1/manifest.json`; `identity-status.json` freezes this request/response boundary.
 
 ## Safe migration tool
 
@@ -179,8 +186,10 @@ Rollback disables `OWJ_SUPPORT_ENABLED`, stops new links, revokes affected suppo
 
 - RS256 issuer and JWKS at the agreed URL, with overlapping key rotation.
 - Assertion claims/token-use/scope contract exactly as above.
-- `POST /api/internal/v1/identity/status` and the outbound Chat credential.
+- `POST /api/internal/v1/identity/status` updated to the frozen `{subject,tokenIssuedAt,jti}` request and role/support/cache response, plus the 32-character outbound Chat credential.
 - A reviewed exact-ID account-link proof contract.
 - A reviewed guest-to-registered conversion proof contract.
 - Same-origin reverse-proxy/cookie integration and actual Web+Chat contract tests.
+
+The actual local Web endpoint now passes the shared status boundary and synthetic registered/staff/revocation flows. Do not enable a production cohort until browser automation, previous-key rotation, production-like TLS/proxy behavior, restore/rollback, resource measurements, and separately reviewed identity-link migration gates also pass.
 

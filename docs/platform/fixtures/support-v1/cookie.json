@@ -1,0 +1,10 @@
+{
+  "contract": "ouj-chat-support-cookie-v1",
+  "name": "owj_support_sid",
+  "path": "/support/v1",
+  "httpOnly": true,
+  "sameSite": "Lax",
+  "secureWhenHttps": true,
+  "browserCredentialSources": ["cookie"],
+  "forbiddenCredentialSources": ["authorization-header", "query-token", "query-sid", "query-supportSession"]
+}

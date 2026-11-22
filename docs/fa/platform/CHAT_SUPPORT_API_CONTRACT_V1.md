@@ -1,61 +1,55 @@
 # قرارداد API پشتیبانی Chat نسخه ۱
 
-وضعیت: **در کد منبع پیاده‌سازی شده، به‌صورت پیش‌فرض غیرفعال است و Deploy نشده است** (Sprint 2، تاریخ 2026-11-20). این قرارداد پوشش تست محلی با Mock و Mongo واقعی دارد، اما سرویس واقعی Owj Web هنوز همراه Chat تست نشده است.
+وضعیت: **در stack مصنوعی و محلی Web+Chat پیاده‌سازی و پذیرفته شده و پیش‌فرض غیرفعال است** (تصویر Sprint 2.5 در ۲۰۲۶-۱۱-۲۱). این فقط مدرک قرارداد محلی است، نه migration یا deployment تولید، نتیجه capacity یا browser automation.
 
-## مدل اعتماد و مسیریابی
+## مالکیت و مسیریابی
 
-Web مرجع عمومی هویت و BFF روبه‌مرورگر است. Chat مالک گفتگوهای پشتیبانی، پیام‌ها، تخصیص، نشست‌های پشتیبانی و مجوزدهی بلادرنگ است. Chat هرگز Collectionهای Web را نمی‌خواند.
+Web مالک هویت مرجع انسان، ورود، وضعیت حساب، نقش کلی، صدور assertion از نوع RS256، JWKS و bootstrap مرورگر است. Chat مالک گفتگوی پشتیبانی، session پشتیبانی، پیام، assignment و realtime بومی است. هیچ سرویس در database سرویس دیگر نمی‌نویسد.
 
-Reverse Proxy فقط باید این مسیرهای یکپارچه‌سازی را برای وب‌سایت در دسترس بگذارد:
+routeهای هدف:
 
-- `POST /internal/v1/support/bootstrap` — فقط Backend-to-Backend؛ هرگز در دسترس مرورگر نباشد.
-- `/support/v1/*` — سطح پشتیبانی Same-Origin در مرورگر.
+- `POST /internal/v1/support/bootstrap`: فرمان داخلی Web به Chat؛ هرگز برای مرورگر expose نشود.
+- `/support/v1/*`: سطح پشتیبانی same-origin مرورگر که به Chat proxy می‌شود.
 
-مسیرهای قدیمی `/api/login` و `/api/register`، فهرست سراسری Chat، Admin، تماس‌ها، Channelها یا مسیرهای CRM را به Widget وب‌سایت Proxy نکنید.
+پشتیبانی Chat تا وقتی `OWJ_SUPPORT_ENABLED=true` نباشد غیرفعال است. routeهای login/register قدیمی Chat، directory کلی، admin، channel، call یا CRM را وارد widget سایت نکنید.
 
-پاسخ‌های موفق JSON پشتیبانی شامل `version: 1` هستند. خطاهای HTTP که با Wrapper پردازش می‌شوند از Envelope پایدار و بدون Version زیر استفاده می‌کنند:
+## پیکربندی لازم runtime
 
-```json
-{
-  "error": {
-    "code": "SUPPORT_REQUEST_INVALID",
-    "message": "The support request is invalid.",
-    "requestId": "request-or-generated-uuid"
-  }
-}
-```
+با فعال‌شدن پشتیبانی، نبود مقدار معتبر زیر startup را fail-closed می‌کند:
 
-Server یک `X-Request-Id` محدودشده را می‌پذیرد و بازمی‌گرداند؛ در غیر این صورت یک شناسه می‌سازد. پاسخ مستقیم HTTP عادی روی `/support/v1/ws` یک استثنای مستند است: Object خطای 426 آن `code` و `message` دارد اما `requestId` ندارد؛ رد Upgrade بومی نیز متن ساده HTTP است. Credentialها، بدنه Assertion، متن پیام و Queryهای Presigned نباید Log شوند.
-
-## فعال‌سازی و Environment
-
-پشتیبانی تا وقتی `OWJ_SUPPORT_ENABLED=true` نباشد Inert است. هنگام فعال‌سازی، Startup بدون مقادیر معتبر زیر به‌صورت Fail Closed متوقف می‌شود:
-
-| Variable | قرارداد |
+| متغیر | قرارداد |
 |---|---|
-| `OWJ_WEB_ISSUER` | Issuer مطلق و دقیق Web؛ در Production از HTTPS |
-| `OWJ_WEB_JWKS_URL` | URL مطلق JWKS؛ در Production از HTTPS |
-| `OWJ_WEB_STATUS_URL` | URL مطلق Identity Status؛ در Production از HTTPS |
-| `OWJ_WEB_TO_CHAT_SERVICE_SECRET` | Secret جهت‌دار HMAC ورودی، حداقل ۳۲ کاراکتر |
-| `OWJ_CHAT_TO_WEB_SERVICE_TOKEN` | Credential جهت‌دار Bearer خروجی، حداقل ۱۶ کاراکتر |
-| `OWJ_SUPPORT_ALLOWED_ORIGINS` | Originهای دقیق مرورگر با جداکننده Comma؛ Fallback آن `APP_PUBLIC_URL` است، اما یکی از این دو الزامی است |
+| `OWJ_WEB_ISSUER` | issuer مطلق و دقیق Web؛ در تولید HTTPS |
+| `OWJ_WEB_JWKS_URL` | URL مطلق JWKS؛ در تولید HTTPS |
+| `OWJ_WEB_STATUS_URL` | URL مطلق status هویت؛ در تولید HTTPS |
+| `OWJ_WEB_TO_CHAT_SERVICE_SECRET` | secret جهت‌دار HMAC برای bootstrap، حداقل **۳۲ کاراکتر** |
+| `OWJ_CHAT_TO_WEB_SERVICE_TOKEN` | credential جهت‌دار Bearer برای status، حداقل **۳۲ کاراکتر** |
+| `OWJ_SUPPORT_ALLOWED_ORIGINS` | originهای دقیق مرورگر؛ در غیر این صورت `APP_PUBLIC_URL` لازم است |
 
-`OWJ_WEB_ALLOW_INSECURE_HTTP=true` فقط خارج از Production و برای توسعه محلی، Endpoint/Origin مبتنی بر HTTP را مجاز می‌کند. آن را هرگز در Production فعال نکنید.
+دو credential جهت‌دار باید متفاوت باشند و نباید signing key وب، `JWT_SECRET`، credential مونگو یا token مرورگر را تکرار کنند. `OWJ_WEB_ALLOW_INSECURE_HTTP=true` فقط بیرون تولید برای local development پذیرفته می‌شود.
 
-Boundهای عملیاتی با `OWJ_IDENTITY_STATUS_CACHE_MS` (سقف سخت ۶۰ ثانیه)، `SUPPORT_SESSION_IDLE_TIMEOUT_MS`، `SUPPORT_SESSION_ABSOLUTE_TIMEOUT_MS`، `SUPPORT_REALTIME_REVALIDATE_MS`، `SUPPORT_REALTIME_MAX_REPLAY`، `SUPPORT_MAX_CONNECTIONS_PER_SESSION`، `SUPPORT_WS_MAX_CONNECTIONS_PER_IP` و `SUPPORT_BOOTSTRAP_RATE_LIMIT` قابل پیکربندی‌اند. `WS_TRUST_PROXY` بر استخراج IP قابل اعتماد Client اثر دارد و باید با Topology کنترل‌شده Proxy منطبق باشد.
+حدود current-state:
 
-## احراز هویت سرویس Web به Chat
+- cache معمول status حداکثر ۶۰ ثانیه؛
+- concurrency پیش‌فرض status برابر ۱۶ و سقف runtime برابر ۶۴؛
+- درخواست‌های همسان درحال‌اجرا coalesce می‌شوند؛
+- session پشتیبانی به‌طور پیش‌فرض idle برابر ۳۰ دقیقه و absolute برابر ۱۲ ساعت؛
+- صفحه پیام حداکثر ۱۰۰ و replay حداکثر ۲۰۰؛
+- متن پیام حداکثر ۴۰۰۰ کاراکتر و ۱۶ KiB.
 
-Bootstrap از `OWJ_WEB_TO_CHAT_SERVICE_SECRET` اختصاصی (حداقل ۳۲ کاراکتر در Runtime) استفاده می‌کند، نه کلید امضای JWT متعلق به Web. Web چهار Header زیر را ارسال می‌کند:
+## احراز Web به Chat برای bootstrap
+
+`POST /internal/v1/support/bootstrap` از HMAC-SHA256 با timestamp/nonce استفاده می‌کند، نه Bearer:
 
 ```http
 X-Ouj-Service-Auth-Version: 1
 X-Ouj-Service-Auth-Timestamp: <13-digit Unix milliseconds>
 X-Ouj-Service-Auth-Nonce: <16-128 base64url characters>
 X-Ouj-Service-Auth-Signature: <lowercase hex HMAC-SHA256>
+Idempotency-Key: <1-180 characters>
 ```
 
-ورودی HMAC دقیقاً این متن جداشده با Newline است:
+ورودی امضا دقیقاً این متن newline-separated است:
 
 ```text
 ouj-service-auth-v1
@@ -65,19 +59,13 @@ POST
 /internal/v1/support/bootstrap
 ```
 
-اختلاف Timestamp محدود است (پیش‌فرض پنج دقیقه). Nonceها در یک Replay Cache درون‌پردازه‌ای، محدود و ۱۰ دقیقه‌ای نگه داشته می‌شوند. Restart شدن Chat این Cache مربوط به Nonce سرویس را پاک می‌کند، اما `jti` یکتای پایدار در Assertion امضاشده همچنان Replay کردن Bootstrap میان Restartها را متوقف می‌کند. Service Auth گم‌شده یا نامعتبر خطای `SUPPORT_SERVICE_UNAUTHORIZED` می‌دهد.
+skew پیش‌فرض timestamp پنج دقیقه است. nonce در replay guard حافظه‌ای محدود ده‌دقیقه‌ای مصرف می‌شود. `jti` یکتای assertion تأییدشده در MongoDB ماندگار مصرف می‌شود؛ بنابراین replay بعد از restart Chat نیز رد می‌ماند.
 
-## Bootstrap
-
-`POST /internal/v1/support/bootstrap`
-
-Headerهای الزامی: Headerهای Service Auth، مقدار `Content-Type: application/json` و `Idempotency-Key` با طول ۱ تا ۱۸۰ کاراکتر. پیاده‌سازی برای سازگاری `body.idempotencyKey` را نیز به‌عنوان Fallback می‌پذیرد، اما Web باید از Header استفاده کند. Assertion حداکثر 16 KiB است. خود Assertion وب یک‌بارمصرف است؛ برای Retry پس از نتیجه مبهم باید یک Assertion جدید با همان Subject وب گرفته شود. یکتایی هویت گفتگو باعث می‌شود این Retry همان گفتگو را ادامه دهد؛ پیاده‌سازی فعلی Credential مبهم نشست قبلی را بر اساس Idempotency Key دوباره بازنمی‌گرداند.
-
-درخواست مشتری:
+body bootstrap مشتری:
 
 ```json
 {
-  "assertion": "<one-time RS256 JWT>",
+  "assertion": "<one-time Web-issued RS256 assertion>",
   "bootstrapType": "customer",
   "locale": "fa-IR",
   "context": {
@@ -87,16 +75,14 @@ Headerهای الزامی: Headerهای Service Auth، مقدار `Content-Type:
 }
 ```
 
-مقدار پیش‌فرض `bootstrapType` برابر `customer` است. Assertion مشتری فقط می‌تواند `support_registered` یا `support_guest` باشد و به `support:conversation:create` نیاز دارد. Context دارای Allowlist (`page`، `locale` و `publicListingId`) است، در JSON حداکثر 2 KiB دارد و محدودیت مؤثر آن برای `page` برابر ۳۰۰ کاراکتر و برای دو فیلد دیگر برابر ۱۲۰ کاراکتر است. `locale` سطح بالا تا ۳۵ کاراکتر پذیرفته می‌شود، اما Persistence فعلی حداکثر ۲۴ کاراکتر را نگه می‌دارد؛ بنابراین Web باید بیش از ۲۴ کاراکتر نفرستد. داده CRM، مشتری یا اطلاعات تماس را ارسال نکنید.
+assertion مشتری `support_registered` یا `support_guest` است. bootstrap کارشناس `bootstrapType:"staff"`، نوع `support_agent` و هر دو scope یعنی `support:agent` و `support:conversation:create` را می‌خواهد. context فقط `page`، `locale` و `publicListingId`، با سقف ۲ KiB است و نباید داده CRM/contact/listing خصوصی داشته باشد.
 
-درخواست Staff از `"bootstrapType":"staff"`، مقدار `token_use:"support_agent"` و هر دو Scope یعنی `support:agent` و `support:conversation:create` استفاده می‌کند. Staff همچنین باید پیوند صریح و فعال Web↔Chat داشته باشد و بررسی وضعیت جاری Web را با موفقیت بگذراند.
-
-پاسخ (`201` برای ایجاد و `200` برای ادامه):
+bootstrap برای مشتری ثبت‌شده و agent بررسی Web status را اجباری و بدون cache انجام می‌دهد. پاسخ موفق برای گفتگوی جدید `201` و برای resume برابر `200` است:
 
 ```json
 {
   "version": 1,
-  "conversationId": "chat-conversation-uuid",
+  "conversationId": "11111111-1111-4111-8111-111111111111",
   "supportSessionCredential": "ocs_<opaque-random-value>",
   "expiresAt": "2026-11-21T12:00:00.000Z",
   "created": true,
@@ -105,39 +91,85 @@ Headerهای الزامی: Headerهای Service Auth، مقدار `Content-Type:
 }
 ```
 
-پاسخ Bootstrap دارای `Cache-Control: private, no-store` است. فقط Backend احرازهویت‌شده Web این Credential مات را دریافت می‌کند. Issuer فعلی از ۳۲ Byte تصادفی استفاده می‌کند (`ocs_` به‌علاوه ۴۳ کاراکتر base64url). Chat فقط Digest نوع SHA-256 و متصل به Namespace آن را ذخیره می‌کند و مقدار خام را نگه نمی‌دارد. Web باید آن را در Cookie هم‌مبدأ قرار دهد:
+Chat فقط digest نام‌گذاری‌شده SHA-256 از credential را ذخیره می‌کند. Web باید credential را در cookie زیر بنویسد:
 
 ```http
 Set-Cookie: owj_support_sid=<credential>; Path=/support/v1; HttpOnly; SameSite=Lax; Secure
 ```
 
-روی HTTPS از `Secure` استفاده کنید و زمان انقضای Cookie نباید دیرتر از `expiresAt` باشد. درخواست‌های API و Realtime مرورگر فقط این Cookie را می‌پذیرند؛ Credential نوع Bearer یا Query پشتیبانی نمی‌شود.
+روی HTTPS، `Secure` الزامی است. endpointهای مرورگر فقط همین cookie را قبول می‌کنند؛ Bearer یا credential در query مجاز نیست.
 
-محدودیت‌های پیش‌فرض نشست پشتیبانی شامل ۳۰ دقیقه Idle و ۱۲ ساعت Absolute است (`SUPPORT_SESSION_IDLE_TIMEOUT_MS` و `SUPPORT_SESSION_ABSOLUTE_TIMEOUT_MS`). هر نشست فقط Actionهای صریح مشتری (`read`، `send`، `events` و `logout`) یا Actionهای Staff (به‌علاوه `staff:list`، `staff:assign` و `staff:resolve`) را دارد. این یک نشست قدیمی Chat نیست.
+### بازیابی bootstrap مبهم
+
+Web می‌تواند یک timeout/unavailability مبهم را با شرایط زیر یک بار retry کند:
+
+- همان `Idempotency-Key` منطقی و همان identity؛
+- timestamp، nonce و امضای service-auth تازه؛
+- assertion تازه Web با `jti` جدید.
+
+retry همان گفتگوی منطقی را resume می‌کند ولی ممکن است plaintext credential تازه بدهد. Chat plaintext قبلی را ذخیره یا replay نمی‌کند. استفاده دوباره assertion قبلی باید به‌عنوان replay شکست بخورد.
+
+## قرارداد frozen وضعیت Chat به Web
+
+مجوز registered/agent از credential اختصاصی Bearer استفاده می‌کند:
+
+```http
+POST /api/internal/v1/identity/status
+Authorization: Bearer <OWJ_CHAT_TO_WEB_SERVICE_TOKEN>
+Content-Type: application/json
+X-Owj-Service: ouj-chat
+X-Correlation-Id: <request-id>
+```
+
+body frozen در Sprint 2.5:
+
+```json
+{
+  "subject": "507f1f77bcf86cd799439011",
+  "tokenIssuedAt": 1795161600,
+  "jti": "fixture-registered-jti-1"
+}
+```
+
+`tokenIssuedAt` و `jti` فقط از assertion تأییدشده RS256 می‌آیند تا Web بتواند زمان صدور را با مرز revocation خود مقایسه کند.
+
+پاسخ موفق باید این شکل باشد:
+
+```json
+{
+  "version": 1,
+  "subject": "507f1f77bcf86cd799439011",
+  "status": "active",
+  "role": "user",
+  "support": { "allowed": true, "staff": false },
+  "authorizationCacheMaxAgeSeconds": 60,
+  "checkedAt": "2026-11-20T08:00:00.000Z",
+  "requestId": "fixture-chat-correlation-1"
+}
+```
+
+Chat statusهای `active`، `disabled`، `revoked` و `deleted` را می‌پذیرد؛ subject دقیق و role و booleanهای support را بررسی می‌کند و زمان cache وب را به بازه ۰ تا ۶۰ ثانیه و سقف محلی محدود می‌کند. guest هرگز به این endpoint ارسال نمی‌شود. پیکربندی ناقص، timeout، خطای upstream غیرقطعی، payload نامعتبر و cache منقضی fail closed هستند.
+
+بررسی passive session/read/realtime می‌تواند از cache محدود استفاده کند. bootstrap، reply کارشناس، assign و resolve refresh اجباری دارند. رد نقش staff فقط sessionهای `agent` همان subject را revoke می‌کند و session جداگانه customer ثبت‌شده را نمی‌بندد. disabled/revoked/deleted یا رد کلی support مجوز فعال مرتبط را متناسب با وضعیت revoke می‌کند.
+
+### مرجع assertion ذخیره‌شده
+
+session جدید registered/agent دو فیلد اختیاری افزایشی دارد:
+
+- `identity_issued_at`: مقدار `iat` assertion تأییدشده به Unix seconds؛
+- `bootstrap_jti`: مقدار `jti` assertion تأییدشده.
+
+validator مونگو این فیلدها را مجاز ولی اجباری نمی‌کند؛ بنابراین migration مخرب یا بازنویسی تاریخی لازم نیست. session مهمان قدیمی بدون آن‌ها معتبر می‌ماند. session غیرمهمان قدیمی که یکی از این دو را ندارد در current-state authorization fail closed می‌شود و باید با assertion/session تازه re-bootstrap شود.
 
 ## API مشتری در مرورگر
 
 ### `GET /support/v1/session`
 
-فقط وضعیت Widget را بازمی‌گرداند:
-
-```json
-{
-  "version": 1,
-  "conversationId": "uuid",
-  "status": "active",
-  "identityKind": "guest",
-  "allowedActions": ["read", "send", "events", "logout"],
-  "expiresAt": "ISO-8601",
-  "supportAvailable": true
-}
-```
-
-این پاسخ هرگز UUID مربوط به Actor در Chat، Subject وب، Digest توکن، Role یا فیلدهای Admin را بازنمی‌گرداند.
+فقط state widget شامل `version`، `conversationId`، `status`، `identityKind`، `allowedActions`، `expiresAt` و `supportAvailable` برمی‌گردد. Web subject، Chat actor ID، role، token digest یا فیلد admin برنمی‌گردد.
 
 ### `GET /support/v1/messages?cursor=<base64url>&limit=50`
 
-گفتگو از نشست پشتیبانی به‌دست می‌آید و Caller نمی‌تواند آن را انتخاب کند. مقدار پیش‌فرض `limit` برابر ۵۰ و سقف آن ۱۰۰ است. Cursor مات، JSON نوع Base64URL شامل قدیمی‌ترین `{ "id", "createdAt" }` برگشتی است. پیام‌ها در هر صفحه به ترتیب زمانی هستند:
+conversation از session می‌آید. cursor، JSON base64url مات روی قدیمی‌ترین `{id,createdAt}` برگشتی است:
 
 ```json
 {
@@ -158,17 +190,19 @@ Set-Cookie: owj_support_sid=<credential>; Path=/support/v1; HttpOnly; SameSite=L
 }
 ```
 
-ورودی‌های File فقط فیلدهای عمومی محدود و URLهای محافظت‌شده Chat را ارائه می‌کنند. نسخه ۱ هیچ Mutation مربوط به Upload در Widget پشتیبانی ندارد؛ ساخت پیام فقط متنی است، هرچند Attachmentهای تاریخی/بومی Chat در Read قابل نمایش‌اند.
-
 ### `POST /support/v1/messages`
 
+schema درخواست دقیق است:
+
 ```json
-{ "body": "bounded text", "clientRequestId": "widget-request-uuid" }
+{ "body": "Hello", "clientRequestId": "unique-request-id" }
 ```
 
-متن الزامی است و سقف آن ۴٬۰۰۰ کاراکتر/16 KiB است. `clientRequestId` باید ۱ تا ۱۲۰ کاراکتر از مجموعه `[A-Za-z0-9._:-]` باشد. Chat گفتگوی متصل به نشست و Lifecycle باز/تخصیص‌یافته را بررسی می‌کند، سپس Repository تراکنشی و Idempotent موجود پیام را فراخوانی می‌کند. برای Retry درخواست دقیقاً یکسان، از همان شناسه استفاده کنید.
+conversation در body پذیرفته نمی‌شود. `clientRequestId` بین ۱ تا ۱۲۰ کاراکتر از `[A-Za-z0-9._:-]` است. repository موجود Chat idempotency را به `(conversation, actor, clientRequestId)` متصل می‌کند:
 
-Idempotency پیام به `(conversation, actor, clientRequestId)` متصل است. Retry دقیقاً یکسان، پیام ذخیره‌شده اول را با HTTP 200 و `deduped:true` برمی‌گرداند. استفاده دوباره از همان Key با Body متفاوت خطای `409 SUPPORT_IDEMPOTENCY_CONFLICT` می‌دهد و هرگز پیام اول را جایگزین نمی‌کند. Client باید برای هر پیام عمدی یک Key تازه بسازد.
+- persistence جدید: HTTP `201` و `deduped:false`؛
+- retry دقیق: HTTP `200`، همان `messageId` و `deduped:true`؛
+- همان key با body متفاوت: HTTP `409 SUPPORT_IDEMPOTENCY_CONFLICT`.
 
 ```json
 {
@@ -179,69 +213,62 @@ Idempotency پیام به `(conversation, actor, clientRequestId)` متصل اس
 }
 ```
 
-ذخیره جدید `201` و Retry شناسایی‌شده به‌عنوان تکراری `200` برمی‌گرداند. پیام و رکورد Journal پایدار در یک Transaction مشترک‌اند؛ Broadcast زنده، ورودی دوم Journal ایجاد نمی‌کند.
+پیام و hint ماندگار event journal در همان transaction مونگو نوشته می‌شوند. history HTTP مرجع body/file است و notification realtime عمداً body ندارد.
 
-### `GET /support/v1/events` و `GET /support/v1/ws`
+### realtime و logout
 
-قراردادهای SSE و WebSocket بومی در [پروتکل بلادرنگ نسخه ۱](./CHAT_REALTIME_PROTOCOL_V1.md) تعریف شده‌اند. درخواست عادی HTTP GET به مسیر WS پاسخ `426 SUPPORT_WEBSOCKET_UPGRADE_REQUIRED` می‌گیرد.
+- WebSocket بومی: `/support/v1/ws`.
+- SSE: `/support/v1/events`.
+- logout: `POST /support/v1/logout` session را محلی revoke، stream شناخته‌شده را قطع و فقط `owj_support_sid` را پاک می‌کند؛ حتی با unavailable بودن Web کار می‌کند.
 
-### `POST /support/v1/logout`
+[پروتکل realtime نسخه ۱](./CHAT_REALTIME_PROTOCOL_V1.md) را ببینید.
 
-نشست محلی پشتیبانی را لغو می‌کند، Streamهای شناخته‌شده را قطع می‌کند، فقط `owj_support_sid` را پاک می‌کند و `{ "version":1, "ok":true }` بازمی‌گرداند. Logout حتی هنگام در دسترس نبودن وضعیت Web یا منقضی‌شدن نشست، همچنان به‌صورت محلی قابل استفاده است.
+## API کارشناس
 
-## API کارکنان پشتیبانی
+هر route کارشناس به `actorKind:"agent"`، scope برابر `support:agent`، link فعال، مجوز جاری staff در Web و action مرتبط session نیاز دارد.
 
-همه مسیرهای Staff به `actorKind:"agent"`، Scope نوع `support:agent`، پیوند فعال Web↔Chat/وضعیت جاری Web و Action مربوطه در نشست پشتیبانی نیاز دارند.
-
-| Method/Path | رفتار |
+| روش/path | قرارداد |
 |---|---|
-| `GET /support/v1/staff/conversations?status=available|assigned|open|resolved|closed&limit=` | وضعیت Available/Open یعنی بدون تخصیص؛ Assigned/Resolved/Closed به Agent جاری محدود است. اندازه صفحه حداکثر ۱۰۰. |
-| `GET /support/v1/staff/conversations/:conversationId?cursor=&limit=` | فقط Agent تخصیص‌یافته که عضو Chat نیز هست می‌تواند بخواند؛ پیام‌ها از Schema ایمن Customer/Agent استفاده می‌کنند. |
-| `POST /support/v1/staff/conversations/:conversationId/assign` | به `Idempotency-Key` نیاز دارد؛ یک Transaction در Mongo، Claim اتمی تخصیص را با عضویت Chat همراه می‌کند. فقط یک Agent برنده می‌شود و کار Resolved/Closed هرگز باز نمی‌شود. |
-| `POST /support/v1/staff/conversations/:conversationId/reply` | همان Schema متن/Idempotency؛ فقط وقتی Status برابر `assigned` است مجاز است. |
-| `POST /support/v1/staff/conversations/:conversationId/resolve` | به `Idempotency-Key` نیاز دارد؛ بدنه `{ "resolution":"resolved" }` یا `closed`؛ فقط Agent تخصیص‌یافته. Transitionهای مجاز assigned→resolved/closed و resolved→closed هستند. |
+| `GET /support/v1/staff/conversations?status=...` | لیست محدود available/assigned/open/resolved/closed |
+| `GET /support/v1/staff/conversations/:conversationId` | فقط agent assigned همراه membership در Chat |
+| `POST .../:conversationId/assign` | `Idempotency-Key`، status refresh اجباری و یک winner تراکنشی |
+| `POST .../:conversationId/reply` | schema دقیق پیام، refresh اجباری و فقط حالت assigned |
+| `POST .../:conversationId/resolve` | `Idempotency-Key`، refresh اجباری و transition به `resolved` یا `closed` |
 
-Keyهای Command کارکنان فقط به‌صورت Digest ذخیره می‌شوند. تکرار Assignment/Transition وضعیت، State مرجع جاری را برمی‌گرداند و Event بلادرنگ دیگری منتشر نمی‌کند. استفاده دوباره از Key مربوط به Resolution برای Outcome متفاوت خطای `409 SUPPORT_IDEMPOTENCY_CONFLICT` می‌دهد؛ Transition نامعتبر یا هم‌زمان Lifecycle یک Conflict پایدار 409 برمی‌گرداند.
+Chat فقط backend را پیاده می‌کند؛ به agent پنل admin Chat نمی‌دهد و UI staff تازه اضافه نمی‌کند.
 
-پیاده‌سازی فقط Routeهای Backend را فراهم می‌کند؛ Frontend جدید Staff اضافه نمی‌کند و Admin Panel مربوط به Chat را به Agentها نمی‌دهد.
+## خطاها و fixtureهای machine-readable
 
-## قواعد مجوزدهی و وضعیت جاری
+خطای HTTP بسته‌بندی‌شده:
 
-- نشست ثبت‌شده به هویت دقیق گفتگو، پیوند فعال، عضویت جاری، حساب فعال Chat و وضعیت Web نیاز دارد.
-- نشست مهمان، Subject مهمان Web را به‌شکل Digestشده دقیقاً با یک گفتگوی پشتیبانی مقایسه می‌کند. مهمان‌ها در `users` درج نمی‌شوند و به APIهای قدیمی/سراسری دسترسی ندارند.
-- تخصیص Agent و عضویت به‌صورت Transactional به هم متصل‌اند. خواندن/پاسخ‌دادن علاوه بر آن به تخصیص جاری و عضویت Chat نیاز دارد.
-- وضعیت Web برای هر Operation حداکثر ۶۰ ثانیه Cache می‌شود. پس از Stale شدن، قطعی Web عملیات ثبت‌شده/Agent را Fail Closed می‌کند؛ عملیات مهمان محلی باقی می‌ماند.
-- گفتگوهای Resolved/Closed برای Agent تخصیص‌یافته قابل خواندن باقی می‌مانند، اما ارسال مشتری/Staff متوقف می‌شود. Bootstrap بعدی همان گفتگوی بسته را با `supportAvailable:false` ادامه می‌دهد؛ ساخت Case دوم یا Reopen هنوز پیاده‌سازی نشده است.
-- نشست‌های منقضی/لغوشده رد می‌شوند و به‌صورت دوره‌ای پاک‌سازی می‌گردند؛ اتصال‌های باز Realtime به‌طور مستقل دوباره اعتبارسنجی می‌شوند.
+```json
+{
+  "error": {
+    "code": "SUPPORT_REQUEST_INVALID",
+    "message": "Safe text",
+    "requestId": "request-or-generated-id"
+  }
+}
+```
 
-## خانواده‌های پایدار خطا
+statusهای نماینده: 400 ورودی نامعتبر، 401 session یا service auth غایب/منقضی، 403 رد scope/conversation/staff، 409 conflict idempotency/assignment/lifecycle، 426 درخواست HTTP عادی روی WS، 429 limit و 503 provider لازمِ unavailable. credential و متن خصوصی پیام نباید در log/error بیاید.
 
-| HTTP | کد نمونه | معنی |
-|---:|---|---|
-| 400 | `SUPPORT_REQUEST_INVALID` | فیلد، Cursor، Context یا UUID گفتگو نامعتبر/بیش از حد |
-| 401 | `SUPPORT_SERVICE_UNAUTHORIZED` | احراز هویت سرویس Web→Chat نامعتبر |
-| 401 | `SUPPORT_SESSION_REQUIRED` | Cookie پشتیبانی گم‌شده/بدساخت/ناشناخته |
-| 401 | `SUPPORT_SESSION_EXPIRED` / `SUPPORT_SESSION_REVOKED` | نشست محلی پشتیبانی دیگر فعال نیست |
-| 401/403 | `IDENTITY_*` | رد Signature/Claim/Replay/Link/Current-State |
-| 403 | `SUPPORT_ACTION_DENIED` | کلاس نشست Action مورد نیاز را ندارد |
-| 403 | `SUPPORT_CONVERSATION_DENIED` | گفتگو، Lifecycle، عضویت یا تخصیص مجاز نیست |
-| 403 | `SUPPORT_AGENT_REQUIRED` | مشتری مسیر Staff را فراخوانده است |
-| 403 | `SUPPORT_SCOPE_DENIED` / `SUPPORT_ORIGIN_DENIED` | کلاس/Scope مربوط به Assertion یا Origin بلادرنگ رد شده |
-| 409 | `SUPPORT_IDEMPOTENCY_CONFLICT` / `SUPPORT_ASSIGNMENT_CONFLICT` / `SUPPORT_ASSIGNMENT_CLOSED` / `SUPPORT_RESOLUTION_CONFLICT` | تداخل ورودی Retry، تخصیص یا Lifecycle |
-| 426 | `SUPPORT_WEBSOCKET_UPGRADE_REQUIRED` | به‌جای Upgrade بومی WS از درخواست عادی HTTP استفاده شده |
-| 429 | `SUPPORT_RATE_LIMITED` / `SUPPORT_CONNECTION_LIMIT` | سقف محدودشده سوءاستفاده/اتصال |
-| 500 | `SUPPORT_INTERNAL_ERROR` | Fallback پاک‌سازی‌شده برای خطای پیش‌بینی‌نشده Server |
-| 503 | `SUPPORT_PROVIDER_UNAVAILABLE` | Web/Store/Provider الزامی در دسترس نیست؛ Fail Closed |
+manifest fixture مرجع Chat:
 
-محدودیت پیش‌فرض HTTP برابر ۳٬۰۰۰ درخواست Bootstrap در هر ۱۵ دقیقه برای هر IP حل‌شده Client (قابل پیکربندی) و ۶۰ نوشتن پیام در دقیقه است. `trust proxy` باید با Topology کنترل‌شده Reverse Proxy مطابقت داشته باشد؛ در غیر این صورت محدودیت‌های مبتنی بر IP می‌توانند گمراه‌کننده باشند.
+`docs/platform/fixtures/support-v1/manifest.json`
 
-## وابستگی‌های شناخته‌شده بین Repositoryها
+این مسیر assertion policy، HMAC، recovery، cookie، status، message و realtime را پوشش می‌دهد. fixtureها synthetic هستند و secret تولید یا private signing key ندارند.
 
-- Issuer/JWKS واقعی نوع RS256 و Fixtureهای Assertion از Web.
-- Endpoint واقعی Identity Status و Credential جهت‌دار Chat→Web.
-- امضای Headerهای Service Auth ورودی توسط Web BFF و تنظیم Cookie دقیق.
-- تست Reverse Proxy برای Cookie Path، Origin، بافرینگ SSE و Upgrade وب‌سوکت.
-- Endpointهای تاییدشده Proof برای پیوند حساب و تبدیل مهمان.
-- تصمیم محصول و پیاده‌سازی Reopen/ساخت Case جدید پس از Resolution.
+## پذیرش محلی بین‌مخزنی — ۲۰۲۶-۱۱-۲۱
 
-تا زمانی که تست‌های واقعی Web+Chat موفق نشده‌اند، این یکپارچه‌سازی را Production-Complete توصیف نکنید.
+اولین درخواست به Image قدیمی Web پاسخ قدیمی `400 IDENTITY_REFERENCE_INVALID` داد. سپس Web از سورس هم‌راستا rebuild شد؛ Chat بدنه frozen یعنی `{subject,tokenIssuedAt,jti}` را با credential اختصاصی Bearer فرستاد و HTTP 200 با subject تخت، policy فعال role/support، دستور cache برابر ۶۰ ثانیه، timestamp و correlation ID بازتاب‌شده گرفت. Chat هیچ fallback قدیمی اضافه نکرد.
+
+stack ایزوله Docker مشترک سپس flowهای مصنوعی زیر را پاس کرد:
+
+- assertion واقعی guest وب و bootstrap نوع HMAC، cookie محدود `owj_support_sid`، conversation/message/history، retry همان گفتگو با `created:false`، dedupe retry دقیق و conflict نوع `409` برای body متفاوت؛
+- جداسازی Guest B حتی وقتی conversation ID مربوط به Guest A به‌عنوان query اضافه ارسال شد؛
+- bootstrap کارشناس، مشاهده queue، assignment و reply؛ bootstrap registered، recovery همان گفتگو و history ماندگار؛
+- تغییر موقت و Web-owned فیلد `authRevokedBefore` باعث شد session موجود registered در Chat پاسخ `401 SUPPORT_SESSION_REVOKED` بگیرد؛ fixture مصنوعی بلافاصله restore شد؛
+- logout پاسخ 200 داد و cookie قدیمی guest سپس 401 گرفت.
+
+این نتیجه blocker قرارداد status در Sprint 2.5 را برای revision محلی تست‌شده می‌بندد. این مدرک production readiness، rotation واقعی کلید تولید، browser automation واقعی، deployment، migration یا ظرفیت اندازه‌گیری‌شده نیست.

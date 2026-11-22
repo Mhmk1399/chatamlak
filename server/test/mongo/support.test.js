@@ -82,11 +82,17 @@ describe("support persistence on a real MongoDB replica set", () => {
       principalKind: "guest",
       actorId: guest.actorId,
       guestSubjectDigest: conversation.guest_subject_digest,
+      bootstrapJti: "guest-persisted-jti-1",
+      identityIssuedAt: 1_795_171_600,
       expiresAt: "2026-11-21T10:00:00.000Z",
       idleExpiresAt: "2026-11-20T11:00:00.000Z",
     });
     const stored = await db.collection("support_sessions").findOne({ conversation_id: guest.conversationId });
     expect(stored.token_digest).toMatch(/^sha256:/);
+    expect(stored).toMatchObject({
+      bootstrap_jti: "guest-persisted-jti-1",
+      identity_issued_at: 1_795_171_600,
+    });
     expect(stored).not.toHaveProperty("credential");
 
     const input = {
