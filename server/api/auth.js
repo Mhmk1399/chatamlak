@@ -23,7 +23,15 @@ function registerAuthRoutes(app, deps) {
     getSessionFromRequest,
   } = deps;
 
+  const localNativeAuthEnabled = () => deps.nativeAuthMode === "local_test";
+
   app.post("/api/register", async (req, res) => {
+    if (!localNativeAuthEnabled()) {
+      return res.status(403).json({
+        error: "Local account creation is disabled. Sign in with Owj Web.",
+        code: "LOCAL_NATIVE_AUTH_DISABLED",
+      });
+    }
     if (!getSetting("SIGN_UP")) {
       return res.status(403).json({ error: "Account creation is disabled." });
     }
@@ -115,6 +123,12 @@ function registerAuthRoutes(app, deps) {
   });
 
   app.post("/api/login", async (req, res) => {
+    if (!localNativeAuthEnabled()) {
+      return res.status(403).json({
+        error: "Local password sign-in is disabled. Sign in with Owj Web.",
+        code: "LOCAL_NATIVE_AUTH_DISABLED",
+      });
+    }
     const { username, password } = req.body || {};
 
     if (!username || !password) {
@@ -173,6 +187,10 @@ function registerAuthRoutes(app, deps) {
       status: session.status || "online",
       role: session.role || "user",
       verified: Boolean(session.verified),
+      authKind: session.auth_kind || "native_local",
+      webScopes: session.auth_kind === "web_federated"
+        ? (Array.isArray(session.web_scopes) ? session.web_scopes : [])
+        : [],
       chatAppearance: normalizeChatAppearance(session.chat_appearance),
     });
   });

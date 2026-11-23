@@ -319,7 +319,22 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
     upsertPushSubscription: (userId, endpoint, p256dh, auth, messagePreview = 1, locale = "fa") => s.upsert("push_subscriptions", { endpoint }, { user_id: userId, p256dh, auth, message_preview: Number(messagePreview), locale: locale === "en" ? "en" : "fa" }),
     deletePushSubscription: (endpoint, userId) => s.remove("push_subscriptions", { endpoint, ...(userId ? { user_id: userId } : {}) }),
     listPushSubscriptionsByUserIds: (ids = []) => s.many("push_subscriptions", { user_id: { $in: unique(ids) } }),
-    createSession: (userId, token) => s.insert("sessions", { id: crypto.randomUUID(), user_id: userId, token: sessionTokenStorageValue(token), last_seen: now() }),
+    createSession: (userId, token, options = {}) => s.insert("sessions", {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      token: sessionTokenStorageValue(token),
+      last_seen: now(),
+      auth_kind: options.authKind || "native_local",
+      web_subject: options.webSubject || null,
+      web_scopes: Array.isArray(options.webScopes) ? [...new Set(options.webScopes)].slice(0, 8) : [],
+      web_authorization_established_at: options.authorizationEstablishedAt || null,
+      web_session_expires_at: options.sessionExpiresAt || null,
+      web_authorization_checked_at: options.authorizationCheckedAt || null,
+      web_authorization_cache_seconds: Number.isInteger(options.authorizationCacheMaxAgeSeconds)
+        ? Math.max(0, Math.min(60, options.authorizationCacheMaxAgeSeconds))
+        : 0,
+      crm_actor_authorization: options.crmActorAuthorization || null,
+    }),
     async getSession(token) {
       const candidates = sessionTokenLookupValues(token);
       const session = candidates.length ? await s.one("sessions", { token: { $in: candidates } }) : null;
@@ -340,7 +355,51 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
         session_id: session.id,
         session_created_at: session.created_at,
         session_last_seen: session.last_seen,
+        auth_kind: session.auth_kind || "native_local",
+        web_subject: session.web_subject || null,
+        web_scopes: Array.isArray(session.web_scopes) ? session.web_scopes : [],
+        web_authorization_established_at: session.web_authorization_established_at || null,
+        web_session_expires_at: session.web_session_expires_at || null,
+        web_authorization_checked_at: session.web_authorization_checked_at || null,
+        web_authorization_cache_seconds: Number(session.web_authorization_cache_seconds || 0),
+        crm_actor_authorization: session.crm_actor_authorization || null,
       } : null;
+    },
+    updateNativeWebSession: (sessionId, authorization = {}) => s.update("sessions", {
+      id: String(sessionId || ""),
+      auth_kind: "web_federated",
+    }, {
+      web_scopes: Array.isArray(authorization.scopes) ? [...new Set(authorization.scopes)].slice(0, 8) : [],
+      web_session_expires_at: authorization.sessionExpiresAt || null,
+      web_authorization_checked_at: authorization.authorizationCheckedAt || now(),
+      web_authorization_cache_seconds: Number.isInteger(authorization.authorizationCacheMaxAgeSeconds)
+        ? Math.max(0, Math.min(60, authorization.authorizationCacheMaxAgeSeconds))
+        : 0,
+      ...(authorization.crmActorAuthorization
+        ? { crm_actor_authorization: authorization.crmActorAuthorization }
+        : {}),
+    }),
+    createNativeWebAuthTransaction: (transaction) => s.insert("native_web_auth_transactions", {
+      id: transaction.id || crypto.randomUUID(),
+      state_digest: String(transaction.stateDigest),
+      browser_token_digest: String(transaction.browserTokenDigest),
+      code_verifier: String(transaction.codeVerifier),
+      redirect_uri: String(transaction.redirectUri),
+      expires_at: new Date(transaction.expiresAt),
+      consumed_at: null,
+    }),
+    async consumeNativeWebAuthTransaction({ stateDigest, browserTokenDigest, consumedAt = new Date() } = {}) {
+      const result = await db.collection("native_web_auth_transactions").findOneAndUpdate({
+        state_digest: String(stateDigest || ""),
+        browser_token_digest: String(browserTokenDigest || ""),
+        consumed_at: null,
+        expires_at: { $gt: new Date(consumedAt) },
+      }, {
+        $set: { consumed_at: new Date(consumedAt) },
+      }, s.opts({ returnDocument: "before" }));
+      if (!result) return null;
+      const { _id, ...transaction } = result;
+      return transaction;
     },
     touchSession: (token) => {
       const candidates = sessionTokenLookupValues(token);
@@ -452,6 +511,86 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
   Object.assign(R, createAdminRepository(s, R));
   R.messagingDb = createMessagingRepository(s, R, encryption, visibleFilter);
   Object.assign(R, createPlatformIdentityRepository(s));
+  R.provisionNativeWebUser = async ({ webUserId } = {}) => {
+    const subject = String(webUserId || "").trim();
+    if (!/^[0-9a-f]{24}$/.test(subject)) {
+      throw Object.assign(new Error("The Web identity subject is invalid."), {
+        code: "IDENTITY_SUBJECT_INVALID",
+        status: 400,
+      });
+    }
+    const existing = await R.findPlatformIdentityLinkByWebUserId("owj-web", subject);
+    if (existing) {
+      if (existing.status !== "active") {
+        throw Object.assign(new Error("The Web identity link is not active."), {
+          code: "IDENTITY_LINK_REVOKED",
+          status: 403,
+        });
+      }
+      const user = await R.findUserById(existing.chat_user_id);
+      if (!user || Number(user.banned)) {
+        throw Object.assign(new Error("The linked Chat account is disabled."), {
+          code: "CHAT_ACCOUNT_DISABLED",
+          status: 403,
+        });
+      }
+      return { user, link: existing, created: false };
+    }
+
+    try {
+      return await s.transaction(async () => {
+        const concurrent = await R.findPlatformIdentityLinkByWebUserId("owj-web", subject);
+        if (concurrent) {
+          const user = await R.findUserById(concurrent.chat_user_id);
+          return { user, link: concurrent, created: false };
+        }
+        const hash = crypto.createHash("sha256").update(`owj-web:${subject}`, "utf8").digest("hex");
+        let userId = null;
+        let username = null;
+        for (let offset = 0; offset <= 40; offset += 8) {
+          username = `w${hash.slice(offset, offset + 15)}`;
+          if (await R.findUserByUsername(username)) continue;
+          try {
+            userId = await R.createUser(username, "!web-federated!", null, null, null, {
+              role: "user",
+              status: "online",
+            });
+            break;
+          } catch (error) {
+            if (error?.code !== 11000) throw error;
+          }
+        }
+        if (!userId) {
+          throw Object.assign(new Error("A safe Chat identity could not be provisioned."), {
+            code: "IDENTITY_PROVISION_CONFLICT",
+            status: 409,
+          });
+        }
+        const linked = await R.linkPlatformIdentityAccount({
+          provider: "owj-web",
+          webUserId: subject,
+          chatUserId: userId,
+          linkedByWebUserId: subject,
+        });
+        await s.insert("admin_audit_logs", {
+          action: "platform_identity.provisioned",
+          actor_user_id: userId,
+          target_user_id: userId,
+          metadata: { provider: "owj-web", web_subject: subject },
+        });
+        return {
+          user: await R.findUserById(userId),
+          link: linked.link,
+          created: true,
+        };
+      });
+    } catch (error) {
+      if (error?.code !== 11000 && error?.code !== "IDENTITY_LINK_CONFLICT") throw error;
+      const winner = await R.findPlatformIdentityLinkByWebUserId("owj-web", subject);
+      if (!winner || winner.status !== "active") throw error;
+      return { user: await R.findUserById(winner.chat_user_id), link: winner, created: false };
+    }
+  };
   R.supportDb = createSupportRepository(s, R);
   Object.assign(R, createMongoMaintenance(s));
   Object.assign(R, createAppearanceRepository(s));

@@ -1,0 +1,92 @@
+{
+  "contract": "owj-chat-support-lifecycle-v2",
+  "syntheticOnly": true,
+  "sessionExchange": {
+    "request": {
+      "method": "POST",
+      "path": "/support/v2/session",
+      "body": { "supportSessionCredential": "<redacted-already-issued-opaque-credential>" }
+    },
+    "response": {
+      "body": { "version": 2, "ok": true, "expiresAt": "2026-11-23T20:00:00.000Z" },
+      "setCookie": "owj_support_v2_sid=<redacted>; Path=/support/v2; HttpOnly; SameSite=Lax; Secure"
+    },
+    "v1CookieUnchanged": "owj_support_sid remains scoped to /support/v1"
+  },
+  "listCasesResponse": {
+    "version": 2,
+    "current": {
+      "conversationId": "case_synthetic_current_02",
+      "caseNumber": 2,
+      "status": "open",
+      "unreadCount": 0,
+      "current": true,
+      "reopenedAt": null
+    },
+    "history": [
+      {
+        "conversationId": "case_synthetic_history_01",
+        "caseNumber": 1,
+        "status": "resolved",
+        "unreadCount": 1,
+        "current": false,
+        "reopenedAt": "2026-11-22T10:00:00.000Z"
+      }
+    ]
+  },
+  "createCaseRequest": {
+    "headers": { "idempotency-key": "case:create:synthetic-002" },
+    "body": {
+      "locale": "fa-IR",
+      "context": { "page": "/synthetic-listing", "publicListingId": "listing_synthetic_01" }
+    }
+  },
+  "reopenCaseRequest": {
+    "conversationId": "case_synthetic_history_01",
+    "headers": { "idempotency-key": "case:reopen:synthetic-001" },
+    "body": {}
+  },
+  "eventsResponse": {
+    "version": 2,
+    "conversationId": "case_synthetic_current_02",
+    "events": [],
+    "nextCursor": null,
+    "hasMore": false,
+    "gap": false
+  },
+  "linkRegisteredRequest": {
+    "headers": { "idempotency-key": "guest:link:synthetic-001" },
+    "body": { "intent": "link_guest_history" },
+    "requiredCookies": ["owj_support_v2_sid=<redacted-guest-session>", "sid=<redacted-web-federated-chat-session>"]
+  },
+  "linkRegisteredResponse": { "version": 2, "linked": true, "convertedCount": 2 },
+  "conversionPolicy": {
+    "maximumActiveCasesAfterLink": 1,
+    "caseNumbers": "guest cases are appended after existing registered history",
+    "v1Primary": "active or newest converted guest case when no registered primary exists",
+    "preservedProvenance": [
+      "guest subject digest",
+      "guest actor id",
+      "original case number",
+      "conversion proof id",
+      "conversion timestamp"
+    ]
+  },
+  "logout": {
+    "request": { "method": "POST", "path": "/support/v2/logout" },
+    "response": {
+      "body": { "version": 2, "ok": true },
+      "setCookie": "owj_support_v2_sid=; Path=/support/v2; Max-Age=0; HttpOnly; SameSite=Lax; Secure"
+    }
+  },
+  "negativeCases": [
+    "active case already exists",
+    "reopen target is not resolved or closed",
+    "another active case blocks reopen",
+    "case belongs to another identity",
+    "guest link intent or current federated session is missing",
+    "registered and guest identities both have an active case",
+    "idempotency conflict"
+  ]
+}
+

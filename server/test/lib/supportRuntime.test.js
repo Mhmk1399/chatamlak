@@ -107,6 +107,82 @@ describe("support runtime composition", () => {
     await runtime.close();
   });
 
+  test("preserves guest and registered customer authorship after history linking", async () => {
+    const deps = dependencies({
+      supportDb: {
+        getSupportConversation: vi.fn(async () => ({
+          id: "case-linked",
+          actor_id: "support-guest:original",
+          chat_user_id: "chat-user-1",
+        })),
+        getSupportMessages: vi.fn(async () => ({
+          messages: [
+            { id: "guest-message", user_id: "support-guest:original", body: "Before sign-in" },
+            { id: "registered-message", user_id: "chat-user-1", body: "After sign-in" },
+            { id: "agent-message", user_id: "chat-agent-1", body: "Agent reply" },
+          ],
+          hasMore: false,
+        })),
+      },
+    });
+    const runtime = createSupportRuntime({
+      env: environment(),
+      appEnv: "development",
+      now: () => NOW,
+      fetchImpl: vi.fn(async () => webStatusResponse()),
+      ...deps,
+    });
+    const result = await runtime.apiDeps.listSupportMessages("case-linked", {
+      viewerChatUserId: "chat-user-1",
+    });
+    expect(result.messages.map((message) => message.authorKind)).toEqual([
+      "customer",
+      "customer",
+      "agent",
+    ]);
+    await runtime.close();
+  });
+
+  test("separates the active case from historical cases in the V2 list", async () => {
+    const deps = dependencies({
+      supportDb: {
+        listSupportCases: vi.fn(async () => [
+          {
+            id: "case-current",
+            status: "open",
+            actor_id: "support-guest:actor",
+            case_number: 2,
+            updated_at: "2026-11-20T08:00:00.000Z",
+          },
+          {
+            id: "case-history",
+            status: "resolved",
+            actor_id: "support-guest:actor",
+            case_number: 1,
+            updated_at: "2026-11-19T08:00:00.000Z",
+          },
+        ]),
+      },
+    });
+    const runtime = createSupportRuntime({
+      env: environment(),
+      appEnv: "development",
+      now: () => NOW,
+      fetchImpl: vi.fn(async () => webStatusResponse()),
+      ...deps,
+    });
+    const result = await runtime.apiDeps.listSupportCasesV2({
+      actorKind: "guest",
+      subject: `sha256:${"a".repeat(64)}`,
+      chatUserId: "support-guest:actor",
+    });
+    expect(result.current).toMatchObject({ conversationId: "case-current", current: true });
+    expect(result.history).toEqual([
+      expect.objectContaining({ conversationId: "case-history", current: false }),
+    ]);
+    await runtime.close();
+  });
+
   test("requires a 32-character Chat-to-Web status credential", () => {
     expect(() => createSupportRuntime({
       env: environment({ OWJ_CHAT_TO_WEB_SERVICE_TOKEN: "c".repeat(31) }),

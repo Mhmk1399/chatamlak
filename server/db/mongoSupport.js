@@ -93,7 +93,9 @@ export function createSupportRepository(
     if (existing) {
       return {
         conversationId: existing.id,
-        actorId: existing.actor_id,
+        actorId: identity.kind === "registered"
+          ? existing.chat_user_id || existing.actor_id
+          : existing.actor_id,
         status: existing.status,
         assignedChatUserId: existing.assigned_chat_user_id || null,
         created: false,
@@ -145,7 +147,9 @@ export function createSupportRepository(
       if (!winner) throw error;
       return {
         conversationId: winner.id,
-        actorId: winner.actor_id,
+        actorId: identity.kind === "registered"
+          ? winner.chat_user_id || winner.actor_id
+          : winner.actor_id,
         status: winner.status,
         assignedChatUserId: winner.assigned_chat_user_id || null,
         created: false,
@@ -465,10 +469,14 @@ export function createSupportRepository(
       const userId = typeof payload.userId === "string" && payload.userId
         ? payload.userId
         : message?.user_id || null;
+      const customerActors = new Set([
+        conversation?.actor_id,
+        conversation?.chat_user_id,
+      ].filter(Boolean).map(String));
       const actorKind = ["customer", "agent"].includes(payload.actorKind)
         ? payload.actorKind
         : userId
-          ? (userId === conversation?.actor_id ? "customer" : "agent")
+          ? (customerActors.has(String(userId)) ? "customer" : "agent")
           : null;
       return {
         ...payload,
@@ -527,6 +535,205 @@ export function createSupportRepository(
     return getSupportConversation(id);
   }
 
+  async function listSupportCases({ ownerIdentityKey, actorId, limit = 100 } = {}) {
+    const owner = required(ownerIdentityKey, "Owner identity key", 180);
+    const actor = required(actorId, "Actor id", 128);
+    const rows = await store.many("support_conversations", {
+      $or: [{ owner_identity_key: owner }, { identity_key: owner }],
+    }, {
+      sort: { updated_at: -1, id: -1 },
+      limit: Math.max(1, Math.min(MAX_SUPPORT_PAGE_SIZE, Number(limit) || 100)),
+    });
+    for (const row of rows) {
+      row.unread_count = await store.count("chat_messages", {
+        chat_id: row.id,
+        user_id: { $ne: actor },
+        ...(row.customer_read_at ? { created_at: { $gt: row.customer_read_at } } : {}),
+      });
+    }
+    return rows;
+  }
+
+  async function createSupportCase({
+    ownerIdentityKey,
+    identityKind,
+    actorId,
+    webUserId = null,
+    chatUserId = null,
+    guestSubjectDigest = null,
+    locale = null,
+    context = null,
+    idempotencyKey,
+  } = {}) {
+    const owner = required(ownerIdentityKey, "Owner identity key", 180);
+    const actor = required(actorId, "Actor id", 128);
+    const requestDigest = digest(`${owner}:${required(idempotencyKey, "Idempotency key", 180)}`);
+    const duplicate = await store.one("support_conversations", { create_idempotency_digest: requestDigest });
+    if (duplicate) return { ...duplicate, _deduped: true };
+    return store.transaction(async () => {
+      const active = await store.one("support_conversations", {
+        $and: [
+          { $or: [{ owner_identity_key: owner }, { identity_key: owner }] },
+          { status: { $in: ["open", "assigned"] } },
+        ],
+      });
+      if (active) fail("SUPPORT_ACTIVE_CASE_EXISTS", "Resolve the current support case before opening another.", 409);
+      const historyCount = await store.count("support_conversations", {
+        $or: [{ owner_identity_key: owner }, { identity_key: owner }],
+      });
+      const conversationId = randomUUID();
+      const timestamp = now();
+      await store.insert("chats", {
+        id: conversationId,
+        name: `Website support #${historyCount + 1}`,
+        type: "group",
+        group_visibility: "private",
+        created_by_user_id: chatUserId || null,
+        support_managed: 1,
+      });
+      await store.insert("support_conversations", {
+        id: conversationId,
+        identity_key: `${owner}:case:${conversationId}`,
+        owner_identity_key: owner,
+        identity_kind: identityKind,
+        actor_id: actor,
+        web_user_id: webUserId,
+        chat_user_id: chatUserId,
+        guest_subject_digest: guestSubjectDigest,
+        case_number: historyCount + 1,
+        create_idempotency_digest: requestDigest,
+        status: "open",
+        assigned_chat_user_id: null,
+        locale: locale == null ? null : String(locale).slice(0, 24),
+        context: boundedContext(context),
+        updated_at: timestamp,
+        resolved_at: null,
+        closed_at: null,
+        reopened_at: null,
+      });
+      if (chatUserId) await chatRepository.addChatMember(conversationId, chatUserId, "member");
+      return { ...(await getSupportConversation(conversationId)), _deduped: false };
+    });
+  }
+
+  async function reopenSupportCase({ ownerIdentityKey, conversationId, actorId, idempotencyKey } = {}) {
+    const owner = required(ownerIdentityKey, "Owner identity key", 180);
+    const id = required(conversationId, "Conversation id", 128);
+    const actor = required(actorId, "Actor id", 128);
+    const keyDigest = digest(`${owner}:reopen:${required(idempotencyKey, "Idempotency key", 180)}`);
+    return store.transaction(async () => {
+      const current = await getSupportConversation(id);
+      if (!current || ![current.owner_identity_key, current.identity_key].includes(owner) || current.actor_id !== actor) {
+        fail("SUPPORT_CONVERSATION_DENIED", "The support case is not owned by this identity.", 403);
+      }
+      if (current.reopen_idempotency_digest === keyDigest && ["open", "assigned"].includes(current.status)) {
+        return { ...current, _deduped: true };
+      }
+      if (!["resolved", "closed"].includes(current.status)) {
+        fail("SUPPORT_REOPEN_CONFLICT", "Only a resolved support case can be reopened.", 409);
+      }
+      const active = await store.one("support_conversations", {
+        id: { $ne: id }, status: { $in: ["open", "assigned"] },
+        $or: [{ owner_identity_key: owner }, { identity_key: owner }],
+      });
+      if (active) fail("SUPPORT_ACTIVE_CASE_EXISTS", "Another support case is already active.", 409);
+      const timestamp = now();
+      const updated = await store.modify("support_conversations", { id, status: current.status }, { $set: {
+        status: "open",
+        assigned_chat_user_id: null,
+        reopen_idempotency_digest: keyDigest,
+        reopened_at: timestamp,
+        updated_at: timestamp,
+        resolved_at: null,
+        closed_at: null,
+      } });
+      if (!updated) fail("SUPPORT_REOPEN_CONFLICT", "The support case changed concurrently.", 409);
+      return { ...updated, _deduped: false };
+    });
+  }
+
+  const markSupportCaseRead = (conversationId, actorId) => store.update(
+    "support_conversations",
+    { id: String(conversationId), actor_id: String(actorId) },
+    { customer_read_at: now(), updated_at: now() },
+  );
+
+  async function convertGuestHistory({ guestSubjectDigest, webUserId, chatUserId, proofId } = {}) {
+    const guestDigest = required(guestSubjectDigest, "Guest subject digest", 80);
+    const webId = required(webUserId, "Web user id", 128);
+    const chatId = required(chatUserId, "Chat user id", 128);
+    const proof = required(proofId, "Conversion proof id", 200);
+    const registeredOwner = `registered:${digest(`owj-web:${webId}`)}`;
+    return store.transaction(async () => {
+      const alreadyConverted = await store.many("support_conversations", {
+        conversion_from_guest_digest: guestDigest,
+        identity_kind: "registered",
+        web_user_id: webId,
+        chat_user_id: chatId,
+      });
+      const rows = await store.many("support_conversations", {
+        guest_subject_digest: guestDigest,
+        identity_kind: "guest",
+      });
+      if (!rows.length) {
+        return {
+          convertedCount: alreadyConverted.length,
+          ownerIdentityKey: registeredOwner,
+          deduped: alreadyConverted.length > 0,
+        };
+      }
+      const registeredRows = await store.many("support_conversations", {
+        $or: [{ owner_identity_key: registeredOwner }, { identity_key: registeredOwner }],
+      });
+      const activeRegistered = registeredRows.filter((row) => ["open", "assigned"].includes(row.status));
+      const activeGuest = rows.filter((row) => ["open", "assigned"].includes(row.status));
+      if (activeRegistered.length + activeGuest.length > 1) {
+        fail(
+          "SUPPORT_GUEST_LINK_ACTIVE_CONFLICT",
+          "Resolve one active support case before linking guest history.",
+          409,
+        );
+      }
+      let nextCaseNumber = registeredRows.reduce(
+        (maximum, row) => Math.max(maximum, Number(row.case_number || 1)),
+        0,
+      );
+      const ordered = [...rows].sort((left, right) =>
+        String(left.created_at || "").localeCompare(String(right.created_at || "")) ||
+        String(left.id).localeCompare(String(right.id))
+      );
+      const baseIdentityTaken = registeredRows.some((row) => row.identity_key === registeredOwner);
+      const primary = baseIdentityTaken
+        ? null
+        : activeGuest[0] || ordered.at(-1) || null;
+      for (const row of ordered) {
+        nextCaseNumber += 1;
+        await store.update("support_conversations", { id: row.id, identity_kind: "guest" }, {
+          identity_kind: "registered",
+          identity_key: row.id === primary?.id
+            ? registeredOwner
+            : `${registeredOwner}:case:${row.id}`,
+          owner_identity_key: registeredOwner,
+          web_user_id: webId,
+          chat_user_id: chatId,
+          conversion_proof_id: proof,
+          conversion_from_guest_digest: guestDigest,
+          conversion_from_guest_actor_id: row.actor_id,
+          conversion_from_guest_case_number: Number(row.case_number || 1),
+          case_number: nextCaseNumber,
+          converted_at: now(),
+          updated_at: now(),
+        });
+        await chatRepository.addChatMember(row.id, chatId, "member");
+      }
+      return {
+        convertedCount: alreadyConverted.length + ordered.length,
+        ownerIdentityKey: registeredOwner,
+        deduped: false,
+      };
+    });
+  }
+
   return {
     ensureSupportConversation,
     getSupportConversation,
@@ -544,5 +751,10 @@ export function createSupportRepository(
     getSupportMessages,
     getSupportEvents,
     convertGuestConversation,
+    listSupportCases,
+    createSupportCase,
+    reopenSupportCase,
+    markSupportCaseRead,
+    convertGuestHistory,
   };
 }

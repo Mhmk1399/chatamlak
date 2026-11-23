@@ -12,6 +12,7 @@ import {
   createSupportRealtime,
   createSupportWebSocketGateway,
 } from "./supportRealtime.js";
+import crypto from "node:crypto";
 
 export const SUPPORT_STAFF_INBOX_ID = "00000000-0000-4000-8000-000000000002";
 
@@ -74,7 +75,12 @@ function safeConversation(row) {
   };
 }
 
-function safeMessage(row, customerActorId) {
+function safeMessage(row, customerActorIds) {
+  const customerIds = new Set(
+    (Array.isArray(customerActorIds) ? customerActorIds : [customerActorIds])
+      .filter(Boolean)
+      .map(String),
+  );
   const files = Array.isArray(row?.files)
     ? row.files.slice(0, 10).map((file) => ({
         id: file.id || null,
@@ -89,13 +95,41 @@ function safeMessage(row, customerActorId) {
   return {
     id: row?.id || null,
     body: String(row?.editedBody ?? row?.edited_body ?? row?.body ?? ""),
-    authorKind: String(row?.userId || row?.user_id || "") === String(customerActorId)
+    authorKind: customerIds.has(String(row?.userId || row?.user_id || ""))
       ? "customer"
       : "agent",
     createdAt: row?.createdAt || row?.created_at || null,
     editedAt: row?.editedAt || row?.edited_at || null,
     files,
   };
+}
+
+function supportCaseIdentity(session) {
+  if (session?.actorKind === "guest" && /^sha256:[a-f0-9]{64}$/.test(String(session.subject || ""))) {
+    return {
+      ownerIdentityKey: `guest:${session.subject}`,
+      identityKind: "guest",
+      actorId: session.chatUserId,
+      guestSubjectDigest: session.subject,
+      webUserId: null,
+      chatUserId: null,
+    };
+  }
+  if (session?.actorKind === "registered" && session.webUserId && session.chatUserId) {
+    const digest = (value) => `sha256:${crypto.createHash("sha256").update(String(value), "utf8").digest("hex")}`;
+    return {
+      ownerIdentityKey: `registered:${digest(`owj-web:${session.webUserId}`)}`,
+      identityKind: "registered",
+      actorId: session.chatUserId,
+      guestSubjectDigest: null,
+      webUserId: session.webUserId,
+      chatUserId: session.chatUserId,
+    };
+  }
+  throw Object.assign(new Error("A support customer identity is required."), {
+    code: "SUPPORT_IDENTITY_REQUIRED",
+    status: 401,
+  });
 }
 
 /**
@@ -246,7 +280,11 @@ export function createSupportRuntime({
       });
     }
     const conversation = await supportDb.getSupportConversation(session.conversationId);
-    if (!conversation || conversation.actor_id !== session.chatUserId) return false;
+    const ownsConversation = conversation && (
+      conversation.actor_id === session.chatUserId ||
+      (session.actorKind === "registered" && conversation.chat_user_id === session.chatUserId)
+    );
+    if (!ownsConversation) return false;
     if (session.actorKind === "guest") {
       return conversation.identity_kind === "guest" &&
         conversation.guest_subject_digest === session.subject;
@@ -355,9 +393,117 @@ export function createSupportRuntime({
   async function authorizeSupportConversation({ session, conversationId, operation } = {}) {
     if (session?.conversationId !== conversationId) return false;
     const conversation = await supportDb.getSupportConversation(conversationId);
-    if (!conversation || conversation.actor_id !== session.chatUserId) return false;
+    if (
+      !conversation || (
+        conversation.actor_id !== session.chatUserId &&
+        !(session.actorKind === "registered" && conversation.chat_user_id === session.chatUserId)
+      )
+    ) return false;
     if (operation === "send" && !["open", "assigned"].includes(conversation.status)) return false;
     return validateAuthorization(session);
+  }
+
+  async function authorizeSupportCaseV2({ session, conversationId, operation } = {}) {
+    if (session?.actorKind === "agent") return false;
+    const identity = supportCaseIdentity(session);
+    const conversation = await supportDb.getSupportConversation(conversationId);
+    if (!conversation) return false;
+    const actorMatches = conversation.actor_id === identity.actorId ||
+      (identity.identityKind === "registered" && conversation.chat_user_id === identity.chatUserId);
+    if (!actorMatches) return false;
+    if (![conversation.owner_identity_key, conversation.identity_key].includes(identity.ownerIdentityKey)) return false;
+    if (operation === "send" && !["open", "assigned"].includes(conversation.status)) return false;
+    return validateAuthorization(session);
+  }
+
+  async function listSupportCasesV2(session) {
+    const identity = supportCaseIdentity(session);
+    const rows = await supportDb.listSupportCases(identity);
+    const cases = rows.map((row) => ({
+      ...safeConversation(row),
+      caseNumber: Number(row.case_number || 1),
+      unreadCount: Number(row.unread_count || 0),
+      current: ["open", "assigned"].includes(row.status),
+      reopenedAt: row.reopened_at || null,
+    }));
+    return {
+      current: cases.find((item) => item.current) || null,
+      history: cases.filter((item) => !item.current),
+    };
+  }
+
+  async function createSupportCaseV2({ session, idempotencyKey, locale, context } = {}) {
+    const identity = supportCaseIdentity(session);
+    const row = await supportDb.createSupportCase({
+      ...identity,
+      locale,
+      context,
+      idempotencyKey,
+    });
+    if (!row?._deduped) supportRealtime.publish(row.id, { type: "support_request_created", version: 2 });
+    return { ...safeConversation(row), caseNumber: Number(row.case_number || 1), deduped: Boolean(row._deduped) };
+  }
+
+  async function reopenSupportCaseV2({ session, conversationId, idempotencyKey } = {}) {
+    const identity = supportCaseIdentity(session);
+    const row = await supportDb.reopenSupportCase({
+      ownerIdentityKey: identity.ownerIdentityKey,
+      actorId: identity.actorId,
+      conversationId,
+      idempotencyKey,
+    });
+    if (!row?._deduped) supportRealtime.publish(row.id, { type: "support_reopened", version: 2 });
+    return { ...safeConversation(row), caseNumber: Number(row.case_number || 1), deduped: Boolean(row._deduped) };
+  }
+
+  async function markSupportCaseReadV2(session, conversationId) {
+    if (!await authorizeSupportCaseV2({ session, conversationId, operation: "read" })) return false;
+    await supportDb.markSupportCaseRead(conversationId, session.chatUserId);
+    return true;
+  }
+
+  async function listSupportEventsV2(session, conversationId, options = {}) {
+    if (!await authorizeSupportCaseV2({ session, conversationId, operation: "read" })) {
+      throw Object.assign(new Error("The support case is not available to this identity."), {
+        code: "SUPPORT_CONVERSATION_DENIED", status: 403,
+      });
+    }
+    return supportDb.getSupportEvents({
+      conversationId,
+      after: options.after || null,
+      limit: options.limit || 100,
+      viewerUserId: session.chatUserId,
+    });
+  }
+
+  async function linkGuestHistoryV2({ guestSession, nativeSession, idempotencyKey } = {}) {
+    if (guestSession?.actorKind !== "guest" || nativeSession?.auth_kind !== "web_federated") {
+      throw Object.assign(new Error("Both current guest ownership and a Web identity are required."), {
+        code: "SUPPORT_GUEST_LINK_PROOF_REQUIRED", status: 403,
+      });
+    }
+    const platformLink = await identityRepository.findPlatformIdentityLinkByWebUserId("owj-web", nativeSession.web_subject);
+    if (!platformLink || platformLink.status !== "active" || platformLink.chat_user_id !== nativeSession.id) {
+      throw Object.assign(new Error("The current Web identity is not linked to this Chat account."), {
+        code: "IDENTITY_LINK_REQUIRED", status: 409,
+      });
+    }
+    const proofId = crypto.createHash("sha256")
+      .update(`${guestSession.subject}:${nativeSession.web_subject}:${String(idempotencyKey)}`, "utf8")
+      .digest("hex");
+    await identityRepository.linkSupportGuestDigestToRegistered({
+      guestSubjectDigest: guestSession.subject,
+      webUserId: nativeSession.web_subject,
+      chatUserId: nativeSession.id,
+      conversationId: guestSession.conversationId,
+      proofJti: proofId,
+    });
+    return supportDb.convertGuestHistory({
+      guestSubjectDigest: guestSession.subject,
+      webUserId: nativeSession.web_subject,
+      chatUserId: nativeSession.id,
+      proofId,
+    });
   }
 
   async function authorizeSupportAgentConversation({ session, conversationId, operation } = {}) {
@@ -379,13 +525,23 @@ export function createSupportRuntime({
   }
 
   async function listSupportMessages(conversationId, options = {}) {
-    return supportDb.getSupportMessages({
+    const [conversation, result] = await Promise.all([
+      supportDb.getSupportConversation(conversationId),
+      supportDb.getSupportMessages({
       conversationId,
       actorId: options.viewerChatUserId,
       limit: options.limit,
       beforeId: options.beforeId,
       beforeCreatedAt: options.beforeCreatedAt,
-    });
+      }),
+    ]);
+    return {
+      ...result,
+      messages: (result?.messages || []).map((message) => safeMessage(message, [
+        conversation?.actor_id,
+        conversation?.chat_user_id,
+      ])),
+    };
   }
 
   async function listSupportConversationsForAgent(session, { status, limit } = {}) {
@@ -428,7 +584,10 @@ export function createSupportRuntime({
     return {
       ...safeConversation(row),
       assignedToCurrentAgent: row?.assigned_chat_user_id === session.chatUserId,
-      messages: messages.messages.map((message) => safeMessage(message, row.actor_id)),
+      messages: messages.messages.map((message) => safeMessage(message, [
+        row.actor_id,
+        row.chat_user_id,
+      ])),
       hasMore: messages.hasMore,
     };
   }
@@ -497,7 +656,14 @@ export function createSupportRuntime({
       createOrResumeSupportConversation,
       supportSessionService,
       authorizeSupportConversation,
+      authorizeSupportCaseV2,
       listSupportMessages,
+      listSupportCasesV2,
+      createSupportCaseV2,
+      reopenSupportCaseV2,
+      markSupportCaseReadV2,
+      listSupportEventsV2,
+      linkGuestHistoryV2,
       createOrReuseMessage,
       emitChatEvent,
       supportRealtime,

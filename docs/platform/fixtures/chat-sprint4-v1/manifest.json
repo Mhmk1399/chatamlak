@@ -1,0 +1,19 @@
+{
+  "fixtureSet": "owj-chat-sprint4-v1",
+  "version": 1,
+  "syntheticOnly": true,
+  "containsSecrets": false,
+  "purpose": "Contract and regression examples for Chat Sprint 4",
+  "files": [
+    "native-web-sso.json",
+    "support-lifecycle-v2.json",
+    "crm-task-v1.json",
+    "call-e2e-result.json"
+  ],
+  "limitations": [
+    "Not production credentials or data",
+    "Not evidence of production reliability",
+    "Deployed cross-repository browser validation remains required"
+  ]
+}
+

@@ -8,6 +8,11 @@ const withCredentials = (options = {}) => ({
 });
 
 export const apiFetch = (url, options = {}) => fetch(url, withCredentials(options));
+export const createCrmTask = ({ conversationId, task, idempotencyKey }) => apiFetch(`${API_BASE}/api/integrations/crm/tasks`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+  body: JSON.stringify({ conversationId, task }),
+});
 export const updateChatAppearance = (wallpaperId, revision, accountId, signal) => apiFetch(`${API_BASE}/api/profile/appearance`, {
   method: "PUT", headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ wallpaperId, revision, accountId }), signal,

@@ -168,4 +168,121 @@ describe("support persistence on a real MongoDB replica set", () => {
       idempotencyKey: "resolve-once",
     })).rejects.toMatchObject({ code: "SUPPORT_IDEMPOTENCY_CONFLICT", status: 409 });
   });
+
+  test("keeps independent V2 cases with controlled reopen and history", async () => {
+    const principal = { kind: "registered", provider: "owj-web", webUserId: "web-cases", chatUserId: alice };
+    const first = await R.supportDb.ensureSupportConversation({ principal });
+    const firstRow = await R.supportDb.getSupportConversation(first.conversationId);
+    const ownerIdentityKey = firstRow.identity_key;
+    await expect(R.supportDb.createSupportCase({
+      ownerIdentityKey, identityKind: "registered", actorId: alice,
+      webUserId: "web-cases", chatUserId: alice, idempotencyKey: "second-case",
+    })).rejects.toMatchObject({ code: "SUPPORT_ACTIVE_CASE_EXISTS" });
+    await R.supportDb.assignSupportConversation({ conversationId: first.conversationId, agentChatUserId: bob, idempotencyKey: "assign-first" });
+    await R.supportDb.setSupportConversationStatus({ conversationId: first.conversationId, status: "resolved", agentChatUserId: bob, idempotencyKey: "resolve-first" });
+    const second = await R.supportDb.createSupportCase({
+      ownerIdentityKey, identityKind: "registered", actorId: alice,
+      webUserId: "web-cases", chatUserId: alice, idempotencyKey: "second-case",
+    });
+    await expect(R.supportDb.createSupportCase({
+      ownerIdentityKey, identityKind: "registered", actorId: alice,
+      webUserId: "web-cases", chatUserId: alice, idempotencyKey: "second-case",
+    })).resolves.toMatchObject({ id: second.id, _deduped: true });
+    expect(await R.supportDb.listSupportCases({ ownerIdentityKey, actorId: alice })).toHaveLength(2);
+    await expect(R.supportDb.reopenSupportCase({
+      ownerIdentityKey, conversationId: first.conversationId, actorId: alice, idempotencyKey: "reopen-first",
+    })).rejects.toMatchObject({ code: "SUPPORT_ACTIVE_CASE_EXISTS" });
+  });
+
+  test("converts guest history into a resumable registered primary case idempotently", async () => {
+    const guest = await R.supportDb.ensureSupportConversation({
+      principal: { kind: "guest", provider: "owj-web", guestSubject: "guest-primary-link" },
+    });
+    const before = await R.supportDb.getSupportConversation(guest.conversationId);
+    const input = {
+      guestSubjectDigest: before.guest_subject_digest,
+      webUserId: "web-primary-link",
+      chatUserId: alice,
+      proofId: "guest-primary-proof",
+    };
+    await expect(R.supportDb.convertGuestHistory(input)).resolves.toMatchObject({
+      convertedCount: 1,
+      deduped: false,
+    });
+    await expect(R.supportDb.convertGuestHistory(input)).resolves.toMatchObject({
+      convertedCount: 1,
+      deduped: true,
+    });
+
+    const converted = await R.supportDb.getSupportConversation(guest.conversationId);
+    expect(converted).toMatchObject({
+      identity_kind: "registered",
+      chat_user_id: alice,
+      conversion_from_guest_actor_id: guest.actorId,
+      conversion_from_guest_case_number: 1,
+      case_number: 1,
+    });
+    expect(converted.identity_key).toMatch(/^registered:sha256:/);
+    const resumed = await R.supportDb.ensureSupportConversation({
+      principal: {
+        kind: "registered",
+        provider: "owj-web",
+        webUserId: "web-primary-link",
+        chatUserId: alice,
+      },
+    });
+    expect(resumed).toMatchObject({
+      conversationId: guest.conversationId,
+      actorId: alice,
+      created: false,
+    });
+  });
+
+  test("handles existing registered history and rejects two active cases during guest linking", async () => {
+    const registered = await R.supportDb.ensureSupportConversation({
+      principal: { kind: "registered", provider: "owj-web", webUserId: "web-existing", chatUserId: alice },
+    });
+    const guest = await R.supportDb.ensureSupportConversation({
+      principal: { kind: "guest", provider: "owj-web", guestSubject: "guest-existing" },
+    });
+    const guestRow = await R.supportDb.getSupportConversation(guest.conversationId);
+    const conversion = {
+      guestSubjectDigest: guestRow.guest_subject_digest,
+      webUserId: "web-existing",
+      chatUserId: alice,
+      proofId: "guest-existing-proof",
+    };
+    await expect(R.supportDb.convertGuestHistory(conversion)).rejects.toMatchObject({
+      code: "SUPPORT_GUEST_LINK_ACTIVE_CONFLICT",
+      status: 409,
+    });
+
+    await R.supportDb.assignSupportConversation({
+      conversationId: guest.conversationId,
+      agentChatUserId: bob,
+      idempotencyKey: "assign-guest-existing",
+    });
+    await R.supportDb.setSupportConversationStatus({
+      conversationId: guest.conversationId,
+      status: "resolved",
+      agentChatUserId: bob,
+      idempotencyKey: "resolve-guest-existing",
+    });
+    await expect(R.supportDb.convertGuestHistory(conversion)).resolves.toMatchObject({
+      convertedCount: 1,
+      deduped: false,
+    });
+    const registeredRow = await R.supportDb.getSupportConversation(registered.conversationId);
+    const converted = await R.supportDb.getSupportConversation(guest.conversationId);
+    expect(converted).toMatchObject({
+      owner_identity_key: registeredRow.identity_key,
+      identity_kind: "registered",
+      case_number: 2,
+      conversion_from_guest_case_number: 1,
+    });
+    expect(await R.supportDb.listSupportCases({
+      ownerIdentityKey: registeredRow.identity_key,
+      actorId: alice,
+    })).toHaveLength(2);
+  });
 });

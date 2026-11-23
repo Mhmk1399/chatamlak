@@ -1,0 +1,55 @@
+{
+  "contract": "owj-chat-native-web-sso-v1",
+  "syntheticOnly": true,
+  "startResponse": {
+    "version": 1,
+    "authorizationUrl": "https://web.example.test/api/v1/chat/authorize",
+    "form": {
+      "version": "1",
+      "redirectUri": "https://chat.example.test/auth/web/callback",
+      "state": "synthetic_state_1234567890abcdef1234567890abcdef",
+      "codeChallenge": "synthetic_challenge_1234567890abcdef1234567890abcdef",
+      "codeChallengeMethod": "S256"
+    },
+    "expiresInSeconds": 300
+  },
+  "exchangeRequest": {
+    "headers": {
+      "authorization": "Bearer <redacted-server-only-token>",
+      "x-owj-service": "owj-chat-native"
+    },
+    "body": {
+      "version": 1,
+      "code": "synthetic-one-use-code",
+      "redirectUri": "https://chat.example.test/auth/web/callback",
+      "codeVerifier": "synthetic_verifier_1234567890abcdef1234567890abcdef1234567890",
+      "state": "synthetic_state_1234567890abcdef1234567890abcdef"
+    }
+  },
+  "authorizationResponse": {
+    "version": 1,
+    "subject": "507f1f77bcf86cd799439011",
+    "accountStatus": "active",
+    "scopes": ["chat:access", "chat:call"],
+    "authorizationEstablishedAt": "2026-11-23T08:00:00.000Z",
+    "sessionExpiresAt": "2026-11-23T20:00:00.000Z",
+    "authorizationCheckedAt": "2026-11-23T08:00:00.000Z",
+    "authorizationCacheMaxAgeSeconds": 60,
+    "crmActorAuthorization": "<redacted-short-lived-actor-proof>"
+  },
+  "statusRequest": {
+    "version": 1,
+    "subject": "507f1f77bcf86cd799439011",
+    "authorizationEstablishedAt": "2026-11-23T08:00:00.000Z",
+    "crmActorAuthorization": "<redacted-short-lived-actor-proof>"
+  },
+  "negativeCases": [
+    "state mismatch",
+    "expired or replayed transaction",
+    "PKCE verification failure",
+    "redirect mismatch",
+    "inactive account",
+    "link conflict"
+  ]
+}
+

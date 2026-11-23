@@ -5,6 +5,8 @@ import { readSupportCookie } from "../lib/supportRealtime.js";
 
 const SUPPORT_COOKIE = "owj_support_sid";
 const SUPPORT_COOKIE_PATH = "/support/v1";
+const SUPPORT_V2_COOKIE = "owj_support_v2_sid";
+const SUPPORT_V2_COOKIE_PATH = "/support/v2";
 const MAX_MESSAGE_CHARS = 4_000;
 const MAX_MESSAGE_BYTES = 16 * 1_024;
 const ALLOWED_CONTEXT_FIELDS = new Set(["page", "locale", "publicListingId"]);
@@ -215,6 +217,8 @@ function requireConversationId(value) {
 export function registerSupportRoutes(app, deps = {}) {
   const cookieName = String(deps.supportCookieName || SUPPORT_COOKIE);
   const cookiePath = String(deps.supportCookiePath || SUPPORT_COOKIE_PATH);
+  const v2CookieName = String(deps.supportV2CookieName || SUPPORT_V2_COOKIE);
+  const v2CookiePath = String(deps.supportV2CookiePath || SUPPORT_V2_COOKIE_PATH);
   const secureCookie = deps.secureSupportCookie ?? process.env.NODE_ENV === "production";
 
   const bootstrapRateLimit = Math.max(
@@ -248,12 +252,15 @@ export function registerSupportRoutes(app, deps = {}) {
     },
   });
 
-  async function authenticateRequest(req, requiredAction) {
+  async function authenticateRequest(req, requiredAction, { version2 = false, credential = null } = {}) {
     if (!deps.supportSessionService || typeof deps.supportSessionService.authenticate !== "function") {
       fail("SUPPORT_PROVIDER_UNAVAILABLE", "Support sessions are unavailable.", 503);
     }
-    const credential = readSupportCookie(req, cookieName);
-    return deps.supportSessionService.authenticate(credential, {
+    const selectedCredential = credential || readSupportCookie(
+      req,
+      version2 ? v2CookieName : cookieName,
+    );
+    return deps.supportSessionService.authenticate(selectedCredential, {
       requiredAction,
       touch: true,
       revalidate: true,
@@ -270,7 +277,7 @@ export function registerSupportRoutes(app, deps = {}) {
     }
   }
 
-  async function persistMessage({ session, conversationId, body, staff = false }) {
+  async function persistMessage({ session, conversationId, body, staff = false, version2 = false }) {
     if (!session?.chatUserId) {
       fail("SUPPORT_CONVERSATION_DENIED", "The support actor is not bound to Chat.", 403);
     }
@@ -290,10 +297,11 @@ export function registerSupportRoutes(app, deps = {}) {
         fail("SUPPORT_CONVERSATION_DENIED", "The support conversation is not assigned to this agent.", 403);
       }
     } else {
-      if (typeof deps.authorizeSupportConversation !== "function") {
+      const authorize = version2 ? deps.authorizeSupportCaseV2 : deps.authorizeSupportConversation;
+      if (typeof authorize !== "function") {
         fail("SUPPORT_PROVIDER_UNAVAILABLE", "Support conversation authorization is unavailable.", 503);
       }
-      const allowed = await deps.authorizeSupportConversation({
+      const allowed = await authorize({
         session,
         conversationId,
         operation: "send",
@@ -521,6 +529,139 @@ export function registerSupportRoutes(app, deps = {}) {
     res.json({ version: 1, ok: true });
   }));
 
+  // V1's frozen cookie is intentionally scoped to /support/v1. Exchange the
+  // already-issued opaque credential once so V2 can use a separate HttpOnly
+  // cookie without widening or otherwise changing the V1 browser contract.
+  app.post("/support/v2/session", wrap(async (req, res) => {
+    const credential = stringField(req.body?.supportSessionCredential, { max: 4_096 });
+    const session = await authenticateRequest(req, "read", { version2: true, credential });
+    if (session.actorKind === "agent") {
+      fail("SUPPORT_CONVERSATION_DENIED", "Staff use the support inbox.", 403);
+    }
+    const expiresAtMs = Date.parse(session.expiresAt || "");
+    const maxAge = Number.isFinite(expiresAtMs)
+      ? Math.max(1_000, expiresAtMs - Date.now())
+      : undefined;
+    res.cookie(v2CookieName, credential, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secureCookie,
+      path: v2CookiePath,
+      ...(maxAge ? { maxAge } : {}),
+    });
+    res.set("Cache-Control", "private, no-store");
+    res.json({ version: 2, ok: true, expiresAt: session.expiresAt || null });
+  }));
+
+  app.post("/support/v2/logout", wrap(async (req, res) => {
+    const token = readSupportCookie(req, v2CookieName);
+    let session = null;
+    try {
+      session = await deps.supportSessionService?.authenticate?.(token, {
+        requiredAction: "logout",
+        touch: false,
+        revalidate: false,
+      });
+    } catch (_) {
+      // Local logout is idempotent even after expiry or upstream revocation.
+    }
+    await deps.supportSessionService?.revoke?.(token, "user_logout");
+    if (session?.id) {
+      deps.supportRealtime?.disconnectSession?.(session.id, "user_logout");
+      deps.disconnectSupportSession?.(session.id, "user_logout");
+    }
+    res.cookie(v2CookieName, "", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: secureCookie,
+      path: v2CookiePath,
+      maxAge: 0,
+    });
+    res.json({ version: 2, ok: true });
+  }));
+
+  app.get("/support/v2/cases", wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "read", { version2: true });
+    if (session.actorKind === "agent") fail("SUPPORT_CONVERSATION_DENIED", "Staff use the support inbox.", 403);
+    const result = await deps.listSupportCasesV2?.(session);
+    if (!result) fail("SUPPORT_PROVIDER_UNAVAILABLE", "Support case history is unavailable.", 503);
+    res.set("Cache-Control", "private, no-store");
+    res.json({ version: 2, ...result });
+  }));
+
+  app.post("/support/v2/cases", wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "send", { version2: true });
+    if (session.actorKind === "agent") fail("SUPPORT_CONVERSATION_DENIED", "Staff cannot open customer cases.", 403);
+    const conversation = await deps.createSupportCaseV2?.({
+      session,
+      idempotencyKey: idempotencyKey(req),
+      locale: stringField(req.body?.locale, { max: 35, required: false }),
+      context: normalizeContext(req.body?.context),
+    });
+    if (!conversation) fail("SUPPORT_PROVIDER_UNAVAILABLE", "The support case could not be created.", 503);
+    res.status(conversation.deduped ? 200 : 201).json({ version: 2, conversation });
+  }));
+
+  app.post("/support/v2/cases/:conversationId/reopen", wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "send", { version2: true });
+    const conversationId = requireConversationId(req.params.conversationId);
+    const conversation = await deps.reopenSupportCaseV2?.({
+      session, conversationId, idempotencyKey: idempotencyKey(req),
+    });
+    if (!conversation) fail("SUPPORT_PROVIDER_UNAVAILABLE", "The support case could not be reopened.", 503);
+    res.json({ version: 2, conversation });
+  }));
+
+  app.get("/support/v2/cases/:conversationId/messages", wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "read", { version2: true });
+    const conversationId = requireConversationId(req.params.conversationId);
+    if (!await deps.authorizeSupportCaseV2?.({ session, conversationId, operation: "read" })) {
+      fail("SUPPORT_CONVERSATION_DENIED", "The support case is not available to this identity.", 403);
+    }
+    const cursor = decodeCursor(req.query?.cursor);
+    const result = await deps.listSupportMessages(conversationId, {
+      cursor, beforeId: cursor?.id, beforeCreatedAt: cursor?.createdAt,
+      limit: pageLimit(req.query?.limit), viewerChatUserId: session.chatUserId, session, version: 2,
+    });
+    await deps.markSupportCaseReadV2?.(session, conversationId);
+    const rows = Array.isArray(result?.messages) ? result.messages.slice(0, 100) : [];
+    res.set("Cache-Control", "private, no-store");
+    res.json({ version: 2, conversationId, messages: rows.map((row) => normalizeMessage(row, session)), nextCursor: result?.hasMore ? encodeCursor(rows.at(0)) : null, hasMore: Boolean(result?.hasMore) });
+  }));
+
+  app.post("/support/v2/cases/:conversationId/messages", messageLimiter, wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "send", { version2: true });
+    const conversationId = requireConversationId(req.params.conversationId);
+    const result = await persistMessage({ session, conversationId, body: req.body, version2: true });
+    res.status(result.deduped ? 200 : 201).json({ version: 2, conversationId, ...result });
+  }));
+
+  app.get("/support/v2/cases/:conversationId/events", wrap(async (req, res) => {
+    const session = await authenticateRequest(req, "events", { version2: true });
+    const conversationId = requireConversationId(req.params.conversationId);
+    const result = await deps.listSupportEventsV2?.(session, conversationId, {
+      after: String(req.query?.after || "").slice(0, 256) || null,
+      limit: pageLimit(req.query?.limit),
+    });
+    if (!result) fail("SUPPORT_PROVIDER_UNAVAILABLE", "Support replay is unavailable.", 503);
+    res.set("Cache-Control", "private, no-store");
+    res.json({ version: 2, conversationId, ...result });
+  }));
+
+  app.post("/support/v2/link-registered", wrap(async (req, res) => {
+    const guestSession = await authenticateRequest(req, "read", { version2: true });
+    if (guestSession.actorKind !== "guest" || req.body?.intent !== "link_guest_history") {
+      fail("SUPPORT_GUEST_LINK_INTENT_REQUIRED", "Explicit guest-history link intent is required.", 400);
+    }
+    const nativeSession = await deps.getSessionFromRequest?.(req, { forceRefresh: true });
+    if (!nativeSession) fail("SUPPORT_GUEST_LINK_PROOF_REQUIRED", "A current Web-backed Chat session is required.", 401);
+    const result = await deps.linkGuestHistoryV2?.({
+      guestSession, nativeSession, idempotencyKey: idempotencyKey(req),
+    });
+    if (!result) fail("SUPPORT_PROVIDER_UNAVAILABLE", "Guest history linking is unavailable.", 503);
+    res.json({ version: 2, linked: true, convertedCount: result.convertedCount });
+  }));
+
   app.get("/support/v1/staff/conversations", wrap(async (req, res) => {
     const session = await authenticateRequest(req, "staff:list");
     requireAgent(session);
@@ -626,4 +767,10 @@ export function registerSupportRoutes(app, deps = {}) {
   }));
 }
 
-export { SupportApiError, SUPPORT_COOKIE, SUPPORT_COOKIE_PATH };
+export {
+  SupportApiError,
+  SUPPORT_COOKIE,
+  SUPPORT_COOKIE_PATH,
+  SUPPORT_V2_COOKIE,
+  SUPPORT_V2_COOKIE_PATH,
+};

@@ -15,11 +15,12 @@ export const COLLECTION_KEYS = {
   session_devices: ["token_hash"], group_call_rooms: ["chat_id"], group_call_peers: ["id"],
   platform_identity_links: ["id"], platform_identity_assertion_jtis: ["id"],
   support_guest_identity_links: ["id"], support_conversations: ["id"],
-  support_sessions: ["id"], media_processing_jobs: ["id"],
+  support_sessions: ["id"], native_web_auth_transactions: ["id"],
+  media_processing_jobs: ["id"],
   meta: ["key"], migration_runs: ["id"],
 };
 export const NUMERIC_IDS = new Set(["chat_message_files", "remote_channel_sources", "remote_channel_queue", "admin_audit_logs", "chat_event_log"]);
-export const MONGO_SCHEMA_VERSION = 2;
+export const MONGO_SCHEMA_VERSION = 3;
 const validators = {
   users: { required: ["id", "username", "password_hash"], properties: { id: { bsonType: "string" }, username: { bsonType: "string", minLength: 1 }, password_hash: { bsonType: "string" } } },
   chats: { required: ["id", "type"], properties: { id: { bsonType: "string" }, type: { enum: ["dm", "group", "channel", "saved"] } } },
@@ -31,6 +32,7 @@ const validators = {
   support_guest_identity_links: { required: ["id", "provider", "guest_subject_digest", "web_user_id", "chat_user_id", "conversation_id", "proof_jti", "converted_at"], properties: { id: { bsonType: "string" }, provider: { enum: ["owj-web"] }, guest_subject_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, web_user_id: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, conversation_id: { bsonType: "string", minLength: 1 }, proof_jti: { bsonType: "string", minLength: 1 }, converted_at: { bsonType: "string", minLength: 1 } } },
   support_conversations: { required: ["id", "identity_key", "identity_kind", "actor_id", "status", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, identity_key: { bsonType: "string", minLength: 1 }, identity_kind: { enum: ["guest", "registered"] }, actor_id: { bsonType: "string", minLength: 1 }, status: { enum: ["open", "assigned", "resolved", "closed"] } } },
   support_sessions: { required: ["id", "token_digest", "principal_kind", "actor_id", "status", "expires_at", "idle_expires_at", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, token_digest: { bsonType: "string", minLength: 32 }, principal_kind: { enum: ["guest", "registered", "agent"] }, actor_id: { bsonType: "string", minLength: 1 }, bootstrap_jti: { bsonType: ["string", "null"] }, identity_issued_at: { bsonType: ["int", "long", "double", "null"] }, status: { enum: ["active", "revoked", "expired"] }, expires_at: { bsonType: "string" }, idle_expires_at: { bsonType: "string" } } },
+  native_web_auth_transactions: { required: ["id", "state_digest", "browser_token_digest", "code_verifier", "redirect_uri", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, state_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, browser_token_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, code_verifier: { bsonType: "string", minLength: 43 }, redirect_uri: { bsonType: "string", minLength: 1 }, expires_at: { bsonType: "date" }, consumed_at: { bsonType: ["date", "null"] } } },
 };
 const index = (collection, keys, options = {}) => ({ collection, keys, options });
 const IDENTITY_COLLECTIONS_WITH_NAMED_KEYS = new Set([
@@ -83,11 +85,15 @@ export const MONGO_INDEXES = [
   index("support_guest_identity_links", { provider: 1, web_user_id: 1, converted_at: -1 }, { name: "support_guest_identity_web_user" }),
   index("support_guest_identity_links", { conversation_id: 1 }, { name: "support_guest_identity_conversation" }),
   index("support_conversations", { identity_key: 1 }, { unique: true }),
+  index("support_conversations", { owner_identity_key: 1, updated_at: -1, id: -1 }),
+  index("support_conversations", { create_idempotency_digest: 1 }, { unique: true, partialFilterExpression: { create_idempotency_digest: { $type: "string" } } }),
   index("support_conversations", { status: 1, assigned_chat_user_id: 1, updated_at: -1, id: -1 }),
   index("support_sessions", { token_digest: 1 }, { unique: true }),
   index("support_sessions", { conversation_id: 1, status: 1 }),
   index("support_sessions", { web_user_id: 1, status: 1 }),
   index("support_sessions", { status: 1, expires_at: 1 }),
+  index("native_web_auth_transactions", { state_digest: 1 }, { unique: true }),
+  index("native_web_auth_transactions", { expires_at: 1 }, { expireAfterSeconds: 0 }),
 ];
 
 export function documentDefaults(collection, now = new Date().toISOString()) {
@@ -102,6 +108,7 @@ export function documentDefaults(collection, now = new Date().toISOString()) {
     platform_identity_links: { status: "active", revision: 1, updated_at: now, revoked_at: null, revocation_reason: null },
     support_conversations: { status: "open", assigned_chat_user_id: null, updated_at: now, resolved_at: null, closed_at: null },
     support_sessions: { status: "active", updated_at: now, revoked_at: null, revocation_reason: null },
+    native_web_auth_transactions: { consumed_at: null },
     media_processing_jobs: { status: "pending", attempts: 0, updated_at: now, locked_at: null, lock_owner: null, last_error_code: null, completed_at: null },
     chat_polls: { closed: 0 }, chat_preferences: { pinned: 0, archived: 0, folder: "" },
   };

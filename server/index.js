@@ -33,6 +33,8 @@ import { migrateLegacyStorageLayout } from "./lib/storageLayoutMigration.js";
 import { createMediaQueueManager } from "./lib/mediaQueue.js";
 import { createDurableMediaQueueRunner } from "./lib/durableMediaQueue.js";
 import { createSupportRuntime } from "./lib/supportRuntime.js";
+import { createNativeWebAuthRuntime } from "./lib/nativeWebAuthRuntime.js";
+import { createCrmTaskClient } from "./lib/crmTaskClient.js";
 import { createRemoteChannelManager } from "./lib/remoteChannels.js";
 import { initAutoAddWorker } from "./lib/workers/autoAddWorker.js";
 import { ensureLocalWorkerRunning } from "./lib/localWorkerManager.js";
@@ -756,8 +758,8 @@ const mediaQueueManager = useMongoMediaQueue
     }
   : fallbackMediaQueueManager;
 
-async function createSessionCombined(userId, token) {
-  await createSession(userId, token);
+async function createSessionCombined(userId, token, options = {}) {
+  await createSession(userId, token, options);
   await redisSessionStore.createSession(userId, token);
 }
 
@@ -777,16 +779,27 @@ async function deleteSessionCombined(token, options) {
   await redisSessionStore.deleteSession(token, options);
 }
 
+const nativeWebAuthRuntime = createNativeWebAuthRuntime({
+  env: process.env,
+  appEnv,
+  repository: mongoRepository,
+  createSession: createSessionCombined,
+  deleteSession: deleteSessionCombined,
+  updateNativeWebSession: mongoRepository.updateNativeWebSession,
+});
+
 const sessionHelpers = createSessionHelpers({
   getSession: getSessionCombined,
   touchSession: touchSessionCombined,
   deleteSession: deleteSessionCombined,
+  validateSession: nativeWebAuthRuntime.validateSession,
   isProduction,
 });
 const {
   parseCookies,
   setSessionCookie,
   clearSessionCookie,
+  shouldUseSecureCookie,
   getSessionFromToken: getValidatedSessionFromToken,
   getSessionFromRequest,
   requireSession,
@@ -802,6 +815,23 @@ const supportRuntime = createSupportRuntime({
   isMember,
   createOrReuseMessage,
   emitChatEvent,
+});
+const crmTaskEndpoint = process.env.OWJ_CHAT_CRM_WEB_TASK_URL || (() => {
+  try {
+    return new URL(
+      "/api/internal/v1/crm/tasks",
+      process.env.OWJ_CHAT_NATIVE_WEB_STATUS_URL,
+    ).toString();
+  } catch {
+    return "";
+  }
+})();
+const crmTaskClient = createCrmTaskClient({
+  endpoint: crmTaskEndpoint,
+  serviceToken: process.env.OWJ_CHAT_CRM_TO_WEB_SERVICE_TOKEN,
+  allowHttp: appEnv !== "production" && ["1", "true", "yes", "on"].includes(
+    String(process.env.OWJ_WEB_ALLOW_INSECURE_HTTP || "").trim().toLowerCase(),
+  ),
 });
 
 async function backfillStorageEncryption() {
@@ -924,7 +954,9 @@ registerUploadRoutes(app, {
 });
 
 const apiDeps = {
+  ...nativeWebAuthRuntime.apiDeps,
   ...supportRuntime.apiDeps,
+  crmTaskClient,
   cleanupDeletedFiles: messageFileJobs.cleanupDeletedFiles,
   mongoRepository,
   messagingDb,
@@ -988,6 +1020,7 @@ const apiDeps = {
   clearGroupMemberRemoved,
   clearChatMemberLeft,
   clearSessionCookie,
+  shouldUseSecureCookie,
   computeExpiryIso,
   createChat,
   createMessage,

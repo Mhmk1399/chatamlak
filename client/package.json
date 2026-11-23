@@ -24,6 +24,7 @@
     "test:unit": "vitest --project unit --run",
     "test:browser": "vitest --project browser --run",
     "test:browser:headful": "VITEST_HEADFUL=1 vitest --project browser --run",
+    "test:e2e:call": "node test/e2e/call-two-users.mjs",
     "test:ui": "vitest --ui",
     "test:bench": "vitest bench --run"
   },

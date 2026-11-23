@@ -67,6 +67,27 @@ describe("/api/calls endpoints", () => {
       expect(res.body.length).toBeGreaterThan(0);
       expect(res.body[0]).toHaveProperty("urls");
     });
+
+    it("requires chat:call for a Web-federated session", async () => {
+      sessionStore.createSession(ALICE_ID, "web-without-call", {
+        authKind: "web_federated",
+        webScopes: ["chat:read"],
+      });
+      const denied = await request(app)
+        .get("/api/calls/ice-servers")
+        .set("Cookie", "sid=web-without-call");
+      expect(denied.status).toBe(403);
+      expect(denied.body.code).toBe("CHAT_CALL_SCOPE_REQUIRED");
+
+      sessionStore.createSession(ALICE_ID, "web-with-call", {
+        authKind: "web_federated",
+        webScopes: ["chat:read", "chat:call"],
+      });
+      await request(app)
+        .get("/api/calls/ice-servers")
+        .set("Cookie", "sid=web-with-call")
+        .expect(200);
+    });
   });
 
   describe("GET /api/calls/incoming", () => {

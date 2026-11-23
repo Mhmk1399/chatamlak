@@ -256,6 +256,53 @@ export function createPlatformIdentityRepository(store, {
     }
   }
 
+  async function linkSupportGuestDigestToRegistered({
+    provider = "owj-web",
+    guestSubjectDigest: suppliedDigest,
+    webUserId,
+    chatUserId,
+    conversationId,
+    proofJti,
+  } = {}) {
+    const normalizedProvider = value(provider, "provider", 64);
+    const normalizedDigest = value(suppliedDigest, "guest subject digest", 80);
+    if (!/^sha256:[a-f0-9]{64}$/.test(normalizedDigest)) {
+      fail("IDENTITY_LINK_INPUT_INVALID", "The guest subject digest is invalid.", 400);
+    }
+    const document = {
+      id: randomUUID(),
+      provider: normalizedProvider,
+      guest_subject_digest: normalizedDigest,
+      web_user_id: value(webUserId, "Web user ID"),
+      chat_user_id: value(chatUserId, "Chat user ID"),
+      conversation_id: value(conversationId, "conversation ID", 128),
+      proof_jti: value(proofJti, "conversion proof ID", 128),
+      converted_at: new Date(Number(now())).toISOString(),
+    };
+    const find = () => guestLinks().findOne({
+      provider: normalizedProvider,
+      guest_subject_digest: normalizedDigest,
+    }, options()).then(clean);
+    const existing = await find();
+    if (existing) {
+      if (existing.web_user_id === document.web_user_id && existing.chat_user_id === document.chat_user_id) {
+        return { created: false, duplicate: true, link: existing };
+      }
+      fail("GUEST_CONVERSION_CONFLICT", "The guest identity was already linked to another account.", 409);
+    }
+    try {
+      await guestLinks().insertOne(document, options());
+      return { created: true, duplicate: false, link: document };
+    } catch (error) {
+      if (!isDuplicateKey(error)) throw error;
+      const concurrent = await find();
+      if (concurrent?.web_user_id === document.web_user_id && concurrent?.chat_user_id === document.chat_user_id) {
+        return { created: false, duplicate: true, link: concurrent };
+      }
+      fail("GUEST_CONVERSION_CONFLICT", "The guest identity was already linked to another account.", 409);
+    }
+  }
+
   return {
     findPlatformIdentityLinkByWebUserId,
     findPlatformIdentityLinkByChatUserId,
@@ -264,5 +311,6 @@ export function createPlatformIdentityRepository(store, {
     consumePlatformIdentityAssertionJti,
     findSupportGuestIdentityLink,
     linkSupportGuestToRegistered,
+    linkSupportGuestDigestToRegistered,
   };
 }

@@ -76,6 +76,7 @@ function RouteLoadingFallback({ themeColor, onVisibleChange = null }) {
 }
 
 function getRoute(pathname) {
+  if (pathname === '/auth/web/callback') return 'webCallback'
   if (pathname === '/signup') return 'signup'
   if (pathname.startsWith('/invite/')) return 'invite'
   if (pathname === '/chat') return 'chat'
@@ -191,6 +192,9 @@ export default function App() {
   const [accountCreationEnabled, setAccountCreationEnabled] = useState(
     APP_CONFIG.accountCreationEnabled,
   )
+  const [nativeAuthMode, setNativeAuthMode] = useState('federated')
+  const [webAuthState, setWebAuthState] = useState('ready')
+  const webCallbackAttemptedRef = useRef(false)
   const [adminPanelEnabled, setAdminPanelEnabled] = useState(true)
   const isStandaloneDisplay =
     window.matchMedia?.('(display-mode: standalone)')?.matches ||
@@ -707,6 +711,9 @@ export default function App() {
         if (typeof data?.accountCreationEnabled === 'boolean') {
           setAccountCreationEnabled(data.accountCreationEnabled)
         }
+        if (data?.nativeAuthMode === 'federated' || data?.nativeAuthMode === 'local_test') {
+          setNativeAuthMode(data.nativeAuthMode)
+        }
         if (typeof data?.adminPanelEnabled === 'boolean') {
           setAdminPanelEnabled(data.adminPanelEnabled)
         }
@@ -776,6 +783,55 @@ export default function App() {
     }
   }, [user, route, authChecked, authLoading])
 
+  useEffect(() => {
+    if (route !== 'webCallback' || webCallbackAttemptedRef.current) return
+    webCallbackAttemptedRef.current = true
+    const parameters = new URLSearchParams(window.location.search)
+    const code = parameters.get('code') || ''
+    const state = parameters.get('state') || ''
+    setAuthStatus('')
+    setWebAuthState('loading')
+    setAuthLoading(true)
+    apiFetch(`${API_BASE}/api/auth/web/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, state }),
+      credentials: 'include',
+    })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          const error = new Error(body?.error?.message || 'Unable to complete Web sign-in.')
+          error.code = body?.error?.code || 'CHAT_AUTHORIZATION_FAILED'
+          error.status = response.status
+          throw error
+        }
+        setUser(body.user)
+        setWebAuthState('linked')
+        window.history.replaceState({}, '', '/chat')
+        window.setTimeout(() => setRoute('chat'), 350)
+      })
+      .catch((error) => {
+        const codeValue = String(error?.code || '')
+        const nextState = codeValue === 'IDENTITY_LINK_REQUIRED'
+          ? 'account_link_required'
+          : codeValue.includes('EXPIRED') || codeValue.includes('TRANSACTION_INVALID')
+            ? 'session_expired'
+            : Number(error?.status) >= 500
+              ? 'service_unavailable'
+              : 'access_denied'
+        setWebAuthState(nextState)
+        const messages = {
+          account_link_required: 'Account link required. Contact an administrator to link your existing Chat history.',
+          session_expired: 'This sign-in request expired. Start again.',
+          service_unavailable: 'Owj Web sign-in is temporarily unavailable. Try again.',
+          access_denied: 'Your Owj Web account does not currently have access to Chat.',
+        }
+        setAuthStatus(messages[nextState])
+      })
+      .finally(() => setAuthLoading(false))
+  }, [route])
+
   function navigate(path, replace = false) {
     if (replace) {
       window.history.replaceState({}, '', path)
@@ -840,6 +896,46 @@ export default function App() {
     }
   }
 
+  async function handleWebSignIn() {
+    setAuthStatus('')
+    setWebAuthState('loading')
+    setAuthLoading(true)
+    try {
+      const response = await apiFetch(`${API_BASE}/api/auth/web/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: 1 }),
+        credentials: 'include',
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok || typeof body.authorizationUrl !== 'string' || !body.form) {
+        const error = new Error(body?.error?.message || 'Owj Web sign-in is temporarily unavailable. Try again.')
+        error.status = response.status
+        throw error
+      }
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = body.authorizationUrl
+      form.acceptCharset = 'UTF-8'
+      form.hidden = true
+      for (const [name, value] of Object.entries(body.form)) {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = String(value)
+        form.appendChild(input)
+      }
+      document.body.appendChild(form)
+      form.submit()
+    } catch (error) {
+      setWebAuthState('service_unavailable')
+      setAuthStatus(Number(error?.status) === 403
+        ? 'Your Owj Web account does not currently have access to Chat.'
+        : error.message)
+      setAuthLoading(false)
+    }
+  }
+
   async function handleSignup(event) {
     event.preventDefault()
     setAuthStatus('')
@@ -893,7 +989,7 @@ export default function App() {
   }
 
   const isNonAdminClaimRoute = route === 'admin' && user && user.role !== 'admin' && user.role !== 'owner'
-  const isAuthRoute = route === 'login' || route === 'signup' || route === 'invite' || isNonAdminClaimRoute
+  const isAuthRoute = route === 'login' || route === 'signup' || route === 'webCallback' || route === 'invite' || isNonAdminClaimRoute
   const safeAreaKey = `${route}-${isDark ? 'dark' : 'light'}`
   const safeAreaThemeColor = getThemeColor(isDark, route)
   const appShellClass = isAuthRoute
@@ -1015,6 +1111,23 @@ export default function App() {
                   loading={authLoading}
                   showSigningOverlay={authLoading}
                   allowSignup={accountCreationEnabled}
+                  authMode={nativeAuthMode}
+                  onWebSignIn={handleWebSignIn}
+                  webAuthState={webAuthState}
+                />
+              )}
+              {route === 'webCallback' && (
+                <AuthPage
+                  mode="login"
+                  isDark={isDark}
+                  onToggleTheme={toggleTheme}
+                  status={authStatus}
+                  loading={authLoading}
+                  authMode="federated"
+                  onWebSignIn={handleWebSignIn}
+                  webAuthState={webAuthState}
+                  title="Signing in with Owj"
+                  subtitle="Verifying your Web identity"
                 />
               )}
               {route === 'signup' && (
@@ -1031,6 +1144,9 @@ export default function App() {
                   loading={authLoading}
                   showSigningOverlay={false}
                   allowSignup={accountCreationEnabled}
+                  authMode={nativeAuthMode}
+                  onWebSignIn={handleWebSignIn}
+                  webAuthState={webAuthState}
                 />
               )}
               {user && (route === 'chat' || route === 'admin') ? (

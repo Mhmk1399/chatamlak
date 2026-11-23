@@ -8351,6 +8351,7 @@ export default function ChatPage({
 
   const messagingValue = {
     ...messaging,
+    authKind: user.authKind || "native_local",
     chats,
     headerActions: {
       toggleMute: () => toggleMuteChat(activeChatId),

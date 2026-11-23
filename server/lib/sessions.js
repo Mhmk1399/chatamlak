@@ -2,6 +2,7 @@ export function createSessionHelpers({
   getSession,
   touchSession,
   deleteSession = () => {},
+  validateSession = null,
   isProduction,
   sessionIdleTimeoutMs = Number(process.env.SESSION_IDLE_TIMEOUT_MS) || 14 * 24 * 60 * 60 * 1000,
   sessionAbsoluteTimeoutMs = Number(process.env.SESSION_ABSOLUTE_TIMEOUT_MS) || 30 * 24 * 60 * 60 * 1000,
@@ -83,7 +84,8 @@ export function createSessionHelpers({
     return idleExpired || absoluteExpired;
   };
 
-  const resolveSession = (session, token, { touch = true } = {}) => {
+  const resolveSession = (session, token, options = {}) => {
+    const { touch = true } = options;
     if (!session) return null;
     if (isSessionExpired(session)) {
       try {
@@ -97,12 +99,23 @@ export function createSessionHelpers({
       return null;
     }
 
-    if (!touch) return session;
-    const touched = touchSession(token);
-    if (touched && typeof touched.then === "function") {
-      return touched.then(() => session);
+    const finish = (validated) => {
+      if (!validated) return null;
+      if (!touch) return validated;
+      const touched = touchSession(token);
+      if (touched && typeof touched.then === "function") {
+        return touched.then(() => validated);
+      }
+      return validated;
+    };
+    if (typeof validateSession === "function") {
+      const validated = validateSession(session, { ...options, token, touch });
+      if (validated && typeof validated.then === "function") {
+        return validated.then(finish);
+      }
+      return finish(validated);
     }
-    return session;
+    return finish(session);
   };
 
   const getSessionFromToken = (token, options = {}) => {

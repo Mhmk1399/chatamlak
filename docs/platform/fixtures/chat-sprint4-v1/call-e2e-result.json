@@ -1,0 +1,27 @@
+{
+  "fixture": "owj-chat-two-user-webrtc-result-v1",
+  "syntheticOnly": true,
+  "browser": "Chromium",
+  "contexts": ["alice", "bob"],
+  "peerConnection": "RTCPeerConnection",
+  "iceServers": [],
+  "mediaSources": { "audio": "oscillator", "video": "canvas" },
+  "verified": {
+    "offer": true,
+    "answer": true,
+    "peerConnected": true,
+    "remoteAudioTracks": 1,
+    "remoteVideoTracks": 1,
+    "mute": true,
+    "cameraOff": true,
+    "hangup": true
+  },
+  "notProven": [
+    "TURN credential handling",
+    "TLS termination",
+    "restrictive NAT or firewall traversal",
+    "production signaling reliability",
+    "capacity or WAN reconnect behavior"
+  ]
+}
+

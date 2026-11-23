@@ -21,8 +21,8 @@ export function makeSessionStore() {
   const sessions = new Map();
   return {
     sessions,
-    createSession: (userId, token) => {
-      sessions.set(token, { userId, token });
+    createSession: (userId, token, options = {}) => {
+      sessions.set(token, { userId, token, ...options });
     },
     deleteSession: (token) => {
       sessions.delete(token);
@@ -81,7 +81,18 @@ export function makeApp(overrides = {}) {
     const record = sessionStore.getSession(cookies.sid);
     if (!record) return null;
     sessionStore.touchSession(cookies.sid);
-    return userStore.findUserById(record.userId) ?? null;
+    const user = userStore.findUserById(record.userId) ?? null;
+    return user ? {
+      ...user,
+      auth_kind: record.authKind || "native_local",
+      web_subject: record.webSubject || null,
+      web_scopes: record.webScopes || [],
+      web_authorization_established_at: record.authorizationEstablishedAt || null,
+      web_session_expires_at: record.sessionExpiresAt || null,
+      web_authorization_checked_at: record.authorizationCheckedAt || null,
+      web_authorization_cache_seconds: record.authorizationCacheMaxAgeSeconds || 0,
+      crm_actor_authorization: record.crmActorAuthorization || null,
+    } : null;
   };
 
   const pendingUploadsStore = [];
@@ -91,6 +102,7 @@ export function makeApp(overrides = {}) {
     createStorageProvider({ STORAGE_DRIVER: "local" });
 
   const deps = {
+    nativeAuthMode: "local_test",
     // ── Settings ──────────────────────────────────────────────────────────────
     getSetting: (key) => {
       const defaults = {
@@ -140,6 +152,7 @@ export function makeApp(overrides = {}) {
     parseCookies: sessionHelpers.parseCookies,
     setSessionCookie: sessionHelpers.setSessionCookie,
     clearSessionCookie: sessionHelpers.clearSessionCookie,
+    shouldUseSecureCookie: sessionHelpers.shouldUseSecureCookie,
     getSessionFromRequest,
     requireSession: (req, res) => {
       const session = getSessionFromRequest(req);

@@ -1,0 +1,61 @@
+{
+  "contract": "owj-chat-crm-task-v1",
+  "syntheticOnly": true,
+  "chatRequest": {
+    "headers": {
+      "idempotency-key": "chat:create:synthetic-001",
+      "x-correlation-id": "correlation-synthetic-001"
+    },
+    "body": {
+      "conversationId": "conversation_synthetic_001",
+      "task": {
+        "type": "follow_up",
+        "title": "Review the synthetic request",
+        "priority": "normal",
+        "steps": [{ "title": "Use the approved CRM channel", "required": true }],
+        "dueAt": "2026-11-24T12:00:00.000Z",
+        "instructions": "Use only the approved CRM record."
+      }
+    }
+  },
+  "webRequestHeaders": {
+    "authorization": "Bearer <redacted-server-only-crm-token>",
+    "x-owj-service": "owj-chat-crm",
+    "x-owj-actor-authorization": "<redacted-delegated-actor-proof>",
+    "idempotency-key": "chat:create:synthetic-001",
+    "x-correlation-id": "correlation-synthetic-001"
+  },
+  "webRequestBody": {
+    "version": 1,
+    "source": { "conversationId": "conversation_synthetic_001" },
+    "task": {
+      "type": "follow_up",
+      "title": "Review the synthetic request",
+      "priority": "normal",
+      "steps": [{ "title": "Use the approved CRM channel", "required": true }],
+      "dueAt": "2026-11-24T12:00:00.000Z",
+      "instructions": "Use only the approved CRM record."
+    }
+  },
+  "webResponse": {
+    "version": 1,
+    "task": {
+      "id": "task_synthetic_001",
+      "status": "open",
+      "dueAt": "2026-11-24T12:00:00.000Z",
+      "createdAt": "2026-11-23T08:00:00.000Z"
+    },
+    "deduped": false,
+    "correlationId": "correlation-synthetic-001"
+  },
+  "allowedTaskFields": [
+    "type", "title", "priority", "steps", "assignedUserId",
+    "assignedConsultantId", "sellerPropertyCaseId", "buyerCaseId",
+    "dueAt", "instructions"
+  ],
+  "forbiddenFields": [
+    "message", "messageBody", "privateMessage", "customer", "customerName",
+    "customerPhone", "contact", "phone", "transcript", "messages"
+  ]
+}
+

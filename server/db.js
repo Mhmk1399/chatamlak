@@ -133,6 +133,10 @@ export const createSession = (...args) => mongoRepository.createSession(...args)
 export const getSession = (...args) => mongoRepository.getSession(...args);
 export const touchSession = (...args) => mongoRepository.touchSession(...args);
 export const deleteSession = (...args) => mongoRepository.deleteSession(...args);
+export const updateNativeWebSession = (...args) => mongoRepository.updateNativeWebSession(...args);
+export const createNativeWebAuthTransaction = (...args) => mongoRepository.createNativeWebAuthTransaction(...args);
+export const consumeNativeWebAuthTransaction = (...args) => mongoRepository.consumeNativeWebAuthTransaction(...args);
+export const provisionNativeWebUser = (...args) => mongoRepository.provisionNativeWebUser(...args);
 export const adminGetRow = (...args) => mongoRepository.adminGetRow(...args);
 export const adminGetAll = (...args) => mongoRepository.adminGetAll(...args);
 export const adminRun = (...args) => mongoRepository.adminRun(...args);
@@ -172,3 +176,4 @@ export const deactivatePlatformIdentityLink = (...args) => mongoRepository.deact
 export const consumePlatformIdentityAssertionJti = (...args) => mongoRepository.consumePlatformIdentityAssertionJti(...args);
 export const findSupportGuestIdentityLink = (...args) => mongoRepository.findSupportGuestIdentityLink(...args);
 export const linkSupportGuestToRegistered = (...args) => mongoRepository.linkSupportGuestToRegistered(...args);
+export const linkSupportGuestDigestToRegistered = (...args) => mongoRepository.linkSupportGuestDigestToRegistered(...args);

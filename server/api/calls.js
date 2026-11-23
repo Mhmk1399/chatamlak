@@ -24,16 +24,25 @@ export function registerCallRoutes(app, deps) {
     });
 
   const requireUser = async (req, res) => {
+    let session = null;
     if (typeof deps.requireSession === "function") {
-      return await deps.requireSession(req, res);
+      session = await deps.requireSession(req, res);
+    } else {
+      const rawSession = getSessionFromRequest ? getSessionFromRequest(req) : null;
+      session =
+        rawSession && typeof rawSession.then === "function"
+          ? await rawSession
+          : rawSession;
     }
-    const rawSession = getSessionFromRequest ? getSessionFromRequest(req) : null;
-    const session =
-      rawSession && typeof rawSession.then === "function"
-        ? await rawSession
-        : rawSession;
     if (!session) {
-      res.status(401).json({ error: "Not authenticated" });
+      if (!res.headersSent) res.status(401).json({ error: "Not authenticated" });
+      return null;
+    }
+    if (session.auth_kind === "web_federated" && !session.web_scopes?.includes("chat:call")) {
+      res.status(403).json({
+        error: "Current Owj Web authorization does not allow calls.",
+        code: "CHAT_CALL_SCOPE_REQUIRED",
+      });
       return null;
     }
     return session;

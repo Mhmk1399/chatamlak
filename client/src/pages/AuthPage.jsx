@@ -5,7 +5,7 @@ import AuthHeader from "../components/auth/AuthHeader.jsx";
 import AuthOverlay from "../components/auth/AuthOverlay.jsx";
 import AuthStatusBanner from "../components/auth/AuthStatusBanner.jsx";
 import { t, useLocale } from "../i18n/locale.js";
-import { ArrowUpLeft, Files, MessageSquare, ShieldCheck } from "../icons/lucide.js";
+import { ArrowUpLeft, Files, LoaderCircle, LogIn, MessageSquare, ShieldCheck } from "../icons/lucide.js";
 
 export default function AuthPage({
   mode,
@@ -20,10 +20,14 @@ export default function AuthPage({
   title,
   subtitle,
   children,
+  authMode = "local_test",
+  onWebSignIn,
+  webAuthState = "ready",
 }) {
   useLocale();
   const isLogin = mode === "login";
   const canSignup = Boolean(allowSignup);
+  const isFederated = authMode === "federated";
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [themeToggleAnimating, setThemeToggleAnimating] = useState(false);
@@ -113,30 +117,55 @@ export default function AuthPage({
 
       {children ? (
         children
+      ) : isFederated ? (
+        <div className="mt-7 space-y-4">
+          <button
+            type="button"
+            onClick={onWebSignIn}
+            disabled={loading || webAuthState === "linked"}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-500 dark:hover:bg-brand-400"
+          >
+            {loading ? <LoaderCircle size={19} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <LogIn size={19} aria-hidden="true" />}
+            <span>{t(loading ? "Connecting to Owj Web..." : "Sign in with Owj")}</span>
+          </button>
+          <p className="text-center text-xs leading-6 text-slate-500 dark:text-slate-400">
+            {t("Your Owj Web account verifies access. Chat keeps its own private session.")}
+          </p>
+          {webAuthState === "linked" ? (
+            <p role="status" aria-live="polite" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-200">
+              {t("Account linked. Opening Chat...")}
+            </p>
+          ) : null}
+        </div>
       ) : (
-        <AuthFormFields
-          isLogin={isLogin}
-          canSignup={canSignup}
-          showPassword={showPassword}
-          setShowPassword={setShowPassword}
-          showConfirmPassword={showConfirmPassword}
-          setShowConfirmPassword={setShowConfirmPassword}
-          nicknameLength={nicknameLength}
-          setNicknameLength={setNicknameLength}
-          usernameLength={usernameLength}
-          setUsernameLength={setUsernameLength}
-          loading={loading}
-          onSubmit={onSubmit}
-          onReset={() => {
-            setNicknameLength(0);
-            setUsernameLength(0);
-          }}
-        />
+        <>
+          <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-200">
+            {t("Native test mode")}
+          </p>
+          <AuthFormFields
+            isLogin={isLogin}
+            canSignup={canSignup}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            showConfirmPassword={showConfirmPassword}
+            setShowConfirmPassword={setShowConfirmPassword}
+            nicknameLength={nicknameLength}
+            setNicknameLength={setNicknameLength}
+            usernameLength={usernameLength}
+            setUsernameLength={setUsernameLength}
+            loading={loading}
+            onSubmit={onSubmit}
+            onReset={() => {
+              setNicknameLength(0);
+              setUsernameLength(0);
+            }}
+          />
+        </>
       )}
 
       <AuthStatusBanner status={status} />
 
-      {!children && (
+      {!children && !isFederated && (
         <AuthFooter
           isLogin={isLogin}
           canSignup={canSignup}

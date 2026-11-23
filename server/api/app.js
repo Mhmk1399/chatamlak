@@ -16,7 +16,8 @@ function registerAppRoutes(app, deps) {
       // UI correctly. Read via getSetting() on every request so admin-panel
       // changes take effect immediately, without a client rebuild or reload
       // being required beyond a normal page fetch.
-      accountCreationEnabled: Boolean(getSetting("SIGN_UP")),
+      accountCreationEnabled: deps.nativeAuthMode === "local_test" && Boolean(getSetting("SIGN_UP")),
+      nativeAuthMode: deps.nativeAuthMode || "local_test",
       adminPanelEnabled: !["0", "false", "no", "n", "off"].includes(
         String(process.env.ADMIN_PANEL ?? "true").trim().toLowerCase(),
       ),

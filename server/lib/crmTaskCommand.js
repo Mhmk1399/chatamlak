@@ -1,20 +1,11 @@
 const ALLOWED_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
 const ALLOWED_TASK_FIELDS = new Set([
-  "title",
-  "dueAt",
-  "priority",
-  "assigneeWebUserId",
+  "type", "title", "priority", "steps", "assignedUserId", "assignedConsultantId",
+  "sellerPropertyCaseId", "buyerCaseId", "dueAt", "instructions",
 ]);
 const PRIVATE_TASK_FIELDS = new Set([
-  "message",
-  "messageBody",
-  "privateMessage",
-  "customer",
-  "customerName",
-  "customerPhone",
-  "contact",
-  "phone",
-  "transcript",
+  "message", "messageBody", "privateMessage", "customer", "customerName",
+  "customerPhone", "contact", "phone", "transcript", "messages",
 ]);
 
 export class PlatformContractError extends Error {
@@ -26,161 +17,91 @@ export class PlatformContractError extends Error {
   }
 }
 
-function fail(code, message, status) {
+const fail = (code, message, status = 400) => {
   throw new PlatformContractError(code, message, status);
-}
+};
 
-function stringField(value, { code, message, max = 200, optional = false }) {
-  if (value == null && optional) return undefined;
+function stringField(value, { max = 200, optional = false } = {}) {
+  if ((value == null || value === "") && optional) return undefined;
   const normalized = typeof value === "string" ? value.trim() : "";
-  if (!normalized || normalized.length > max) fail(code, message, 400);
+  if (!normalized || normalized.length > max) fail("CRM_TASK_INVALID", "The CRM task input is invalid.");
   return normalized;
 }
 
-/**
- * Builds only the Chat-owned proposal for a future Web CRM command.
- * This module performs no network request and is intentionally not wired to UI
- * or routes until Web approves identity delegation and the provider contract.
- */
-export function buildCrmTaskCommandV1({
-  actor,
-  conversationId,
-  requestId,
-  idempotencyKey,
-  task,
-} = {}) {
-  if (
-    !actor ||
-    actor.kind !== "registered" ||
-    actor.provider !== "owj-web" ||
-    typeof actor.webUserId !== "string" ||
-    !actor.webUserId.trim() ||
-    typeof actor.chatUserId !== "string" ||
-    !actor.chatUserId.trim()
-  ) {
-    fail(
-      "CRM_ACTOR_NOT_VERIFIED",
-      "A verified Web identity linked to Chat is required.",
-      403,
-    );
-  }
-
-  const normalizedConversationId = stringField(conversationId, {
-    code: "CRM_CONVERSATION_REQUIRED",
-    message: "A source conversation is required.",
-    max: 128,
-  });
-  const normalizedRequestId =
-    typeof requestId === "string" ? requestId.trim() : "";
-  const normalizedIdempotencyKey =
-    typeof idempotencyKey === "string" ? idempotencyKey.trim() : "";
-  if (
-    !normalizedRequestId ||
-    normalizedRequestId.length > 128 ||
-    !normalizedIdempotencyKey ||
-    normalizedIdempotencyKey.length > 180
-  ) {
-    fail(
-      "CRM_IDEMPOTENCY_REQUIRED",
-      "Stable request and idempotency identifiers are required.",
-      400,
-    );
-  }
-  if (!task || typeof task !== "object" || Array.isArray(task)) {
-    fail("CRM_TASK_INVALID", "Task parameters are required.", 400);
-  }
-
-  const taskKeys = Object.keys(task);
-  if (taskKeys.some((key) => PRIVATE_TASK_FIELDS.has(key))) {
-    fail(
-      "CRM_PRIVATE_DATA_FORBIDDEN",
-      "Private message and customer contact data are not accepted.",
-      400,
-    );
-  }
-  if (taskKeys.some((key) => !ALLOWED_TASK_FIELDS.has(key))) {
-    fail(
-      "CRM_TASK_FIELD_UNAPPROVED",
-      "The task contains a field that is not part of the proposed contract.",
-      400,
-    );
-  }
-
-  const title = stringField(task.title, {
-    code: "CRM_TASK_INVALID",
-    message: "A task title is required.",
-    max: 200,
-  });
-  let dueAt;
-  if (task.dueAt != null) {
-    dueAt = stringField(task.dueAt, {
-      code: "CRM_TASK_INVALID",
-      message: "The task due date is invalid.",
-      max: 64,
-    });
-    if (!Number.isFinite(Date.parse(dueAt))) {
-      fail("CRM_TASK_INVALID", "The task due date is invalid.", 400);
+function normalizedSteps(value) {
+  if (value == null) return undefined;
+  if (!Array.isArray(value) || value.length > 30) fail("CRM_TASK_INVALID", "The CRM task steps are invalid.");
+  return value.map((step) => {
+    if (typeof step === "string") return stringField(step, { max: 300 });
+    if (!step || typeof step !== "object" || Array.isArray(step) || Object.keys(step).some((key) => !["title", "required"].includes(key))) {
+      fail("CRM_TASK_INVALID", "The CRM task steps are invalid.");
     }
-  }
-  let priority;
-  if (task.priority != null) {
-    priority = stringField(task.priority, {
-      code: "CRM_TASK_INVALID",
-      message: "The task priority is invalid.",
-      max: 16,
-    });
-    if (!ALLOWED_PRIORITIES.has(priority)) {
-      fail("CRM_TASK_INVALID", "The task priority is invalid.", 400);
-    }
-  }
-  const assigneeWebUserId = stringField(task.assigneeWebUserId, {
-    code: "CRM_TASK_INVALID",
-    message: "The task assignee is invalid.",
-    max: 128,
-    optional: true,
+    return {
+      title: stringField(step.title, { max: 300 }),
+      ...(step.required == null ? {} : { required: Boolean(step.required) }),
+    };
   });
+}
 
+/** Build the exact Web-owned Chat CRM task contract. */
+export function buildCrmTaskCommandV1({ conversationId, task } = {}) {
+  const sourceId = stringField(conversationId, { max: 128 });
+  if (!/^[A-Za-z0-9_-]+$/.test(sourceId)) fail("CRM_CONVERSATION_REQUIRED", "A valid source conversation is required.");
+  if (!task || typeof task !== "object" || Array.isArray(task)) fail("CRM_TASK_INVALID", "Task parameters are required.");
+  const keys = Object.keys(task);
+  if (keys.some((key) => PRIVATE_TASK_FIELDS.has(key))) {
+    fail("CRM_PRIVATE_DATA_FORBIDDEN", "Private message and contact data are not accepted.");
+  }
+  if (keys.some((key) => !ALLOWED_TASK_FIELDS.has(key))) {
+    fail("CRM_TASK_FIELD_UNAPPROVED", "The task contains an unapproved field.");
+  }
+  const title = stringField(task.title, { max: 200 });
+  const type = stringField(task.type, { max: 64, optional: true });
+  const priority = stringField(task.priority, { max: 16, optional: true });
+  if (priority && !ALLOWED_PRIORITIES.has(priority)) fail("CRM_TASK_INVALID", "The task priority is invalid.");
+  const dueAt = stringField(task.dueAt, { max: 64, optional: true });
+  if (dueAt && !Number.isFinite(Date.parse(dueAt))) fail("CRM_TASK_INVALID", "The task due date is invalid.");
+  const steps = normalizedSteps(task.steps);
+  const optional = (name, max = 128) => stringField(task[name], { max, optional: true });
+  const assignedUserId = optional("assignedUserId");
+  const assignedConsultantId = optional("assignedConsultantId");
+  const sellerPropertyCaseId = optional("sellerPropertyCaseId");
+  const buyerCaseId = optional("buyerCaseId");
+  const instructions = optional("instructions", 2_000);
   return {
     version: 1,
-    source: {
-      service: "ouj-chat",
-      conversationId: normalizedConversationId,
-      chatUserId: actor.chatUserId.trim(),
-    },
-    actor: {
-      provider: "owj-web",
-      webUserId: actor.webUserId.trim(),
-    },
-    requestId: normalizedRequestId,
-    idempotencyKey: normalizedIdempotencyKey,
+    source: { conversationId: sourceId },
     task: {
-      title,
-      ...(dueAt ? { dueAt } : {}),
-      ...(priority ? { priority } : {}),
-      ...(assigneeWebUserId ? { assigneeWebUserId } : {}),
+      ...(type ? { type } : {}), title,
+      ...(priority ? { priority } : {}), ...(steps ? { steps } : {}),
+      ...(assignedUserId ? { assignedUserId } : {}),
+      ...(assignedConsultantId ? { assignedConsultantId } : {}),
+      ...(sellerPropertyCaseId ? { sellerPropertyCaseId } : {}),
+      ...(buyerCaseId ? { buyerCaseId } : {}),
+      ...(dueAt ? { dueAt } : {}), ...(instructions ? { instructions } : {}),
     },
   };
 }
 
 export function validateCrmTaskResultV1(result) {
+  const task = result?.task;
   if (
-    !result ||
-    typeof result !== "object" ||
-    Array.isArray(result) ||
-    result.version !== 1 ||
-    typeof result.taskId !== "string" ||
-    !result.taskId.trim() ||
-    result.taskId.trim().length > 128
-  ) {
-    fail(
-      "CRM_RESULT_INVALID",
-      "Web returned an invalid CRM task result.",
-      502,
-    );
+    !result || typeof result !== "object" || Array.isArray(result) || result.version !== 1 ||
+    !task || typeof task !== "object" || Array.isArray(task) ||
+    typeof task.id !== "string" || !task.id.trim() || task.id.length > 128 ||
+    typeof task.status !== "string" || !task.status.trim() || task.status.length > 64 ||
+    typeof result.deduped !== "boolean" ||
+    typeof result.correlationId !== "string" || !result.correlationId.trim()
+  ) fail("CRM_RESULT_INVALID", "Web returned an invalid CRM task result.", 502);
+  for (const field of ["dueAt", "createdAt"]) {
+    if (task[field] != null && !Number.isFinite(Date.parse(task[field]))) {
+      fail("CRM_RESULT_INVALID", "Web returned an invalid CRM task result.", 502);
+    }
   }
   return {
     version: 1,
-    taskId: result.taskId.trim(),
-    duplicate: result.duplicate === true,
+    task: { id: task.id.trim(), status: task.status.trim(), dueAt: task.dueAt || null, createdAt: task.createdAt || null },
+    deduped: result.deduped,
+    correlationId: result.correlationId.trim(),
   };
 }
