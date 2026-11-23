@@ -45,7 +45,8 @@ describe("native Web authentication API", () => {
       sessionToken: "opaque-chat-session",
       user: USER,
       provisioned: true,
-      scopes: ["chat:access"],
+      scopes: ["chat:access", "chat:call"],
+      crmTaskAllowed: true,
     }));
     const { app } = makeApp({
       userStore: makeUserStore([USER]),
@@ -63,7 +64,40 @@ describe("native Web authentication API", () => {
       code: "one-time-code",
     }));
     expect(response.headers["set-cookie"].join("\n")).toContain("sid=opaque-chat-session");
+    const clearedTransaction = response.headers["set-cookie"].find((value) =>
+      value.startsWith("owj_chat_auth_tx="));
+    expect(clearedTransaction).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+    expect(clearedTransaction).toContain("Path=/api/auth/web");
     expect(response.body.user).not.toHaveProperty("webToken");
+    expect(response.body.user).toMatchObject({
+      webScopes: ["chat:access", "chat:call"],
+      crmTaskAllowed: true,
+    });
+  });
+
+  it("clears the transaction cookie after an unsuccessful callback", async () => {
+    const failure = Object.assign(new Error("The transaction expired."), {
+      code: "CHAT_AUTH_TRANSACTION_EXPIRED",
+      status: 401,
+    });
+    const { app } = makeApp({
+      deps: {
+        nativeAuthMode: "federated",
+        completeNativeWebAuthorization: vi.fn(async () => { throw failure; }),
+      },
+    });
+
+    const response = await request(app)
+      .post("/api/auth/web/callback")
+      .set("Cookie", "owj_chat_auth_tx=expired-browser-secret")
+      .send({ code: "expired-code", state: "s".repeat(43) })
+      .expect(401);
+
+    const clearedTransaction = response.headers["set-cookie"].find((value) =>
+      value.startsWith("owj_chat_auth_tx="));
+    expect(clearedTransaction).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+    expect(clearedTransaction).toContain("Path=/api/auth/web");
+    expect(response.headers["set-cookie"].join("\n")).not.toContain("sid=");
   });
 
   it("keeps local password sign-in behind explicit local test mode", async () => {

@@ -34,6 +34,7 @@ import { createMediaQueueManager } from "./lib/mediaQueue.js";
 import { createDurableMediaQueueRunner } from "./lib/durableMediaQueue.js";
 import { createSupportRuntime } from "./lib/supportRuntime.js";
 import { createNativeWebAuthRuntime } from "./lib/nativeWebAuthRuntime.js";
+import { createGuestLinkRuntime } from "./lib/guestLinkRuntime.js";
 import { createCrmTaskClient } from "./lib/crmTaskClient.js";
 import { createRemoteChannelManager } from "./lib/remoteChannels.js";
 import { initAutoAddWorker } from "./lib/workers/autoAddWorker.js";
@@ -816,6 +817,12 @@ const supportRuntime = createSupportRuntime({
   createOrReuseMessage,
   emitChatEvent,
 });
+const guestLinkRuntime = createGuestLinkRuntime({
+  env: process.env,
+  appEnv,
+  repository: mongoRepository,
+  completeGuestHistoryLink: supportRuntime.apiDeps.completeGuestHistoryLink,
+});
 const crmTaskEndpoint = process.env.OWJ_CHAT_CRM_WEB_TASK_URL || (() => {
   try {
     return new URL(
@@ -956,6 +963,8 @@ registerUploadRoutes(app, {
 const apiDeps = {
   ...nativeWebAuthRuntime.apiDeps,
   ...supportRuntime.apiDeps,
+  startGuestHistoryLink: guestLinkRuntime.start,
+  completeGuestHistoryLink: guestLinkRuntime.complete,
   crmTaskClient,
   cleanupDeletedFiles: messageFileJobs.cleanupDeletedFiles,
   mongoRepository,

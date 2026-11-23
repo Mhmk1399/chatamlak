@@ -78,6 +78,37 @@ describe("WebSocket Gateway Call Signaling", () => {
     gateway.close();
   });
 
+  test("accepts the voice call type emitted by the native client", async () => {
+    const callManager = {
+      startCall: vi.fn(async () => ({ status: 200, call: {} })),
+      cleanupUserCalls: vi.fn(),
+    };
+    const gateway = createWebSocketGateway({ callManager });
+    const ws = new EventEmitter();
+    ws.isAlive = true;
+    ws.readyState = 1;
+    ws.send = vi.fn();
+    const session = { id: "user-1", username: "alice" };
+
+    gateway.wss.emit("connection", ws, {}, session);
+    ws.emit("message", Buffer.from(JSON.stringify({
+      action: "call_signal",
+      signalType: "start",
+      chatId: CHAT_ID,
+      data: { type: "voice" },
+    })));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(callManager.startCall).toHaveBeenCalledWith({
+      user: session,
+      chatId: CHAT_ID,
+      type: "voice",
+    });
+    expect(ws.send).not.toHaveBeenCalledWith(expect.stringContaining('"type":"call:error"'));
+    ws.emit("close");
+    gateway.close();
+  });
+
   // Regression: a camera-less video caller posts camera-state right after
   // start. Both arrive on the same socket, but each message used to spawn its
   // own async job, so the camera-state relay could run while startCall's DB

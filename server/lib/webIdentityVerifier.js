@@ -31,6 +31,12 @@ const TOKEN_USE_POLICIES = Object.freeze({
       "support:conversation:create",
     ]),
   }),
+  support_guest_link: Object.freeze({
+    kind: "guest_link",
+    maxLifetimeSeconds: 2 * 60,
+    requiredScopes: Object.freeze(["support:guest-history:link"]),
+    allowedScopes: Object.freeze(["support:guest-history:link"]),
+  }),
 });
 
 function fail(code, message, status = 401) {
@@ -311,6 +317,24 @@ export function createWebIdentityVerifier({
         "The Web identity assertion version is not supported.",
       );
     }
+    let guestLinkClaims = null;
+    if (tokenUse === "support_guest_link") {
+      const guestSubject = requiredString(payload.guest_subject, "IDENTITY_CREDENTIAL_INVALID", 64);
+      const conversationId = requiredString(payload.conversation_id, "IDENTITY_CREDENTIAL_INVALID", 128);
+      if (
+        !/^guest_[0-9a-f-]{36}$/.test(guestSubject) ||
+        !/^[A-Za-z0-9_-]{1,128}$/.test(conversationId) ||
+        payload.intent !== "link_guest_history" ||
+        payload.account_status !== "active" ||
+        !Number.isInteger(payload.authorization_established_at) ||
+        payload.authorization_established_at < 1
+      ) fail("IDENTITY_CREDENTIAL_INVALID", "The guest-link proof is invalid.");
+      guestLinkClaims = {
+        guestSubject,
+        conversationId,
+        authorizationEstablishedAt: payload.authorization_established_at,
+      };
+    }
     const scopes = stringList(payload.scope, "IDENTITY_SCOPE_DENIED", MAX_SCOPES);
     const required = stringList(
       [...policy.requiredScopes, ...requiredScopes],
@@ -384,6 +408,7 @@ export function createWebIdentityVerifier({
       kind: policy.kind,
       status: payload.account_status == null ? "active" : payload.account_status,
       claimsVersion: payload.ver == null ? 1 : payload.ver,
+      ...(guestLinkClaims || {}),
     };
   }
 

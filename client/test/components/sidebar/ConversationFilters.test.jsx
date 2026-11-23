@@ -38,7 +38,15 @@ for (const locale of ["fa", "en"]) for (const width of [375, 1280]) test(`folder
   // Folder titles are user data, even when they match an English UI key.
   expect(actions.some(action => action.querySelector('.ouj-folder-label')?.textContent === "All")).toBe(true);
   const groups = navigation.getByRole("button", { name: new RegExp(`^${t("Groups")}`) });
-  expect(groups.element().querySelector(".ouj-folder-count").textContent).toBe(locale === "fa" ? "۳" : "3");
+  if (width < 768) {
+    expect(groups.element().querySelector(".ouj-folder-count")?.textContent).toBe(locale === "fa" ? "۳" : "3");
+  } else {
+    expect(groups.element().querySelector(".ouj-folder-count")).toBeNull();
+    expect(groups.element().querySelector(".sr-only")?.textContent).toContain(
+      t("{count} unread messages", { count: 3 }),
+    );
+    expect(groups.element().querySelector("span.relative span[aria-hidden='true']")?.textContent).toBe(locale === "fa" ? "۳" : "3");
+  }
   await groups.click(); await expect.element(groups).toHaveAttribute("aria-pressed", "true");
   const archive = navigation.getByRole("button", { name: new RegExp(`^${t("Archived")}`) }); await archive.click();
   await expect.element(archive).toHaveAttribute("aria-pressed", "true");

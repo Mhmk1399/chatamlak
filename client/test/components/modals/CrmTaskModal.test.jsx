@@ -20,6 +20,7 @@ test("creates a CRM task without sending conversation content and exposes the We
 
   await page.getByRole("textbox", { name: "Task title", exact: true }).fill("Call the seller");
   await page.getByRole("textbox", { name: "Instructions", exact: true }).fill("Confirm viewing time");
+  await page.getByLabelText("Due date", { exact: true }).fill("2027-01-02T10:00");
   await page.getByRole("button", { name: "Create task", exact: true }).click();
 
   await expect.element(page.getByText("CRM task created", { exact: true })).toBeVisible();
@@ -32,10 +33,12 @@ test("creates a CRM task without sending conversation content and exposes the We
   expect(body).toEqual({
     conversationId: "chat-123",
     task: {
-      type: "follow_up",
+      type: "call",
       title: "Call the seller",
       priority: "normal",
+      dueAt: "2027-01-02T06:30:00.000Z",
       instructions: "Confirm viewing time",
+      steps: [{ title: "Call the seller", required: true }],
     },
   });
   expect(JSON.stringify(body)).not.toContain("message");

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { createCrmTask } from "../../api/chatApi.js";
 import { t, tError, useLocale } from "../../i18n/locale.js";
 import { CircleCheck, Close, LoaderCircle } from "../../icons/lucide.js";
+import { clearCrmTaskIntent, getCrmTaskIntent } from "../../utils/crmTaskIdempotency.js";
 
 export default function CrmTaskModal({ open, conversationId, onClose }) {
   useLocale();
@@ -11,11 +12,9 @@ export default function CrmTaskModal({ open, conversationId, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-  const idempotencyRef = useRef("");
 
   useEffect(() => {
     if (!open) return;
-    idempotencyRef.current = `chat:crm:${conversationId}:${crypto.randomUUID()}`;
     setError("");
     setResult(null);
     requestAnimationFrame(() => titleRef.current?.focus());
@@ -35,25 +34,38 @@ export default function CrmTaskModal({ open, conversationId, onClose }) {
     const form = new FormData(event.currentTarget);
     setSubmitting(true);
     setError("");
+    let intent = null;
     try {
       const dueValue = String(form.get("dueAt") || "").trim();
+      const title = String(form.get("title") || "").trim();
+      const task = {
+        type: "call",
+        title,
+        priority: String(form.get("priority") || "normal"),
+        ...(dueValue ? { dueAt: new Date(dueValue).toISOString() } : {}),
+        ...(String(form.get("instructions") || "").trim()
+          ? { instructions: String(form.get("instructions")).trim() }
+          : {}),
+        steps: [{ title, required: true }],
+      };
+      intent = await getCrmTaskIntent({ conversationId, task });
       const response = await createCrmTask({
         conversationId,
-        idempotencyKey: idempotencyRef.current,
-        task: {
-          type: "follow_up",
-          title: String(form.get("title") || "").trim(),
-          priority: String(form.get("priority") || "normal"),
-          ...(dueValue ? { dueAt: new Date(dueValue).toISOString() } : {}),
-          ...(String(form.get("instructions") || "").trim()
-            ? { instructions: String(form.get("instructions")).trim() }
-            : {}),
-        },
+        idempotencyKey: intent.key,
+        task,
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body?.error?.message || "Unable to create the CRM task.");
+      if (!response.ok) {
+        const responseError = new Error(body?.error?.message || "Unable to create the CRM task.");
+        responseError.status = response.status;
+        throw responseError;
+      }
+      clearCrmTaskIntent(intent);
       setResult(body.task);
     } catch (submitError) {
+      if (intent && Number(submitError?.status) >= 400 && Number(submitError?.status) < 500) {
+        clearCrmTaskIntent(intent);
+      }
       setError(submitError.message || "Unable to create the CRM task.");
     } finally { setSubmitting(false); }
   }
@@ -76,7 +88,7 @@ export default function CrmTaskModal({ open, conversationId, onClose }) {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{t("Task title")}<input required maxLength={200} name="title" className="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950" /></label>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{t("Priority")}<select name="priority" defaultValue="normal" className="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950"><option value="low">{t("Low")}</option><option value="normal">{t("Normal")}</option><option value="high">{t("High")}</option><option value="urgent">{t("Urgent")}</option></select></label>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{t("Due date")}<input type="datetime-local" name="dueAt" className="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950" /></label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{t("Due date")}<input required type="datetime-local" name="dueAt" className="mt-2 min-h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950" /></label>
             </div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">{t("Instructions")}<textarea maxLength={2000} rows={4} name="instructions" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950" /></label>
             {error ? <p role="alert" aria-live="assertive" className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-200">{tError(error)}</p> : null}

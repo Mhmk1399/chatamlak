@@ -6,6 +6,7 @@ import {
   ensurePlatformIdentitySchema,
 } from "../../db/platformIdentitySchema.js";
 import { createPlatformIdentityRepository } from "../../db/platformIdentityRepository.js";
+import { migrateMongoSchemaV4 } from "../../db/mongoSchema.js";
 import { R, alice, db, group } from "./helpers.js";
 
 let identity;
@@ -21,6 +22,26 @@ beforeEach(async () => {
 });
 
 describe("platform identity storage on a real MongoDB replica set", () => {
+  test("upgrades the replay validator before consuming a guest-link proof JTI", async () => {
+    await db.command({
+      collMod: PLATFORM_ASSERTION_JTI_COLLECTION,
+      validator: { $jsonSchema: {
+        bsonType: "object",
+        required: ["id", "issuer", "jti", "subject", "token_use", "expires_at", "created_at"],
+        properties: { token_use: { enum: ["support_registered", "support_guest", "support_agent"] } },
+      } },
+      validationLevel: "strict",
+    });
+    await migrateMongoSchemaV4(db);
+    await expect(identity.consumePlatformIdentityAssertionJti({
+      issuer: "https://web.example.test/",
+      jti: "guest-link-proof-jti",
+      subject: "507f1f77bcf86cd799439011",
+      tokenUse: "support_guest_link",
+      expiresAt: new Date(Date.now() + 60_000),
+    })).resolves.toBe(true);
+  });
+
   test("enforces one-to-one account links under concurrent idempotent retries", async () => {
     const request = {
       provider: "owj-web",

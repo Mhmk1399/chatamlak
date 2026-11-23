@@ -262,6 +262,18 @@ export function createSupportRepository(
       },
     );
 
+  const revokeSupportSessionsByGuestDigest = (guestSubjectDigest, reason = "guest_history_linked") =>
+    store.update(
+      "support_sessions",
+      { guest_subject_digest: String(guestSubjectDigest), status: "active" },
+      {
+        status: "revoked",
+        revoked_at: now(),
+        revocation_reason: String(reason || "guest_history_linked").slice(0, 100),
+        updated_at: now(),
+      },
+    );
+
   const purgeExpiredSupportSessions = ({ cutoff = now() } = {}) =>
     store.remove("support_sessions", {
       $or: [
@@ -545,9 +557,14 @@ export function createSupportRepository(
       limit: Math.max(1, Math.min(MAX_SUPPORT_PAGE_SIZE, Number(limit) || 100)),
     });
     for (const row of rows) {
+      const customerActorIds = [...new Set([
+        actor,
+        row.actor_id,
+        row.identity_kind === "registered" ? row.conversion_from_guest_actor_id : null,
+      ].filter(Boolean))];
       row.unread_count = await store.count("chat_messages", {
         chat_id: row.id,
-        user_id: { $ne: actor },
+        user_id: { $nin: customerActorIds },
         ...(row.customer_read_at ? { created_at: { $gt: row.customer_read_at } } : {}),
       });
     }
@@ -623,7 +640,9 @@ export function createSupportRepository(
     const keyDigest = digest(`${owner}:reopen:${required(idempotencyKey, "Idempotency key", 180)}`);
     return store.transaction(async () => {
       const current = await getSupportConversation(id);
-      if (!current || ![current.owner_identity_key, current.identity_key].includes(owner) || current.actor_id !== actor) {
+      const actorMatches = current?.actor_id === actor ||
+        (current?.identity_kind === "registered" && current.chat_user_id === actor);
+      if (!current || ![current.owner_identity_key, current.identity_key].includes(owner) || !actorMatches) {
         fail("SUPPORT_CONVERSATION_DENIED", "The support case is not owned by this identity.", 403);
       }
       if (current.reopen_idempotency_digest === keyDigest && ["open", "assigned"].includes(current.status)) {
@@ -654,7 +673,13 @@ export function createSupportRepository(
 
   const markSupportCaseRead = (conversationId, actorId) => store.update(
     "support_conversations",
-    { id: String(conversationId), actor_id: String(actorId) },
+    {
+      id: String(conversationId),
+      $or: [
+        { actor_id: String(actorId) },
+        { identity_kind: "registered", chat_user_id: String(actorId) },
+      ],
+    },
     { customer_read_at: now(), updated_at: now() },
   );
 
@@ -746,6 +771,7 @@ export function createSupportRepository(
     revokeSupportSessionByDigest,
     revokeSupportSessionById,
     revokeSupportSessionsByWebUserId,
+    revokeSupportSessionsByGuestDigest,
     purgeExpiredSupportSessions,
     createSupportMessage,
     getSupportMessages,

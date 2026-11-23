@@ -2,6 +2,7 @@ import { registerAppRoutes } from "./app.js";
 import { registerAdminRoutes } from "./admin.js";
 import { registerAuthRoutes } from "./auth.js";
 import { registerNativeAuthRoutes } from "./nativeAuth.js";
+import { registerGuestLinkRoutes } from "./guestLink.js";
 import { registerChatRoutes } from "./chats.js";
 import { registerHealthRoutes } from "./health.js";
 import { registerMessageRoutes } from "./messages.js";
@@ -39,6 +40,7 @@ function registerApiRoutes(app, deps) {
   registerAppRoutes(app, deps);
   registerAuthRoutes(app, deps);
   registerNativeAuthRoutes(app, deps);
+  registerGuestLinkRoutes(app, deps);
   registerPresenceRoutes(app, deps);
   registerProfileRoutes(app, deps);
   registerAppearanceRoutes(app, deps);

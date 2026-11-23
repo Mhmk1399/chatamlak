@@ -41,6 +41,22 @@ function timestamp(value, code) {
   return result;
 }
 
+function crmActorProof(value) {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    return text(value, "WEB_IDENTITY_RESPONSE_INVALID", 8_192);
+  }
+  if (
+    !value || typeof value !== "object" || Array.isArray(value) ||
+    Object.keys(value).some((key) => !["token", "expiresInSeconds"].includes(key)) ||
+    !Number.isInteger(value.expiresInSeconds) ||
+    value.expiresInSeconds < 1 || value.expiresInSeconds > 300
+  ) {
+    fail("WEB_IDENTITY_RESPONSE_INVALID", "The Web identity response is invalid.", 502);
+  }
+  return text(value.token, "WEB_IDENTITY_RESPONSE_INVALID", 8_192);
+}
+
 async function boundedBody(response) {
   const declared = Number(response?.headers?.get?.("content-length") || 0);
   if (declared > MAX_RESPONSE_BYTES) fail("WEB_IDENTITY_RESPONSE_INVALID", "The Web identity response is too large.", 502);
@@ -59,8 +75,9 @@ async function boundedBody(response) {
 }
 
 function upstreamError(body, status) {
-  const code = typeof body?.error?.code === "string"
-    ? body.error.code.slice(0, 100)
+  const rawCode = typeof body?.error === "string" ? body.error : body?.error?.code;
+  const code = typeof rawCode === "string"
+    ? rawCode.slice(0, 100)
     : "WEB_IDENTITY_UNAVAILABLE";
   const definitive = new Set([
     "IDENTITY_NOT_FOUND", "TOKEN_REVOKED", "ACCOUNT_DISABLED",
@@ -100,9 +117,7 @@ function parseAuthorization(body, expectedSubject = null) {
   if (Date.parse(sessionExpiresAt) <= Date.now() - 60_000) {
     fail("WEB_IDENTITY_SESSION_EXPIRED", "The Web authorization has expired.", 401);
   }
-  const crmActorAuthorization = body.crmActorAuthorization == null
-    ? null
-    : text(body.crmActorAuthorization, "WEB_IDENTITY_RESPONSE_INVALID", 8_192);
+  const crmActorAuthorization = crmActorProof(body.crmActorAuthorization);
   return {
     subject,
     accountStatus: "active",

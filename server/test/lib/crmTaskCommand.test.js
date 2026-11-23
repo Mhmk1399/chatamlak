@@ -6,7 +6,7 @@ describe("Chat CRM task command V1", () => {
     expect(buildCrmTaskCommandV1({
       conversationId: "conversation-1",
       task: {
-        type: "follow_up",
+        type: "call",
         title: "Follow up",
         priority: "normal",
         steps: [{ title: "Call", required: true }],
@@ -17,7 +17,7 @@ describe("Chat CRM task command V1", () => {
       version: 1,
       source: { conversationId: "conversation-1" },
       task: {
-        type: "follow_up",
+        type: "call",
         title: "Follow up",
         priority: "normal",
         steps: [{ title: "Call", required: true }],
@@ -32,6 +32,37 @@ describe("Chat CRM task command V1", () => {
       conversationId: "conversation-1",
       task: { title: "Follow up", [field]: "private" },
     })).toThrow(expect.objectContaining({ code: "CRM_PRIVATE_DATA_FORBIDDEN" }));
+  });
+
+  test("requires the due date expected by the real Web CRM domain", () => {
+    expect(() => buildCrmTaskCommandV1({
+      conversationId: "conversation-1",
+      task: { title: "Follow up" },
+    })).toThrow(expect.objectContaining({ code: "CRM_TASK_INVALID" }));
+  });
+
+  test.each(["follow_up", "", "arbitrary"])('rejects non-canonical Web task type %j', (type) => {
+    expect(() => buildCrmTaskCommandV1({
+      conversationId: "conversation-1",
+      task: {
+        type,
+        title: "Follow up",
+        dueAt: "2027-01-02T10:00:00.000Z",
+        steps: [{ title: "Call", required: true }],
+      },
+    })).toThrow(expect.objectContaining({ code: "CRM_TASK_INVALID" }));
+  });
+
+  test.each([undefined, []])("requires at least one canonical Web task step", (steps) => {
+    expect(() => buildCrmTaskCommandV1({
+      conversationId: "conversation-1",
+      task: {
+        type: "call",
+        title: "Follow up",
+        dueAt: "2027-01-02T10:00:00.000Z",
+        ...(steps === undefined ? {} : { steps }),
+      },
+    })).toThrow(expect.objectContaining({ code: "CRM_TASK_INVALID" }));
   });
 
   test("validates the canonical task result", () => {

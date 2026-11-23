@@ -191,6 +191,7 @@ function registerAuthRoutes(app, deps) {
       webScopes: session.auth_kind === "web_federated"
         ? (Array.isArray(session.web_scopes) ? session.web_scopes : [])
         : [],
+      crmTaskAllowed: session.auth_kind === "web_federated" && Boolean(session.crm_actor_authorization),
       chatAppearance: normalizeChatAppearance(session.chat_appearance),
     });
   });

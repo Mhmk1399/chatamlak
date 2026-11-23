@@ -5,7 +5,7 @@ import {
   SUPPORT_GUEST_IDENTITY_LINK_COLLECTION,
 } from "./platformIdentitySchema.js";
 
-const TOKEN_USES = new Set(["support_registered", "support_guest", "support_agent"]);
+const TOKEN_USES = new Set(["support_registered", "support_guest", "support_agent", "support_guest_link"]);
 
 export class PlatformIdentityLinkError extends Error {
   constructor(code, message, status = 409) {

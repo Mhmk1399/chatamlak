@@ -506,6 +506,57 @@ export function createSupportRuntime({
     });
   }
 
+  async function completeGuestHistoryLink({ claims, nativeSession } = {}) {
+    if (
+      !claims || claims.tokenUse !== "support_guest_link" ||
+      nativeSession?.auth_kind !== "web_federated" ||
+      claims.subject !== nativeSession.web_subject
+    ) {
+      throw Object.assign(new Error("The guest-link proof does not match the current account."), {
+        code: "GUEST_LINK_ACCOUNT_MISMATCH", status: 403,
+      });
+    }
+    const platformLink = await identityRepository.findPlatformIdentityLinkByWebUserId("owj-web", claims.subject);
+    if (!platformLink || platformLink.status !== "active" || platformLink.chat_user_id !== nativeSession.id) {
+      throw Object.assign(new Error("The current Web identity is not linked to this Chat account."), {
+        code: "IDENTITY_LINK_REQUIRED", status: 409,
+      });
+    }
+    const guestDigest = `sha256:${crypto.createHash("sha256")
+      .update(`owj-web:${claims.guestSubject}`, "utf8").digest("hex")}`;
+    const conversation = await supportDb.getSupportConversation(claims.conversationId);
+    if (
+      !conversation || conversation.guest_subject_digest !== guestDigest ||
+      (conversation.identity_kind === "registered" && (
+        conversation.web_user_id !== claims.subject || conversation.chat_user_id !== nativeSession.id
+      ))
+    ) {
+      throw Object.assign(new Error("The guest-link proof does not own this support identity."), {
+        code: "SUPPORT_CONVERSATION_DENIED", status: 403,
+      });
+    }
+    const operation = async () => {
+      await identityRepository.linkSupportGuestDigestToRegistered({
+        guestSubjectDigest: guestDigest,
+        webUserId: claims.subject,
+        chatUserId: nativeSession.id,
+        conversationId: claims.conversationId,
+        proofJti: claims.jti,
+      });
+      const result = await supportDb.convertGuestHistory({
+        guestSubjectDigest: guestDigest,
+        webUserId: claims.subject,
+        chatUserId: nativeSession.id,
+        proofId: claims.jti,
+      });
+      await supportDb.revokeSupportSessionsByGuestDigest?.(guestDigest, "guest_history_linked");
+      return result;
+    };
+    return typeof identityRepository.runInTransaction === "function"
+      ? identityRepository.runInTransaction(operation)
+      : operation();
+  }
+
   async function authorizeSupportAgentConversation({ session, conversationId, operation } = {}) {
     if (session?.actorKind !== "agent" || !session.scopes?.includes("support:agent")) return false;
     const conversation = await supportDb.getSupportConversation(conversationId);
@@ -664,6 +715,7 @@ export function createSupportRuntime({
       markSupportCaseReadV2,
       listSupportEventsV2,
       linkGuestHistoryV2,
+      completeGuestHistoryLink,
       createOrReuseMessage,
       emitChatEvent,
       supportRealtime,

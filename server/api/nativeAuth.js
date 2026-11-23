@@ -17,13 +17,18 @@ function errorResponse(res, error) {
 }
 
 function cookieOptions(req, deps, maxAge) {
-  return {
+  const options = {
     httpOnly: true,
     sameSite: "lax",
     secure: Boolean(deps.shouldUseSecureCookie?.(req)),
     path: TRANSACTION_PATH,
-    maxAge,
   };
+  if (Number.isFinite(maxAge)) options.maxAge = maxAge;
+  return options;
+}
+
+function clearTransactionCookie(req, res, deps) {
+  res.clearCookie(TRANSACTION_COOKIE, cookieOptions(req, deps));
 }
 
 export function registerNativeAuthRoutes(app, deps = {}) {
@@ -69,8 +74,8 @@ export function registerNativeAuthRoutes(app, deps = {}) {
         browserToken: cookies[TRANSACTION_COOKIE],
         userAgent: req.headers["user-agent"] || null,
       });
-      res.cookie(TRANSACTION_COOKIE, "", cookieOptions(req, deps, 0));
       deps.setSessionCookie(req, res, result.sessionToken);
+      clearTransactionCookie(req, res, deps);
       const user = result.user;
       return res.json({
         version: 1,
@@ -83,11 +88,13 @@ export function registerNativeAuthRoutes(app, deps = {}) {
           status: user.status || "online",
           role: user.role || "user",
           authKind: "web_federated",
+          webScopes: Array.isArray(result.scopes) ? result.scopes : [],
+          crmTaskAllowed: Boolean(result.crmTaskAllowed),
         },
         provisioned: result.provisioned,
       });
     } catch (error) {
-      res.cookie(TRANSACTION_COOKIE, "", cookieOptions(req, deps, 0));
+      clearTransactionCookie(req, res, deps);
       return errorResponse(res, error);
     }
   });

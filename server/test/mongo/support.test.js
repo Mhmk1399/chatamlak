@@ -238,6 +238,71 @@ describe("support persistence on a real MongoDB replica set", () => {
     });
   });
 
+  test("treats preserved guest authorship as the registered customer's own history", async () => {
+    const guest = await R.supportDb.ensureSupportConversation({
+      principal: { kind: "guest", provider: "owj-web", guestSubject: "guest-linked-history" },
+    });
+    await R.supportDb.createSupportMessage({
+      conversationId: guest.conversationId,
+      actorId: guest.actorId,
+      body: "Before sign-in",
+      clientRequestId: crypto.randomUUID(),
+    });
+    const before = await R.supportDb.getSupportConversation(guest.conversationId);
+    await R.supportDb.convertGuestHistory({
+      guestSubjectDigest: before.guest_subject_digest,
+      webUserId: "web-linked-history",
+      chatUserId: alice,
+      proofId: "guest-linked-history-proof",
+    });
+    const converted = await R.supportDb.getSupportConversation(guest.conversationId);
+
+    await expect(R.supportDb.listSupportCases({
+      ownerIdentityKey: converted.owner_identity_key,
+      actorId: alice,
+    })).resolves.toEqual([
+      expect.objectContaining({ id: guest.conversationId, unread_count: 0 }),
+    ]);
+
+    await R.supportDb.createSupportMessage({
+      conversationId: guest.conversationId,
+      actorId: bob,
+      body: "Agent reply",
+      clientRequestId: crypto.randomUUID(),
+    });
+    await expect(R.supportDb.listSupportCases({
+      ownerIdentityKey: converted.owner_identity_key,
+      actorId: alice,
+    })).resolves.toEqual([
+      expect.objectContaining({ id: guest.conversationId, unread_count: 1 }),
+    ]);
+    await R.supportDb.markSupportCaseRead(guest.conversationId, alice);
+    await expect(R.supportDb.listSupportCases({
+      ownerIdentityKey: converted.owner_identity_key,
+      actorId: alice,
+    })).resolves.toEqual([
+      expect.objectContaining({ id: guest.conversationId, unread_count: 0 }),
+    ]);
+
+    await R.supportDb.assignSupportConversation({
+      conversationId: guest.conversationId,
+      agentChatUserId: bob,
+      idempotencyKey: "assign-linked-history",
+    });
+    await R.supportDb.setSupportConversationStatus({
+      conversationId: guest.conversationId,
+      status: "resolved",
+      agentChatUserId: bob,
+      idempotencyKey: "resolve-linked-history",
+    });
+    await expect(R.supportDb.reopenSupportCase({
+      ownerIdentityKey: converted.owner_identity_key,
+      conversationId: guest.conversationId,
+      actorId: alice,
+      idempotencyKey: "reopen-linked-history",
+    })).resolves.toMatchObject({ status: "open", _deduped: false });
+  });
+
   test("handles existing registered history and rejects two active cases during guest linking", async () => {
     const registered = await R.supportDb.ensureSupportConversation({
       principal: { kind: "registered", provider: "owj-web", webUserId: "web-existing", chatUserId: alice },

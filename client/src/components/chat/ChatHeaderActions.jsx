@@ -33,7 +33,7 @@ export default function ChatHeaderActions({ onVoiceCall, onVideoCall, voiceDisab
     actions.openAppearance && ["Chat background", ImageIcon, actions.openAppearance],
     groupCall && ["Group call", Users, () => context.setPanel("Group call"), groupBlocked],
     context && ["Chat tools", Settings, () => context.setPanel("Devices")],
-    context?.authKind === "web_federated" && context?.activeChatId && ["Create CRM task", CirclePlus, () => setCrmOpen(true)],
+    context?.authKind === "web_federated" && context?.crmTaskAllowed && context?.activeChatId && ["Create CRM task", CirclePlus, () => setCrmOpen(true)],
     ["Language", Languages, () => setLocale(getLocale() === "fa" ? "en" : "fa")],
     actions.deleteChat && ["Delete chat", Trash, actions.deleteChat, context?.busy],
   ].filter(Boolean);

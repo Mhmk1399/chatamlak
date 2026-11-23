@@ -844,6 +844,7 @@ function ChatPageView({ model }) {
     callState,
     callType,
     calls,
+    callsDisabledForUser,
     callsEditMode,
     canCurrentUserViewInvite,
     canDeleteMessageForEveryone,
@@ -1159,7 +1160,7 @@ function ChatPageView({ model }) {
             onDeleteSelectedCalls={handleDeleteCalls}
             onOpenNewCall={handleOpenNewCall}
             onStartCall={handleStartCallFromRow}
-            callsDisabled={!CHAT_PAGE_CONFIG.callsEnabled}
+            callsDisabled={callsDisabledForUser}
             isInCall={isInCall}
             formatChatTimestamp={formatChatCardTimestamp}
             requestDeleteChats={requestDeleteChats}
@@ -1343,7 +1344,7 @@ function ChatPageView({ model }) {
             registerMessageRef={registerMessageRef}
             onStartVoiceCall={handleStartVoiceCall}
             onStartVideoCall={handleStartVideoCall}
-            callsDisabled={!CHAT_PAGE_CONFIG.callsEnabled}
+            callsDisabled={callsDisabledForUser}
             videoCallsDisabled={!CHAT_PAGE_CONFIG.videoCallsEnabled}
             isInCall={isInCall}
             isDmChat={
@@ -1366,7 +1367,7 @@ function ChatPageView({ model }) {
               isCameraOff={isCameraOff}
               cameraUnavailable={
                 isCameraUnavailable ||
-                !CHAT_PAGE_CONFIG.callsEnabled ||
+                callsDisabledForUser ||
                 !CHAT_PAGE_CONFIG.videoCallsEnabled
               }
               isRemoteCameraOff={isRemoteCameraOff}
@@ -1649,7 +1650,7 @@ function ChatPageView({ model }) {
                 onOpenChat={handleOpenProfileChat}
                 onStartVoiceCall={handleProfileStartVoiceCall}
                 onStartVideoCall={handleProfileStartVideoCall}
-                callsDisabled={!CHAT_PAGE_CONFIG.callsEnabled}
+                callsDisabled={callsDisabledForUser}
                 videoCallsDisabled={!CHAT_PAGE_CONFIG.videoCallsEnabled}
                 isInCall={isInCall}
                 onToggleMute={() =>
@@ -8348,10 +8349,15 @@ export default function ChatPage({
   const showGroupInviteManagement = Boolean(editingGroup);
   const isInCall =
     callState !== "idle" || Boolean(groupCall.room) || groupCall.joining;
+  const callsDisabledForUser = !CHAT_PAGE_CONFIG.callsEnabled || (
+    user.authKind === "web_federated" && !user.webScopes?.includes("chat:call")
+  );
 
   const messagingValue = {
     ...messaging,
     authKind: user.authKind || "native_local",
+    webScopes: Array.isArray(user.webScopes) ? user.webScopes : [],
+    crmTaskAllowed: Boolean(user.crmTaskAllowed),
     chats,
     headerActions: {
       toggleMute: () => toggleMuteChat(activeChatId),
@@ -8439,6 +8445,7 @@ export default function ChatPage({
     callState,
     callType,
     calls,
+    callsDisabledForUser,
     callsEditMode,
     canCurrentUserViewInvite,
     canDeleteMessageForEveryone,

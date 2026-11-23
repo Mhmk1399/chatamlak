@@ -16,11 +16,12 @@ export const COLLECTION_KEYS = {
   platform_identity_links: ["id"], platform_identity_assertion_jtis: ["id"],
   support_guest_identity_links: ["id"], support_conversations: ["id"],
   support_sessions: ["id"], native_web_auth_transactions: ["id"],
+  guest_link_transactions: ["id"],
   media_processing_jobs: ["id"],
   meta: ["key"], migration_runs: ["id"],
 };
 export const NUMERIC_IDS = new Set(["chat_message_files", "remote_channel_sources", "remote_channel_queue", "admin_audit_logs", "chat_event_log"]);
-export const MONGO_SCHEMA_VERSION = 3;
+export const MONGO_SCHEMA_VERSION = 4;
 const validators = {
   users: { required: ["id", "username", "password_hash"], properties: { id: { bsonType: "string" }, username: { bsonType: "string", minLength: 1 }, password_hash: { bsonType: "string" } } },
   chats: { required: ["id", "type"], properties: { id: { bsonType: "string" }, type: { enum: ["dm", "group", "channel", "saved"] } } },
@@ -28,11 +29,12 @@ const validators = {
   chat_members: { required: ["chat_id", "user_id", "role"], properties: { chat_id: { bsonType: "string" }, user_id: { bsonType: "string" }, role: { enum: ["owner", "admin", "member"] } } },
   chat_message_files: { required: ["id", "message_id", "mime_type", "stored_name"], properties: { id: { bsonType: ["int", "long", "double"] }, message_id: { bsonType: "string" }, mime_type: { bsonType: "string" }, stored_name: { bsonType: "string" } } },
   platform_identity_links: { required: ["id", "provider", "web_user_id", "chat_user_id", "status", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, provider: { enum: ["owj-web"] }, web_user_id: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, status: { enum: ["active", "revoked", "deactivated"] } } },
-  platform_identity_assertion_jtis: { required: ["id", "issuer", "jti", "subject", "token_use", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, issuer: { bsonType: "string", minLength: 1 }, jti: { bsonType: "string", minLength: 1 }, subject: { bsonType: "string", minLength: 1 }, token_use: { enum: ["support_registered", "support_guest", "support_agent"] }, expires_at: { bsonType: "date" }, created_at: { bsonType: "date" } } },
+  platform_identity_assertion_jtis: { required: ["id", "issuer", "jti", "subject", "token_use", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, issuer: { bsonType: "string", minLength: 1 }, jti: { bsonType: "string", minLength: 1 }, subject: { bsonType: "string", minLength: 1 }, token_use: { enum: ["support_registered", "support_guest", "support_agent", "support_guest_link"] }, expires_at: { bsonType: "date" }, created_at: { bsonType: "date" } } },
   support_guest_identity_links: { required: ["id", "provider", "guest_subject_digest", "web_user_id", "chat_user_id", "conversation_id", "proof_jti", "converted_at"], properties: { id: { bsonType: "string" }, provider: { enum: ["owj-web"] }, guest_subject_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, web_user_id: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, conversation_id: { bsonType: "string", minLength: 1 }, proof_jti: { bsonType: "string", minLength: 1 }, converted_at: { bsonType: "string", minLength: 1 } } },
   support_conversations: { required: ["id", "identity_key", "identity_kind", "actor_id", "status", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, identity_key: { bsonType: "string", minLength: 1 }, identity_kind: { enum: ["guest", "registered"] }, actor_id: { bsonType: "string", minLength: 1 }, status: { enum: ["open", "assigned", "resolved", "closed"] } } },
   support_sessions: { required: ["id", "token_digest", "principal_kind", "actor_id", "status", "expires_at", "idle_expires_at", "created_at", "updated_at"], properties: { id: { bsonType: "string" }, token_digest: { bsonType: "string", minLength: 32 }, principal_kind: { enum: ["guest", "registered", "agent"] }, actor_id: { bsonType: "string", minLength: 1 }, bootstrap_jti: { bsonType: ["string", "null"] }, identity_issued_at: { bsonType: ["int", "long", "double", "null"] }, status: { enum: ["active", "revoked", "expired"] }, expires_at: { bsonType: "string" }, idle_expires_at: { bsonType: "string" } } },
   native_web_auth_transactions: { required: ["id", "state_digest", "browser_token_digest", "code_verifier", "redirect_uri", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, state_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, browser_token_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, code_verifier: { bsonType: "string", minLength: 43 }, redirect_uri: { bsonType: "string", minLength: 1 }, expires_at: { bsonType: "date" }, consumed_at: { bsonType: ["date", "null"] } } },
+  guest_link_transactions: { required: ["id", "state_digest", "browser_token_digest", "code_verifier", "redirect_uri", "web_subject", "chat_user_id", "expires_at", "created_at"], properties: { id: { bsonType: "string" }, state_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, browser_token_digest: { bsonType: "string", pattern: "^sha256:[a-f0-9]{64}$" }, code_verifier: { bsonType: "string", minLength: 43 }, redirect_uri: { bsonType: "string", minLength: 1 }, web_subject: { bsonType: "string", minLength: 1 }, chat_user_id: { bsonType: "string", minLength: 1 }, expires_at: { bsonType: "date" }, consumed_at: { bsonType: ["date", "null"] } } },
 };
 const index = (collection, keys, options = {}) => ({ collection, keys, options });
 const IDENTITY_COLLECTIONS_WITH_NAMED_KEYS = new Set([
@@ -94,6 +96,8 @@ export const MONGO_INDEXES = [
   index("support_sessions", { status: 1, expires_at: 1 }),
   index("native_web_auth_transactions", { state_digest: 1 }, { unique: true }),
   index("native_web_auth_transactions", { expires_at: 1 }, { expireAfterSeconds: 0 }),
+  index("guest_link_transactions", { state_digest: 1 }, { unique: true }),
+  index("guest_link_transactions", { expires_at: 1 }, { expireAfterSeconds: 0 }),
 ];
 
 export function documentDefaults(collection, now = new Date().toISOString()) {
@@ -109,6 +113,7 @@ export function documentDefaults(collection, now = new Date().toISOString()) {
     support_conversations: { status: "open", assigned_chat_user_id: null, updated_at: now, resolved_at: null, closed_at: null },
     support_sessions: { status: "active", updated_at: now, revoked_at: null, revocation_reason: null },
     native_web_auth_transactions: { consumed_at: null },
+    guest_link_transactions: { consumed_at: null },
     media_processing_jobs: { status: "pending", attempts: 0, updated_at: now, locked_at: null, lock_owner: null, last_error_code: null, completed_at: null },
     chat_polls: { closed: 0 }, chat_preferences: { pinned: 0, archived: 0, folder: "" },
   };
@@ -117,10 +122,38 @@ export function documentDefaults(collection, now = new Date().toISOString()) {
 
 export async function ensureMongoSchema(db) {
   for (const name of Object.keys(COLLECTION_KEYS)) {
-    if (!(await db.listCollections({ name }, { nameOnly: true }).hasNext())) await db.createCollection(name, validators[name] ? { validator: { $jsonSchema: { bsonType: "object", ...validators[name] } }, validationLevel: "strict" } : {});
+    const existing = await db.listCollections({ name }).next();
+    if (!existing) {
+      await db.createCollection(name, validators[name] ? { validator: { $jsonSchema: { bsonType: "object", ...validators[name] } }, validationLevel: "strict" } : {});
+    } else if (
+      name === "platform_identity_assertion_jtis" &&
+      !existing.options?.validator?.$jsonSchema?.properties?.token_use?.enum?.includes("support_guest_link")
+    ) {
+      throw Object.assign(new Error("Mongo schema v4 migration is required before guest-link proofs can be consumed."), {
+        code: "MONGO_SCHEMA_MIGRATION_REQUIRED",
+      });
+    }
   }
   for (const { collection, keys, options } of MONGO_INDEXES) await db.collection(collection).createIndex(keys, options);
   if (!(await db.listCollections({ name: "counters" }, { nameOnly: true }).hasNext())) await db.createCollection("counters");
   for (const name of [...NUMERIC_IDS, "chat_events"]) await db.collection("counters").updateOne({ _id: name }, { $setOnInsert: { value: 0 } }, { upsert: true });
   await db.collection("meta").updateOne({ key: "mongo_schema_version" }, { $set: { value: MONGO_SCHEMA_VERSION } }, { upsert: true });
+}
+
+export async function migrateMongoSchemaV4(db) {
+  const name = "platform_identity_assertion_jtis";
+  const existing = await db.listCollections({ name }).next();
+  if (!existing) throw new Error(`${name} must exist before applying Mongo schema v4.`);
+  if (!existing.options?.validator?.$jsonSchema?.properties?.token_use?.enum?.includes("support_guest_link")) {
+    await db.command({
+      collMod: name,
+      validator: { $jsonSchema: { bsonType: "object", ...validators[name] } },
+      validationLevel: "strict",
+    });
+  }
+  await db.collection("meta").updateOne(
+    { key: "mongo_schema_version" },
+    { $set: { value: MONGO_SCHEMA_VERSION } },
+    { upsert: true },
+  );
 }

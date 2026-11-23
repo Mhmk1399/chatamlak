@@ -1,4 +1,7 @@
 const ALLOWED_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
+const ALLOWED_TYPES = new Set([
+  "property_inspection", "call", "meeting", "document_collection", "showing", "other",
+]);
 const ALLOWED_TASK_FIELDS = new Set([
   "type", "title", "priority", "steps", "assignedUserId", "assignedConsultantId",
   "sellerPropertyCaseId", "buyerCaseId", "dueAt", "instructions",
@@ -56,12 +59,14 @@ export function buildCrmTaskCommandV1({ conversationId, task } = {}) {
     fail("CRM_TASK_FIELD_UNAPPROVED", "The task contains an unapproved field.");
   }
   const title = stringField(task.title, { max: 200 });
-  const type = stringField(task.type, { max: 64, optional: true });
+  const type = stringField(task.type, { max: 64 });
+  if (!ALLOWED_TYPES.has(type)) fail("CRM_TASK_INVALID", "The CRM task type is invalid.");
   const priority = stringField(task.priority, { max: 16, optional: true });
   if (priority && !ALLOWED_PRIORITIES.has(priority)) fail("CRM_TASK_INVALID", "The task priority is invalid.");
-  const dueAt = stringField(task.dueAt, { max: 64, optional: true });
-  if (dueAt && !Number.isFinite(Date.parse(dueAt))) fail("CRM_TASK_INVALID", "The task due date is invalid.");
+  const dueAt = stringField(task.dueAt, { max: 64 });
+  if (!Number.isFinite(Date.parse(dueAt))) fail("CRM_TASK_INVALID", "The task due date is invalid.");
   const steps = normalizedSteps(task.steps);
+  if (!steps?.length) fail("CRM_TASK_INVALID", "At least one CRM task step is required.");
   const optional = (name, max = 128) => stringField(task[name], { max, optional: true });
   const assignedUserId = optional("assignedUserId");
   const assignedConsultantId = optional("assignedConsultantId");
@@ -72,13 +77,13 @@ export function buildCrmTaskCommandV1({ conversationId, task } = {}) {
     version: 1,
     source: { conversationId: sourceId },
     task: {
-      ...(type ? { type } : {}), title,
+      type, title,
       ...(priority ? { priority } : {}), ...(steps ? { steps } : {}),
       ...(assignedUserId ? { assignedUserId } : {}),
       ...(assignedConsultantId ? { assignedConsultantId } : {}),
       ...(sellerPropertyCaseId ? { sellerPropertyCaseId } : {}),
       ...(buyerCaseId ? { buyerCaseId } : {}),
-      ...(dueAt ? { dueAt } : {}), ...(instructions ? { instructions } : {}),
+      dueAt, ...(instructions ? { instructions } : {}),
     },
   };
 }

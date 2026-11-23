@@ -375,9 +375,7 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
       web_authorization_cache_seconds: Number.isInteger(authorization.authorizationCacheMaxAgeSeconds)
         ? Math.max(0, Math.min(60, authorization.authorizationCacheMaxAgeSeconds))
         : 0,
-      ...(authorization.crmActorAuthorization
-        ? { crm_actor_authorization: authorization.crmActorAuthorization }
-        : {}),
+      crm_actor_authorization: authorization.crmActorAuthorization || null,
     }),
     createNativeWebAuthTransaction: (transaction) => s.insert("native_web_auth_transactions", {
       id: transaction.id || crypto.randomUUID(),
@@ -401,6 +399,31 @@ export function createMongoRepository({ db, client, encryption = storageEncrypti
       const { _id, ...transaction } = result;
       return transaction;
     },
+    createGuestLinkTransaction: (transaction) => s.insert("guest_link_transactions", {
+      id: transaction.id || crypto.randomUUID(),
+      state_digest: String(transaction.stateDigest),
+      browser_token_digest: String(transaction.browserTokenDigest),
+      code_verifier: String(transaction.codeVerifier),
+      redirect_uri: String(transaction.redirectUri),
+      web_subject: String(transaction.webSubject),
+      chat_user_id: String(transaction.chatUserId),
+      expires_at: new Date(transaction.expiresAt),
+      consumed_at: null,
+    }),
+    async consumeGuestLinkTransaction({ stateDigest, browserTokenDigest, consumedAt = new Date() } = {}) {
+      const result = await db.collection("guest_link_transactions").findOneAndUpdate({
+        state_digest: String(stateDigest || ""),
+        browser_token_digest: String(browserTokenDigest || ""),
+        consumed_at: null,
+        expires_at: { $gt: new Date(consumedAt) },
+      }, {
+        $set: { consumed_at: new Date(consumedAt) },
+      }, s.opts({ returnDocument: "before" }));
+      if (!result) return null;
+      const { _id, ...transaction } = result;
+      return transaction;
+    },
+    runInTransaction: (callback) => s.transaction(callback),
     touchSession: (token) => {
       const candidates = sessionTokenLookupValues(token);
       return candidates.length ? s.update("sessions", { token: { $in: candidates } }, { last_seen: now() }) : 0;

@@ -92,7 +92,7 @@ const assertionJtiValidator = {
       issuer: { bsonType: "string", minLength: 1 },
       jti: { bsonType: "string", minLength: 1 },
       subject: { bsonType: "string", minLength: 1 },
-      token_use: { enum: ["support_registered", "support_guest", "support_agent"] },
+      token_use: { enum: ["support_registered", "support_guest", "support_agent", "support_guest_link"] },
       expires_at: { bsonType: "date" },
       created_at: { bsonType: "date" },
     },

@@ -30,7 +30,7 @@ const BASE_PROPS = {
 };
 
 describe("SidebarHeader in calls mode", () => {
-  test("matches settings page header bar height (h-[72px] shrink-0)", async () => {
+  test("uses the content-driven sidebar header instead of the conversation 72px header", async () => {
     render(<SidebarHeader {...BASE_PROPS} />);
 
     const title = page.getByRole("heading", { name: "Calls" });
@@ -38,10 +38,9 @@ describe("SidebarHeader in calls mode", () => {
 
     const header = title.element().closest(".border-b");
     expect(header).not.toBeNull();
-    expect(header.classList.contains("h-[72px]")).toBe(true);
+    expect(header.classList.contains("h-[72px]")).toBe(false);
     expect(header.classList.contains("shrink-0")).toBe(true);
-    expect(header.classList.contains("flex")).toBe(true);
-    expect(header.classList.contains("items-center")).toBe(true);
+    expect(header.classList.contains("py-2")).toBe(true);
   });
 
   test("disables New call button when isInCall is true", async () => {

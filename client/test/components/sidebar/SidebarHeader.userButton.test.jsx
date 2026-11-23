@@ -50,7 +50,7 @@ const BASE_PROPS = {
 };
 
 describe("SidebarHeader desktop user button vs mobile edit button", () => {
-  test("renders both mobile edit button (md:hidden) and desktop user button (hidden md:inline-flex)", async () => {
+  test("keeps mobile edit in the header while the separate desktop rail owns the account menu", async () => {
     render(<SidebarHeader {...BASE_PROPS} />);
 
     // Mobile edit button exists in DOM
@@ -58,11 +58,9 @@ describe("SidebarHeader desktop user button vs mobile edit button", () => {
     await expect.element(editBtn).toBeInTheDocument();
     expect(editBtn.element().classList.contains("md:hidden")).toBe(true);
 
-    // Desktop user button exists in DOM
-    const userBtn = page.getByRole("button", { name: "User menu" });
-    await expect.element(userBtn).toBeInTheDocument();
-    const userBtnWrapper = userBtn.element().closest(".md\\:inline-flex");
-    expect(userBtnWrapper).not.toBeNull();
+    // Desktop account navigation is rendered by ChatSidebar's 76px rail, not
+    // duplicated inside this header.
+    await expect.element(page.getByRole("button", { name: "User menu" })).not.toBeInTheDocument();
   });
 
   test("in editMode, Close button is displayed instead to exit edit mode", async () => {

@@ -19,6 +19,24 @@ describe("native Web auth persistence on isolated MongoDB", () => {
     expect(results.find(Boolean)).toMatchObject({ code_verifier: "v".repeat(64) });
   });
 
+  test("does not consume an expired browser-bound transaction", async () => {
+    await R.createNativeWebAuthTransaction({
+      id: "auth-transaction-expired",
+      stateDigest: `sha256:${"c".repeat(64)}`,
+      browserTokenDigest: `sha256:${"d".repeat(64)}`,
+      codeVerifier: "x".repeat(64),
+      redirectUri: "https://chat.example.test/auth/web/callback",
+      expiresAt: new Date(Date.now() - 1_000),
+    });
+    await expect(R.consumeNativeWebAuthTransaction({
+      stateDigest: `sha256:${"c".repeat(64)}`,
+      browserTokenDigest: `sha256:${"d".repeat(64)}`,
+    })).resolves.toBeNull();
+    expect(await db.collection("native_web_auth_transactions").findOne({
+      id: "auth-transaction-expired",
+    })).toMatchObject({ consumed_at: null });
+  });
+
   test("provisions one isolated Chat user and reuses the explicit identity link", async () => {
     const subject = "507f1f77bcf86cd799439011";
     const results = await Promise.all(Array.from({ length: 3 }, () => R.provisionNativeWebUser({ webUserId: subject })));
@@ -45,7 +63,17 @@ describe("native Web auth persistence on isolated MongoDB", () => {
       auth_kind: "web_federated",
       web_subject: "507f191e810c19729de860ea",
       web_scopes: ["chat:access", "chat:call"],
+      crm_actor_authorization: "delegated-proof",
     });
     expect(session).not.toHaveProperty("token");
+
+    await R.updateNativeWebSession(session.session_id, {
+      scopes: ["chat:access"],
+      sessionExpiresAt: "2099-11-23T09:00:00.000Z",
+      authorizationCheckedAt: "2026-11-23T08:05:00.000Z",
+      authorizationCacheMaxAgeSeconds: 0,
+      crmActorAuthorization: null,
+    });
+    expect((await R.getSession("opaque-browser-token")).crm_actor_authorization).toBeNull();
   });
 });

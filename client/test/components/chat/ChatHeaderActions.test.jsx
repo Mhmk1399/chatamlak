@@ -60,6 +60,15 @@ test("conversation actions honor server call limits and change with the selected
   await screen.rerender(<MessagingContext.Provider value={{ ...context, activeChatId: "third", chat: { id: "third", type: "group" }, isInCall: true, groupCall: { room: { id: "existing-room" } } }}><ChatHeaderActions groupCallDisabled /></MessagingContext.Provider>);
   await expect.element(page.getByRole("button", { name: "Group call", exact: true })).not.toBeDisabled();
 });
+test("CRM task action requires a current delegated Web capability", async () => {
+  const { context } = fixture();
+  const screen = await render(<MessagingContext.Provider value={{ ...context, authKind: "web_federated", crmTaskAllowed: false }}><ChatHeaderActions /></MessagingContext.Provider>);
+  await page.getByRole("button", { name: "More chat actions", exact: true }).click();
+  await expect.element(page.getByRole("menuitem", { name: "Create CRM task", exact: true })).not.toBeInTheDocument();
+
+  await screen.rerender(<MessagingContext.Provider value={{ ...context, authKind: "web_federated", crmTaskAllowed: true }}><ChatHeaderActions /></MessagingContext.Provider>);
+  await expect.element(page.getByRole("menuitem", { name: "Create CRM task", exact: true })).toBeVisible();
+});
 test("folder assignment preserves the name on failure and can be cleared after retry", async () => {
   const { context } = fixture(); context.preferences = [{ chat_id: "team", folder: "Office" }]; context.act.mockResolvedValueOnce(null).mockResolvedValueOnce(true);
   await render(<MessagingContext.Provider value={context}><FolderPanel /></MessagingContext.Provider>);

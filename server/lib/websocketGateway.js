@@ -409,7 +409,7 @@ export function createWebSocketGateway({
             if (!CALL_SIGNAL_TYPES.has(String(signalType || ""))
               || !isValidUuid(String(chatId || ""))
               || !validData
-              || (signalType === "start" && !["audio", "video"].includes(data?.type))) {
+              || (signalType === "start" && !["audio", "voice", "video"].includes(data?.type))) {
               sendCallError("Invalid call signal.");
               return;
             }

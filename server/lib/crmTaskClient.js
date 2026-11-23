@@ -13,7 +13,7 @@ export function createCrmTaskClient({ endpoint, serviceToken, fetchImpl = global
   async function createTask({ command, actorAuthorization, idempotencyKey, correlationId = randomUUID() } = {}) {
     if (!configured || typeof fetchImpl !== "function") fail("CRM_PROVIDER_UNAVAILABLE", "The Web CRM service is unavailable.");
     if (typeof actorAuthorization !== "string" || !actorAuthorization.trim()) fail("CRM_ACTOR_AUTHORIZATION_REQUIRED", "A current delegated Web actor proof is required.", 403);
-    if (typeof idempotencyKey !== "string" || !/^[A-Za-z0-9._:-]{8,180}$/.test(idempotencyKey)) fail("CRM_IDEMPOTENCY_REQUIRED", "A stable idempotency key is required.", 400);
+    if (typeof idempotencyKey !== "string" || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) fail("CRM_IDEMPOTENCY_REQUIRED", "A stable idempotency key is required.", 400);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     timeout.unref?.();
@@ -38,7 +38,8 @@ export function createCrmTaskClient({ endpoint, serviceToken, fetchImpl = global
       body = JSON.parse(raw);
     } catch { fail("CRM_RESULT_INVALID", "Web returned an invalid CRM task result.", 502); }
     if (!response.ok) {
-      const code = typeof body?.error?.code === "string" ? body.error.code : "CRM_PROVIDER_UNAVAILABLE";
+      const rawCode = typeof body?.error === "string" ? body.error : body?.error?.code;
+      const code = typeof rawCode === "string" ? rawCode.slice(0, 100) : "CRM_PROVIDER_UNAVAILABLE";
       const status = response.status >= 400 && response.status < 500 ? response.status : 503;
       fail(code, status === 503 ? "The Web CRM service is unavailable." : "The CRM task was denied.", status);
     }

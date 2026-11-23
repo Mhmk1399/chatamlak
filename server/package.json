@@ -26,6 +26,7 @@
     "db:vacuum": "node scripts/mongo-cli.js vacuum",
     "db:help": "node scripts/mongo-cli.js help",
     "db:migrate": "node scripts/mongo-cli.js migrate",
+    "db:migrate:v4": "node scripts/migrate-mongo-schema-v4.js",
     "db:backfill": "node scripts/backfill-message-file-metadata.js",
     "db:chat:create": "node scripts/mongo-cli.js chat:create",
     "db:chat:add": "node scripts/mongo-cli.js chat:add",

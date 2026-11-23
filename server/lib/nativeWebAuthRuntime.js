@@ -147,6 +147,7 @@ export function createNativeWebAuthRuntime({
       user: provisioned.user,
       provisioned: Boolean(provisioned.created),
       scopes: authorization.scopes,
+      crmTaskAllowed: Boolean(authorization.crmActorAuthorization),
     };
   }
 
@@ -174,7 +175,7 @@ export function createNativeWebAuthRuntime({
         web_session_expires_at: authorization.sessionExpiresAt,
         web_authorization_checked_at: authorization.authorizationCheckedAt,
         web_authorization_cache_seconds: authorization.authorizationCacheMaxAgeSeconds,
-        crm_actor_authorization: authorization.crmActorAuthorization || session.crm_actor_authorization || null,
+        crm_actor_authorization: authorization.crmActorAuthorization || null,
       };
     } catch (error) {
       if (
